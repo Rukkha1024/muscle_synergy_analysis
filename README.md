@@ -220,6 +220,8 @@ conda run -n cuda python main.py \
 ## 10. 현재 범위와 제한
 
 - 기본 mixed selection은 `mixed == 1`, 총 4 trial, step 2회, nonstep 2회, 선택된 step trial의 실제 `step_onset` complete, subject당 comparison velocity 1개 조건을 요구한다.
+- 군집화 단계에서 선택된 trial은 반드시 step 또는 nonstep 중 정확히 하나의 집단에만 속해야 한다. 양쪽 모두에 속하거나 어느 쪽에도 속하지 않는 trial이 발견되면 파이프라인은 `ValueError`로 즉시 실패한다.
+- `global_step` 또는 `global_nonstep` 집단 중 하나라도 비어 있으면 군집화를 진행하지 않고 `ValueError`로 실패한다.
 - cross-subject global cluster alignment는 현재 구현하지 않았다.
 - figure는 PNG export를 기본 형식으로 사용한다.
 - Qt 관련 `wayland` plugin 경고가 출력될 수 있으나, 현재 fixture 실행 기준 산출물 생성에는 영향을 주지 않았다.
