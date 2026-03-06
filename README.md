@@ -1,10 +1,148 @@
 ﻿# EMG Synergy Pipeline
 
-이 저장소는 EMG parquet와 이벤트 xlsm을 받아 `subject-velocity-trial` 단위로 trial을 자르고, 각 trial에서 근육 시너지를 추출한 뒤 피험자 내 representative cluster를 내보내는 파이프라인이다. 현재 기본 분석 구간은 `platform_onset ~ step_onset`이며, step trial은 실제 `step_onset`을 사용하고 nonstep trial은 같은 피험자에서 선택된 comparison velocity의 step trial 평균 `step_onset`을 surrogate 종료점으로 사용한다.
+이 저장소는 platform translation perturbation 과제에서 수집된 EMG parquet와 이벤트 xlsm을 입력으로 받아, `subject-velocity-trial` 단위 trial을 정의하고 step과 non-step 비교를 위한 근육 시너지를 추출하는 파이프라인이다. 문서의 설명 순서는 실행 가이드보다 분석 설계와 처리 절차를 먼저 제시하는 방법론 형식을 따른다.
 
-파이프라인은 논문식 비교 구조를 따르기 위해 `mixed velocity` 비교 세트만 기본 선택한다. 즉 event workbook에서 `mixed == 1`로 표시되고, 같은 `subject-velocity` 안에 총 4 trial이 있으며 그 안에서 step 2회와 nonstep 2회가 공존하고, 선택된 step trial에 실제 `step_onset`이 존재하는 경우만 본 분석에 포함한다. 또한 한 피험자에는 하나의 comparison velocity만 남아야 하며, 둘 이상이 동시에 성립하면 오류로 처리한다.
+기본 분석 구간은 `platform_onset ~ analysis_window_end`이며, step trial은 실제 `step_onset`을 종료점으로 사용하고 nonstep trial은 같은 피험자에서 선택된 comparison velocity의 step trial 평균 `step_onset`을 surrogate 종료점으로 사용한다. 최종 산출물은 trial window provenance, subject-level representative synergy, overview figure를 포함하며, clustering은 피험자 내에서만 수행된다.
 
-## 빠른 시작
+## 1. 분석 목적과 비교 단위
+
+본 파이프라인의 목적은 동일 피험자 내부에서 step 전략과 non-step 전략을 비교 가능한 시간 구조로 정렬한 뒤, 각 trial에서 추출된 근육 시너지를 피험자 단위 representative cluster로 요약하는 데 있다. 이를 위해 분석의 기본 단위는 `subject-velocity-trial`로 두고, 비교 세트는 논문식 paired comparison 구조를 반영하도록 `mixed velocity` 조건으로 제한한다.
+
+기본 선택 규칙은 event workbook에서 `mixed == 1`로 표시된 세트만 포함하는 것이다. 또한 같은 `subject-velocity` 안에 총 4 trial이 존재하고, 그 안에서 step 2회와 nonstep 2회가 공존해야 하며, 선택된 step trial에는 실제 `step_onset`이 존재해야 한다. 한 피험자에 둘 이상의 comparison velocity가 동시에 남는 경우는 허용하지 않으며 오류로 처리한다.
+
+## 2. 입력 자료와 필수 메타데이터
+
+기본 실행은 아래 두 입력 파일을 사용한다.
+
+- EMG parquet: `input.emg_parquet_path`
+- 이벤트 xlsm: `input.event_xlsm_path`
+
+기본 경로는 [configs/global_config.yaml](configs/global_config.yaml)에 정의되어 있으며, 전역 출력 위치와 재현성 관련 seed 역시 같은 파일에서 관리한다.
+
+EMG parquet는 최소한 아래 컬럼을 포함해야 한다.
+
+- `subject`
+- `velocity`
+- `trial_num`
+- `original_DeviceFrame`
+- 근육 채널 컬럼들 (`muscles.names`)
+
+이벤트 xlsm은 아래 컬럼을 포함해야 한다.
+
+- `subject`
+- `velocity`
+- `trial` 또는 `trial_num`
+- `platform_onset`
+- `platform_offset`
+- `step_onset`
+- `step_TF`
+- `state`
+- `mixed`
+
+현재 근육 채널 목록은 [configs/synergy_stats_config.yaml](configs/synergy_stats_config.yaml)에 정의되어 있으며 다음 16개 근육을 사용한다.
+
+- `TA`
+- `EHL`
+- `MG`
+- `SOL`
+- `PL`
+- `RF`
+- `VL`
+- `ST`
+- `RA`
+- `EO`
+- `IO`
+- `SCM`
+- `GM`
+- `ESC`
+- `EST`
+- `ESL`
+
+## 3. Trial 선택 기준
+
+분석 대상 trial은 [configs/emg_pipeline_config.yaml](configs/emg_pipeline_config.yaml)의 selection rule에 따라 선별된다. 기본 규칙은 다음과 같다.
+
+- `mixed_only: true`
+- `mixed_column: "mixed"`
+- `require_total_trials: 4`
+- `require_step_trials: 2`
+- `require_nonstep_trials: 2`
+- `single_velocity_per_subject: true`
+
+이 규칙은 step과 non-step이 동일 피험자, 동일 comparison velocity, 동일 trial count 구조 안에서 비교되도록 강제한다. 따라서 본 저장소의 기본 산출물은 모든 원시 trial의 전수 요약이 아니라, paired interpretation이 가능한 curated mixed comparison set의 결과로 이해해야 한다.
+
+## 4. 분석 구간 정의
+
+분석 창 정의는 [configs/emg_pipeline_config.yaml](configs/emg_pipeline_config.yaml)의 `windowing` 설정을 따른다. 시작 이벤트는 항상 `platform_onset`이며, 종료 이벤트는 파생 컬럼 `analysis_window_end`로 통일한다.
+
+step trial의 경우 실제 `step_onset`이 `analysis_window_end`로 직접 사용된다. 반면 nonstep trial은 실제 step event가 존재하지 않으므로, 같은 피험자에서 선택된 comparison velocity의 step trial 평균 `step_onset`을 surrogate 종료점으로 사용한다. 이 규칙은 step과 non-step을 동일한 시간 기준에서 비교하기 위한 것으로, 결과 메타데이터에는 실제 종료점인지 surrogate 종료점인지가 함께 기록된다.
+
+이전과 같이 `platform_onset ~ platform_offset` 구간을 사용하려면 `windowing.offset_column`을 `platform_offset`으로 바꾸고 mixed selection을 비활성화하면 된다. 다만 현재 README가 설명하는 기본 방법론은 `platform_onset ~ step_onset` 비교 구조를 전제로 한다.
+
+## 5. 처리 절차
+
+파이프라인 실행 순서는 [main.py](main.py)에 명시되어 있으며, 아래 다섯 단계로 고정된다.
+
+1. [scripts/emg/01_load_emg_table.py](scripts/emg/01_load_emg_table.py)
+   EMG parquet와 event workbook을 읽고, mixed comparison filter와 surrogate `step_onset` 규칙을 적용한 event metadata를 준비한다.
+2. [scripts/emg/02_extract_trials.py](scripts/emg/02_extract_trials.py)
+   선택된 trial만 `platform_onset ~ analysis_window_end` 구간으로 절단하고 `DeviceFrame`을 onset 기준으로 다시 정렬한다.
+3. [scripts/emg/03_extract_synergy_nmf.py](scripts/emg/03_extract_synergy_nmf.py)
+   trial별 NMF를 수행하고 trial window provenance를 feature metadata에 결합한다.
+4. [scripts/emg/04_cluster_synergies.py](scripts/emg/04_cluster_synergies.py)
+   피험자 내에서 representative cluster를 산출한다.
+5. [scripts/emg/05_export_artifacts.py](scripts/emg/05_export_artifacts.py)
+   CSV, parquet, trial window metadata, subject figure, overview figure를 저장한다.
+
+이 순서는 `자료 로딩 → trial 절단 → 시너지 추출 → 피험자 내 군집화 → 산출물 저장`의 분석 절차와 대응한다.
+
+## 6. 시너지 추출 규칙
+
+시너지 추출 설정은 [configs/synergy_stats_config.yaml](configs/synergy_stats_config.yaml)에서 관리한다. 현재 저장소가 유지하는 핵심 규칙은 아래와 같다.
+
+- 분해 기법은 NMF를 사용한다.
+- rank는 `1 ~ max_components_to_try` 범위에서 순차 탐색한다.
+- `VAF >= 0.90`를 처음 만족하는 rank를 채택한다.
+- `W`는 column norm 기준으로 정규화한다.
+- `representative H`는 export 단계에서만 100-window로 보간한다.
+
+현재 기본 파라미터는 `max_components_to_try: 8`, `vaf_threshold: 0.90`, `random_state: 42`, `target_windows: 100`이다. 따라서 대표 activation profile은 원시 시계열 길이 그대로 저장되는 것이 아니라, figure 및 summary export 시점에 100-window 길이로 정렬된 값으로 해석해야 한다.
+
+## 7. 피험자 내 군집화와 대표 시너지
+
+군집화는 [configs/synergy_stats_config.yaml](configs/synergy_stats_config.yaml)의 `synergy_clustering` 설정을 따른다. 현재 알고리즘은 `cuml_kmeans`이며, `disallow_within_trial_duplicate_assignment: true` 조건을 유지한다. 즉 한 trial에서 추출된 복수 synergy가 동일 cluster에 중복 배정되지 않도록 제한한다.
+
+중요한 점은 clustering이 피험자 내부에서만 수행된다는 것이다. 따라서 본 저장소의 representative synergy는 cross-subject global template가 아니라 `subject-local cluster`이며, overview figure는 전 피험자 공통 cluster 평균이 아니라 각 피험자 내부 cluster를 한 화면에 모아 본 montage에 가깝다. 서로 다른 피험자의 같은 cluster 번호를 직접 평균적 의미로 대응시키면 안 된다.
+
+## 8. 산출물과 해석 기준
+
+기본 런 디렉터리는 `runtime.output_dir` 아래에 생성된다. 주요 산출물은 아래와 같다.
+
+- `final_summary.csv`
+- `all_representative_W_posthoc.csv`
+- `all_representative_H_posthoc_long.csv`
+- `all_trial_window_metadata.csv`
+- `figures/subject_<subject_id>_clusters.png`
+- `figures/overview_all_subject_clusters.png`
+- `subject_<subject_id>/trial_window_metadata.csv`
+- `outputs/final.parquet`
+
+가장 먼저 확인할 파일은 `all_trial_window_metadata.csv`다. 이 파일에는 각 trial이 어떤 window를 사용했는지, surrogate 종료점을 썼는지, mixed selection을 어떻게 통과했는지, step/nonstep class가 무엇인지가 기록된다. 특히 아래 컬럼이 분석 창 해석의 기준이 된다.
+
+- `analysis_window_onset_column`
+- `analysis_window_offset_column`
+- `analysis_window_start`
+- `analysis_window_end`
+- `analysis_window_source`
+- `analysis_window_is_surrogate`
+- `analysis_step_class`
+- `analysis_mixed_group_step_trials`
+- `analysis_mixed_group_nonstep_trials`
+- `analysis_selection_rule`
+
+`analysis_window_source`는 기본적으로 `actual_step_onset`, `subject_mean_step_onset`, `platform_offset` 중 하나를 가진다. subject figure는 cluster마다 왼쪽에 `W` bar plot, 오른쪽에 `H(100-window)` line plot을 배치하며, overview figure는 이 subject figure들을 한 화면에 배치한 montage다.
+
+## 9. 재현 실행과 검증
 
 이 저장소의 공식 실행 환경은 conda env `cuda`다. Python과 pip는 아래 형식으로 실행한다.
 
@@ -13,7 +151,7 @@ conda run -n cuda python ...
 conda run -n cuda pip ...
 ```
 
-fixture 입력으로 전체 파이프라인을 검증하려면 저장소 루트에서 아래 명령을 실행한다.
+fixture 입력으로 전체 파이프라인을 재현하려면 저장소 루트에서 아래 명령을 실행한다.
 
 ```bash
 conda run -n cuda python main.py \
@@ -29,145 +167,6 @@ conda run -n cuda python main.py \
   --config configs/global_config.yaml \
   --dry-run
 ```
-
-## 분석 창과 비교 규칙
-
-현재 기본 설정은 [configs/emg_pipeline_config.yaml](/home/alice/workspace/26-03-synergy-analysis/configs/emg_pipeline_config.yaml)에 있다. 핵심 규칙은 아래와 같다.
-
-- 시작 이벤트는 `platform_onset`이다.
-- 종료 이벤트는 파생 컬럼 `analysis_window_end`다.
-- step trial은 실제 `step_onset`을 `analysis_window_end`로 사용한다.
-- nonstep trial은 같은 `subject`에서 선택된 comparison velocity의 step trial 평균 `step_onset`을 `analysis_window_end`로 사용한다.
-- 기본 selection rule은 `mixed == 1`, 총 4 trial, step 2회, nonstep 2회, step trial의 `step_onset` complete, subject당 comparison velocity 1개 조건이다.
-
-이 규칙 덕분에 step과 nonstep을 같은 시간 구조에서 비교할 수 있고, perturbation 강도 차이를 덜어낸 상태에서 시너지 패턴을 비교할 수 있다. 이전 `platform_onset ~ platform_offset` 구간을 다시 쓰고 싶다면 `windowing.offset_column`을 `platform_offset`으로 바꾸고 mixed selection을 끄면 된다.
-
-## 입력 파일
-
-기본 실행은 아래 두 입력을 사용한다.
-
-- EMG parquet: `input.emg_parquet_path`
-- 이벤트 xlsm: `input.event_xlsm_path`
-
-기본 경로는 [configs/global_config.yaml](/home/alice/workspace/26-03-synergy-analysis/configs/global_config.yaml)에 정의되어 있다. fixture 실행은 [tests/fixtures/global_config.yaml](/home/alice/workspace/26-03-synergy-analysis/tests/fixtures/global_config.yaml)을 사용한다.
-
-EMG parquet의 최소 필수 컬럼은 아래와 같다.
-
-- `subject`
-- `velocity`
-- `trial_num`
-- `original_DeviceFrame`
-- 근육 채널 컬럼들 (`muscles.names`)
-
-이벤트 xlsm은 아래 컬럼을 준비해야 한다.
-
-- `subject`
-- `velocity`
-- `trial` 또는 `trial_num`
-- `platform_onset`
-- `platform_offset`
-- `step_onset`
-- `step_TF`
-- `state`
-- `mixed`
-
-`step_onset`은 전체 행에 다 채워질 필요는 없지만, 기본 mixed 비교 세트에 선택된 step trial에는 반드시 존재해야 한다. 그렇지 않으면 그 비교 세트는 분석 대상에서 제외된다.
-
-## 설정 파일
-
-파이프라인 설정은 `configs/` 아래 YAML로 분리되어 있다.
-
-- [configs/global_config.yaml](/home/alice/workspace/26-03-synergy-analysis/configs/global_config.yaml)
-  전역 입력 경로와 런타임 옵션을 관리한다.
-- [configs/emg_pipeline_config.yaml](/home/alice/workspace/26-03-synergy-analysis/configs/emg_pipeline_config.yaml)
-  trial window, mixed selection, surrogate `step_onset`, stance metadata 규칙을 관리한다.
-- [configs/synergy_stats_config.yaml](/home/alice/workspace/26-03-synergy-analysis/configs/synergy_stats_config.yaml)
-  근육 목록, NMF, clustering, representative `H` 100-window 보간, figure export 설정을 관리한다.
-
-루트 오케스트레이터 [main.py](/home/alice/workspace/26-03-synergy-analysis/main.py)는 전역 설정을 먼저 읽고 도메인 설정을 병합한 뒤 `scripts/emg/NN_*.py` 순서대로 실행한다.
-
-## 파이프라인 단계
-
-실제 실행 순서는 [main.py](/home/alice/workspace/26-03-synergy-analysis/main.py)에 명시되어 있다.
-
-1. [scripts/emg/01_load_emg_table.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/01_load_emg_table.py)
-   EMG parquet와 event workbook을 읽고, mixed comparison filter와 surrogate `step_onset`을 적용한 event metadata를 준비한다.
-2. [scripts/emg/02_extract_trials.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/02_extract_trials.py)
-   선택된 trial만 `platform_onset ~ analysis_window_end` 구간으로 자르고 `DeviceFrame`을 onset 기준으로 다시 맞춘다.
-3. [scripts/emg/03_extract_synergy_nmf.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/03_extract_synergy_nmf.py)
-   trial별 NMF를 수행하고, trial window provenance를 feature metadata에 붙인다.
-4. [scripts/emg/04_cluster_synergies.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/04_cluster_synergies.py)
-   피험자 내 representative cluster를 찾는다.
-5. [scripts/emg/05_export_artifacts.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/05_export_artifacts.py)
-   CSV, parquet, trial window metadata, subject figure, overview figure를 저장한다.
-
-## 현재 시너지 규칙
-
-현재 저장소가 유지하는 시너지 추출 규칙은 아래와 같다.
-
-- NMF rank는 `1 ~ max_components_to_try` 범위에서 순차 탐색한다.
-- `VAF >= 0.90`를 처음 만족하는 rank를 채택한다.
-- `W`는 column norm 기준으로 정규화한다.
-- representative `H`는 export 단계에서만 100-window로 보간한다.
-- clustering은 피험자 내에서만 수행하며, cross-subject global cluster 정렬은 하지 않는다.
-
-즉 overview figure는 “전 피험자 공통 cluster 평균”이 아니라 “subject-local cluster를 한 파일에 모아 본 overview”다.
-
-## 출력 파일
-
-기본 런 디렉터리는 `runtime.output_dir` 아래에 생성된다. fixture 실행 기준 주요 산출물은 아래와 같다.
-
-- `final_summary.csv`
-- `all_representative_W_posthoc.csv`
-- `all_representative_H_posthoc_long.csv`
-- `all_trial_window_metadata.csv`
-- `figures/subject_<subject_id>_clusters.png`
-- `figures/overview_all_subject_clusters.png`
-- `subject_<subject_id>/trial_window_metadata.csv`
-- `outputs/final.parquet`
-
-`all_trial_window_metadata.csv`는 이번 변경에서 가장 먼저 확인해야 하는 파일이다. 이 파일에는 각 trial이 어떤 window를 사용했는지, surrogate를 썼는지, mixed selection을 어떻게 통과했는지, step/nonstep class가 무엇인지가 기록된다. `analysis_window_source`는 기본적으로 `actual_step_onset`, `subject_mean_step_onset`, `platform_offset` 중 하나를 가진다.
-
-## 출력 해석
-
-`trial_window_metadata.csv`와 `all_trial_window_metadata.csv`에서 아래 컬럼을 보면 window 해석이 가능하다.
-
-- `analysis_window_onset_column`
-- `analysis_window_offset_column`
-- `analysis_window_start`
-- `analysis_window_end`
-- `analysis_window_source`
-- `analysis_window_is_surrogate`
-- `analysis_step_class`
-- `analysis_mixed_group_step_trials`
-- `analysis_mixed_group_nonstep_trials`
-- `analysis_selection_rule`
-
-subject figure는 cluster마다 왼쪽에 `W` bar plot, 오른쪽에 `H(100-window)` line plot을 배치한다. overview figure는 이 subject figure들을 한 화면에 모아 놓은 montage다. 여기서 cluster 번호는 subject-local label이므로, 다른 피험자의 같은 번호 cluster와 직접 평균 비교하면 안 된다.
-
-## 실행 예시
-
-실운영 경로로 실제 계산을 수행할 때는 아래 형식을 사용한다.
-
-```bash
-conda run -n cuda python main.py \
-  --config configs/global_config.yaml \
-  --out outputs/runs/platform_to_step_onset \
-  --overwrite
-```
-
-입력 경로만 임시로 바꾸고 싶다면 CLI override를 사용한다.
-
-```bash
-conda run -n cuda python main.py \
-  --config configs/global_config.yaml \
-  --parquet /path/to/processed_emg_data.parquet \
-  --meta-xlsm /path/to/perturb_inform.xlsm \
-  --out outputs/runs/custom_run \
-  --overwrite
-```
-
-## 검증
 
 pytest 전체 실행:
 
@@ -193,15 +192,29 @@ conda run -n cuda python scripts/emg/99_md5_compare_outputs.py \
   --new outputs/runs/fixture_run
 ```
 
-실제 확인된 검증 결과는 아래와 같다.
+실운영 계산은 아래 형식을 사용한다.
 
-- `conda run -n cuda python -m pytest tests -q` 통과
-- `conda run -n cuda python main.py --config configs/global_config.yaml --dry-run` 통과
-- fixture reference baseline 대비 curated MD5 비교 통과
+```bash
+conda run -n cuda python main.py \
+  --config configs/global_config.yaml \
+  --out outputs/runs/platform_to_step_onset \
+  --overwrite
+```
 
-## 현재 범위와 제한
+입력 경로만 임시로 바꾸고 싶다면 CLI override를 사용한다.
 
-- 기본 mixed selection은 `mixed == 1`이면서 총 4 trial, step 2회, nonstep 2회, step trial의 실제 `step_onset` complete, subject당 comparison velocity 1개 조건을 요구한다.
-- cross-subject global cluster alignment는 아직 구현하지 않았다.
-- figure는 PNG export를 기본으로 사용한다.
-- Qt 관련 `wayland` plugin 경고가 출력될 수 있지만, 현재 fixture 실행에서는 산출물 생성에 영향을 주지 않았다.
+```bash
+conda run -n cuda python main.py \
+  --config configs/global_config.yaml \
+  --parquet /path/to/processed_emg_data.parquet \
+  --meta-xlsm /path/to/perturb_inform.xlsm \
+  --out outputs/runs/custom_run \
+  --overwrite
+```
+
+## 10. 현재 범위와 제한
+
+- 기본 mixed selection은 `mixed == 1`, 총 4 trial, step 2회, nonstep 2회, 선택된 step trial의 실제 `step_onset` complete, subject당 comparison velocity 1개 조건을 요구한다.
+- cross-subject global cluster alignment는 현재 구현하지 않았다.
+- figure는 PNG export를 기본 형식으로 사용한다.
+- Qt 관련 `wayland` plugin 경고가 출력될 수 있으나, 현재 fixture 실행 기준 산출물 생성에는 영향을 주지 않았다.
