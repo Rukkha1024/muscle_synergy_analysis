@@ -128,15 +128,20 @@ def build_trial_records(df: pd.DataFrame, cfg: dict[str, Any]) -> list[TrialReco
     frame_ratio = int(emg_cfg.get("frame_ratio", window_cfg.get("mocap_to_device_ratio", 10)))
     onset_column = str(window_cfg.get("onset_column", "platform_onset"))
     offset_column = str(window_cfg.get("offset_column", "platform_offset"))
+    selected_df = df.copy()
+    if "analysis_selected_group" in selected_df.columns:
+        selected_df = selected_df.loc[selected_df["analysis_selected_group"].fillna(False)].copy()
+        if selected_df.empty:
+            raise ValueError("No selected trial groups remain after event filtering.")
     required = ["subject", "velocity", "trial_num", "original_DeviceFrame"]
-    missing = [column for column in required if column not in df.columns]
+    missing = [column for column in required if column not in selected_df.columns]
     if missing:
         raise ValueError(f"Missing columns required for trial building: {missing}")
-    event_missing = [column for column in [onset_column, offset_column] if column not in df.columns]
+    event_missing = [column for column in [onset_column, offset_column] if column not in selected_df.columns]
     if event_missing:
         raise ValueError(f"Missing event columns required for trial building: {event_missing}")
     trials: list[TrialRecord] = []
-    for _, group in df.groupby(["subject", "velocity", "trial_num"], sort=True):
+    for _, group in selected_df.groupby(["subject", "velocity", "trial_num"], sort=True):
         if group[[onset_column, offset_column]].isnull().any().any():
             raise ValueError(f"{onset_column}/{offset_column} must exist for every trial.")
         trials.append(_slice_trial(group, frame_ratio, onset_column, offset_column))

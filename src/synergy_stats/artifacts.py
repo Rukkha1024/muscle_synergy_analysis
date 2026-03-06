@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 
 from .clustering import build_subject_exports, save_subject_outputs
-from .figures import save_overview_figure, save_subject_cluster_figure
+from .figures import figure_suffix, save_overview_figure, save_subject_cluster_figure
 
 
 def summarize_subject_results(subject_rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -45,6 +45,7 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     subject_summaries = []
     subject_figure_paths: list[Path] = []
     figure_dir = output_dir / "figures"
+    figure_ext = figure_suffix(cfg)
     for subject_id, payload in context["subject_results"].items():
         exports = build_subject_exports(
             subject_id=subject_id,
@@ -55,7 +56,7 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         )
         subject_dir = output_dir / f"subject_{subject_id}"
         save_subject_outputs(subject_dir, exports)
-        subject_figure_path = figure_dir / f"subject_{subject_id}_clusters.png"
+        subject_figure_path = figure_dir / f"subject_{subject_id}_clusters{figure_ext}"
         save_subject_cluster_figure(
             subject_id=subject_id,
             rep_w=exports.get("rep_W", pd.DataFrame()),
@@ -81,7 +82,7 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-    overview_path = figure_dir / "overview_all_subject_clusters.png"
+    overview_path = figure_dir / f"overview_all_subject_clusters{figure_ext}"
     save_overview_figure(subject_figure_paths, cfg, overview_path)
 
     summary_df = summarize_subject_results(subject_summaries)

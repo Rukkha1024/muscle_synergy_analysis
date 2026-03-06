@@ -52,5 +52,5 @@ def test_fixture_run_writes_expected_artifacts(
     assert set(final_df["velocity"].unique().to_list()) == {1}
 
     window_df = pd.read_csv(trial_window_metadata, encoding="utf-8-sig")
-    assert set(window_df["analysis_window_source"].unique()) == {"step_onset", "subject_velocity_mean_step_onset"}
+    assert set(window_df["analysis_window_source"].unique()) == {"actual_step_onset", "subject_mean_step_onset"}
     assert window_df["analysis_window_is_surrogate"].astype(str).str.lower().eq("true").any()

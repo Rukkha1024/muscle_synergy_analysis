@@ -15,6 +15,7 @@ STABLE_SUFFIXES = {
     "all_minimal_units_W.csv",
     "all_representative_H_posthoc_long.csv",
     "all_representative_W_posthoc.csv",
+    "all_trial_window_metadata.csv",
     "final_summary.csv",
 }
 

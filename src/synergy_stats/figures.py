@@ -15,12 +15,24 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
+SUPPORTED_OVERVIEW_FORMATS = {"png", "jpg", "jpeg", "tif", "tiff"}
+
+
 def _figure_cfg(cfg: dict) -> dict:
     return cfg.get("figures", {})
 
 
-def _figure_format(cfg: dict) -> str:
-    return str(_figure_cfg(cfg).get("format", "png"))
+def _normalized_figure_format(cfg: dict) -> str:
+    raw = str(_figure_cfg(cfg).get("format", "png")).strip().lower().lstrip(".")
+    normalized = "jpeg" if raw == "jpg" else raw
+    if normalized not in SUPPORTED_OVERVIEW_FORMATS:
+        supported = ", ".join(sorted(SUPPORTED_OVERVIEW_FORMATS))
+        raise ValueError(f"Unsupported figure format for overview export: {raw}. Supported formats: {supported}")
+    return normalized
+
+
+def figure_suffix(cfg: dict) -> str:
+    return f".{_normalized_figure_format(cfg)}"
 
 
 def _figure_dpi(cfg: dict) -> int:
@@ -66,7 +78,7 @@ def save_subject_cluster_figure(
         ax_h.set_ylabel("Activation")
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_figure_format(cfg), bbox_inches="tight")
+    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_normalized_figure_format(cfg), bbox_inches="tight")
     plt.close(fig)
 
 
@@ -85,5 +97,5 @@ def save_overview_figure(subject_figure_paths: list[Path], cfg: dict, output_pat
         ax.axis("off")
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_figure_format(cfg), bbox_inches="tight")
+    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_normalized_figure_format(cfg), bbox_inches="tight")
     plt.close(fig)
