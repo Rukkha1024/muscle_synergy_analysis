@@ -1,3 +1,0 @@
-﻿subject,status,n_clusters,inertia,duplicate_trials,algorithm_used
-S01,success,2,9.836935532803182e-07,[],sklearn_kmeans
-S02,success,2,5.625959147437243e-07,[],sklearn_kmeans
