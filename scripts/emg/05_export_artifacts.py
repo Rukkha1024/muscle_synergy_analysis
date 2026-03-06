@@ -1,4 +1,4 @@
-﻿"""Write subject outputs, aggregates, and the final parquet."""
+﻿"""Write group outputs, aggregate CSVs, and the final parquet."""
 
 from __future__ import annotations
 

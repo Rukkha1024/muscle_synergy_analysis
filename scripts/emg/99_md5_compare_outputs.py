@@ -1,4 +1,4 @@
-﻿"""Compare curated stable output files by filename and MD5 hash."""
+﻿"""Compare stable global step/nonstep output files by relative path and MD5."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import hashlib
 from pathlib import Path
 
 
-STABLE_SUFFIXES = {
+STABLE_RELATIVE_PATHS = {
     "all_cluster_labels.csv",
     "all_cluster_members.csv",
     "all_clustering_metadata.csv",
@@ -17,6 +17,22 @@ STABLE_SUFFIXES = {
     "all_representative_W_posthoc.csv",
     "all_trial_window_metadata.csv",
     "final_summary.csv",
+    "global_step/clustering_metadata.csv",
+    "global_step/cluster_labels.csv",
+    "global_step/cluster_members.csv",
+    "global_step/minimal_units_H_long.csv",
+    "global_step/minimal_units_W.csv",
+    "global_step/representative_H_posthoc_long.csv",
+    "global_step/representative_W_posthoc.csv",
+    "global_step/trial_window_metadata.csv",
+    "global_nonstep/clustering_metadata.csv",
+    "global_nonstep/cluster_labels.csv",
+    "global_nonstep/cluster_members.csv",
+    "global_nonstep/minimal_units_H_long.csv",
+    "global_nonstep/minimal_units_W.csv",
+    "global_nonstep/representative_H_posthoc_long.csv",
+    "global_nonstep/representative_W_posthoc.csv",
+    "global_nonstep/trial_window_metadata.csv",
 }
 
 
@@ -27,8 +43,9 @@ def _md5(path: Path) -> str:
 def _stable_files(root: Path) -> dict[str, str]:
     files = {}
     for path in sorted(root.rglob("*")):
-        if path.is_file() and path.name in STABLE_SUFFIXES:
-            files[str(path.relative_to(root))] = _md5(path)
+        relative_path = str(path.relative_to(root))
+        if path.is_file() and relative_path in STABLE_RELATIVE_PATHS:
+            files[relative_path] = _md5(path)
     return files
 
 
