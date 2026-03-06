@@ -1,0 +1,3 @@
+﻿subject,n_trials,n_clusters,status,duplicate_trials,algorithm_used
+S01,4,2,success,[],sklearn_kmeans
+S02,4,2,success,[],sklearn_kmeans

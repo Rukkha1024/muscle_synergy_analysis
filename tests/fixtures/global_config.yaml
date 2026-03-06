@@ -1,0 +1,11 @@
+﻿input:
+  emg_parquet_path: /home/alice/workspace/26-03-synergy-analysis/tests/fixtures/emg_fixture.parquet
+  event_xlsm_path: /home/alice/workspace/26-03-synergy-analysis/tests/fixtures/perturb_inform_fixture.xlsm
+runtime:
+  gpu_required: false
+  seed: 7
+  output_dir: outputs/runs/fixture_run
+  log_dir: outputs/manifests
+configs:
+  emg_pipeline: /home/alice/workspace/26-03-synergy-analysis/tests/fixtures/emg_pipeline_config.yaml
+  synergy_stats: /home/alice/workspace/26-03-synergy-analysis/tests/fixtures/synergy_stats_config.yaml

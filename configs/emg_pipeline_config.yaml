@@ -1,0 +1,5 @@
+﻿emg_pipeline:
+  frame_ratio: 10
+  base_keys: ["subject", "velocity", "trial_num"]
+  time_column: "original_DeviceFrame"
+  manual_precedence: true

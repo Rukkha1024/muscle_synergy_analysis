@@ -1,0 +1,13 @@
+﻿project:
+  name: "emg-synergy-analysis"
+config_paths:
+  emg_pipeline: "emg_pipeline_config.yaml"
+  synergy_stats: "synergy_stats_config.yaml"
+input:
+  emg_parquet_path: "/mnt/c/Users/Alice/OneDrive - 청주대학교/근전도 분석 코드/shared_files/output/02_processed/Chvatal_35-40/processed_emg_data.parquet"
+  event_xlsm_path: "/mnt/c/Users/Alice/OneDrive - 청주대학교/연구실 자료/연구실_노인균형프로토콜/데이터 정리-설문, 신체계측, 기타 데이터/perturb_inform.xlsm"
+runtime:
+  output_dir: "outputs/runs/default_run"
+  seed: 42
+  dry_run: false
+  overwrite: false

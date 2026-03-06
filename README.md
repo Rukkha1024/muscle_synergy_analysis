@@ -1,195 +1,160 @@
-﻿# EMG Synergy Clustering
+﻿# EMG Synergy Pipeline
 
-실험의 EMG 데이터를 `subject-velocity-trial` 단위로 정리하고,
-trial별 시너지 특징을 추출한 뒤 피험자 내(intra-subject) 클러스터링 결과를 저장하는 파이프라인입니다.
+이 저장소는 EMG parquet와 이벤트 xlsm을 받아 `subject-velocity-trial` 단위로 trial을 자르고,
+trial별 시너지(NMF)를 추출한 뒤 피험자 내 클러스터링 결과를 저장하는 파이프라인입니다.
+현재 구현은 저장소 아키텍처 규칙에 맞춰 `configs/`, `src/`, `scripts/`, `outputs/`, `tests/` 구조로 정리되어 있습니다.
 
-이 저장소는 연구자가 다음 흐름을 한 번에 실행할 수 있도록 구성되어 있습니다.
+## 빠른 시작
 
-- 입력 CSV 로드
-- trial 구간 추출
-- 시너지 특징 추출
-- 피험자 내 클러스터링
-- 대표 시너지와 요약 파일 저장
-- 실행 이력(`run_manifest.json`) 기록
+이 저장소의 공식 실행 환경은 conda env `module`입니다.
+Python과 pip는 아래 형식으로만 실행합니다.
 
-현재 기준으로 알아두면 좋은 핵심 제약은 아래와 같습니다.
-
-- `feature_extractor.type: nmf` 는 CPU 전용입니다.
-- 기본 클러스터링 알고리즘인 `cuml_kmeans` 는 GPU가 필요합니다.
-- `feature_extractor.type: cnn` 경로는 연구 확장을 위한 placeholder입니다.
-
-## 이 README가 다루는 내용
-
-이 문서는 코드를 설명하기보다, 처음 실행하는 사람이 바로 따라 할 수 있도록 아래에 집중합니다.
-
-- 어떤 입력 파일이 필요한지
-- 어떤 환경에서 실행해야 하는지
-- `config.yaml`에서 무엇을 바꿔야 하는지
-- 실행 후 어떤 결과물이 생성되는지
-- 결과 검증은 어떻게 하는지
-
-## 파이프라인 개요
-
-```text
-입력 CSV (EMG, frame x channel)
-  -> subject-velocity-trial 기준 그룹화
-  -> platform on-offset.xlsx 기준 trial 구간 추출
-  -> feature_extractor 실행
-      - nmf: CPU-only NMF
-      - cnn: placeholder feature path
-  -> trial별 특징 행렬 정리
-  -> 피험자 내 클러스터링
-  -> 대표 W/H 및 요약 CSV 저장
-  -> 전체 통합 결과와 run_manifest.json 저장
+```bash
+conda run -n module python ...
+conda run -n module pip ...
 ```
 
-## 실행 환경
+fixture 입력으로 전체 파이프라인을 바로 검증하려면 저장소 루트에서 아래 명령을 실행합니다.
 
-이 저장소는 기존 conda 환경 `cuda`(WSL2) 사용을 전제로 합니다.
-새 `venv`를 만들지 않고, 아래 형식을 그대로 사용하는 것을 권장합니다.
-
-## 실행 전에 준비할 것
-
-기본 설정 기준으로 아래 입력이 필요합니다.
-
-### 1. EMG 입력 CSV
-
-기본 경로:
-
-```text
-"C:\Users\Alice\OneDrive - 청주대학교\근전도 분석 코드\shared_files\output\02_processed\Chvatal_35-40\processed_emg_data.parquet"
+```bash
+conda run -n module python main.py \
+  --config tests/fixtures/global_config.yaml \
+  --out outputs/runs/fixture_run \
+  --overwrite
 ```
 
-### 2. 플랫폼 이벤트 Excel 파일
+성공하면 아래 결과가 생성됩니다.
 
-기본 경로:
+- `outputs/runs/fixture_run/run_manifest.json`
+- `outputs/runs/fixture_run/final_summary.csv`
+- `outputs/runs/fixture_run/all_*.csv`
+- `outputs/runs/fixture_run/subject_<subject>/...`
+- `outputs/final.parquet`
 
-```text
-/mnt/c/Users/Alice/OneDrive - 청주대학교/근전도 분석 코드/perturb_inform.xlsx
-```
+## 입력 파일
 
-## `config.yaml`에서 자주 확인할 항목
+기본 실행은 아래 두 입력을 사용합니다.
 
-실행 전에는 아래 블록만 먼저 확인해도 대부분의 실행 실수를 줄일 수 있습니다.
+- EMG parquet: `input.emg_parquet_path`
+- 이벤트 xlsm: `input.event_xlsm_path`
 
-### 1. 입력 경로
+기본 경로는 [configs/global_config.yaml](/home/alice/workspace/26-03-synergy-analysis/configs/global_config.yaml)에 정의되어 있습니다.
+fixture 실행은 [tests/fixtures/global_config.yaml](/home/alice/workspace/26-03-synergy-analysis/tests/fixtures/global_config.yaml)을 사용합니다.
 
-```yaml
-input:
-  csv_path: "DATA_input/min-max_data.csv"
-  platform_excel_path: "/mnt/c/Users/Alice/OneDrive - 청주대학교/근전도 분석 코드/platform on-offset.xlsx"
-```
+EMG parquet의 최소 필수 컬럼은 아래와 같습니다.
 
-### 2. 사용할 근육 채널
+- `subject`
+- `velocity`
+- `trial_num`
+- `original_DeviceFrame`
+- 근육 채널 컬럼들 (`muscles.names`)
 
-```yaml
-muscles:
-  names: ["TA","EHL","MG","SOL","PL","RF","VL","ST","RA","EO","IO","SCM","GM","ESC","EST","ESL"]
-```
+이벤트 xlsm의 최소 필수 컬럼은 아래와 같습니다.
 
-### 3. 특징 추출기 선택
+- `subject`
+- `velocity`
+- `trial_num`
+- `platform_onset`
+- `platform_offset`
 
-```yaml
-feature_extractor:
-  type: "nmf"  # allowed: "nmf" | "cnn"
-```
+## 설정 파일
 
-- `nmf`: 실제 기본 경로입니다.
-- `cnn`: 현재는 placeholder 경로입니다.
+파이프라인 설정은 `configs/` 아래 YAML로 분리되어 있습니다.
 
-### 4. NMF 관련 설정
+- [configs/global_config.yaml](/home/alice/workspace/26-03-synergy-analysis/configs/global_config.yaml)
+  전역 입력 경로와 런타임 옵션
+- [configs/emg_pipeline_config.yaml](/home/alice/workspace/26-03-synergy-analysis/configs/emg_pipeline_config.yaml)
+  EMG trial 정렬과 frame ratio
+- [configs/synergy_stats_config.yaml](/home/alice/workspace/26-03-synergy-analysis/configs/synergy_stats_config.yaml)
+  근육 목록, NMF, 클러스터링 옵션
 
-```yaml
-feature_extractor:
-  nmf:
-    vaf_threshold: 0.90
-    max_components_to_try: 15
-    random_state: 42
-    fit_params:
-      max_iter: 5000
-      tol: 0.0001
-      beta: 2
-```
-
-이 블록은 NMF 시너지 추출의 기준을 정합니다.
-실험 조건 비교 중이 아니라면, 먼저 기본값으로 실행한 뒤 결과를 확인하는 흐름을 권장합니다.
-
-### 5. 클러스터링 설정
-
-```yaml
-synergy_clustering:
-  algorithm: "cuml_kmeans"
-  max_clusters: 25
-  repeats: 1000
-  random_state: 42
-```
-
-중요:
-
-- 현재 구현 기준으로 `algorithm: "cuml_kmeans"` 가 기본값입니다.
-- 이 설정은 CUDA 장치가 필요합니다.
-- 즉, NMF가 CPU-only라고 해서 전체 파이프라인이 CPU-only가 되는 것은 아닙니다.
-
-### 6. 실행 환경 설정
-
-```yaml
-runtime:
-  gpu_required: true
-  seed: 42
-  output_dir: "DATA_output"
-  log_dir: "logs"
-```
-
-`runtime.gpu_required` 와 `synergy_clustering.algorithm` 조합에 따라 실제 GPU 필요 여부가 결정됩니다.
-현재 코드는 GPU가 필요한 조건에서 CUDA 장치를 찾지 못하면 실행을 중단하도록 되어 있습니다.
+루트 오케스트레이터 [main.py](/home/alice/workspace/26-03-synergy-analysis/main.py)는 전역 설정을 먼저 읽고,
+도메인 설정을 병합한 뒤 `scripts/emg/NN_*.py` 순서대로 실행합니다.
 
 ## 실행 예시
 
-### 1. 기본 실행
-
-기본 설정 그대로 NMF 추출과 기본 클러스터링을 수행합니다.
+실운영 경로로 실행할 때는 기본 전역 설정을 사용합니다.
 
 ```bash
-conda run -n cuda python main.py \
-  --config config.yaml \
-  --out DATA_output_runs/nmf_default
+conda run -n module python main.py \
+  --config configs/global_config.yaml \
+  --out outputs/runs/production_run \
+  --overwrite
 ```
 
-## 재현성과 기록
+입력 경로만 임시로 바꾸고 싶다면 CLI override를 사용합니다.
 
-### 1. 시드 고정
+```bash
+conda run -n module python main.py \
+  --config configs/global_config.yaml \
+  --parquet /path/to/processed_emg_data.parquet \
+  --meta-xlsm /path/to/perturb_inform.xlsm \
+  --out outputs/runs/custom_run \
+  --overwrite
+```
 
-`runtime.seed` 값으로 아래 라이브러리의 난수 시드를 가능한 범위에서 함께 맞춥니다.
+설정과 입력만 먼저 확인하고 전체 계산은 건너뛰려면 dry-run을 사용합니다.
 
-- `python`
-- `numpy`
-- `torch`
+```bash
+conda run -n module python main.py \
+  --config configs/global_config.yaml \
+  --dry-run
+```
 
-### 2. 실행 매니페스트 저장
+## 파이프라인 단계
 
-매 실행마다 `run_manifest.json` 이 생성되며, 실행 환경을 추적하는 데 필요한 핵심 정보가 기록됩니다.
+실제 실행 순서는 [main.py](/home/alice/workspace/26-03-synergy-analysis/main.py)에 명시되어 있습니다.
 
-예:
+1. [scripts/emg/01_load_emg_table.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/01_load_emg_table.py)
+   parquet와 xlsm을 읽고 수동 이벤트 값을 우선 적용합니다.
+2. [scripts/emg/02_extract_trials.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/02_extract_trials.py)
+   `subject-velocity-trial` 단위로 잘라 `DeviceFrame`을 만듭니다.
+3. [scripts/emg/03_extract_synergy_nmf.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/03_extract_synergy_nmf.py)
+   trial별 시너지 특징을 추출합니다.
+4. [scripts/emg/04_cluster_synergies.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/04_cluster_synergies.py)
+   피험자 내 시너지 벡터를 클러스터링합니다.
+5. [scripts/emg/05_export_artifacts.py](/home/alice/workspace/26-03-synergy-analysis/scripts/emg/05_export_artifacts.py)
+   subject 결과, 통합 CSV, `outputs/final.parquet`를 저장합니다.
 
-- `created_at_utc`
-- `python_executable`
-- `python_version`
-- `platform`
-- `feature_extractor_type`
-- `config_sha256`
-- `runtime_seed`
+## 구현 메모
 
-같은 설정으로 반복 실행했는지 확인할 때 이 파일을 먼저 보는 것이 좋습니다.
+기본 설정은 reference 정책을 따라 `cuml_kmeans`를 우선 시도합니다.
+다만 `module` 환경에 GPU 라이브러리가 없으면 현재 구현은 `sklearn_kmeans` fallback으로 fixture 검증을 계속 진행합니다.
+NMF도 `torchnmf`를 우선 시도하고, unavailable이면 `sklearn` fallback을 사용합니다.
 
-## 결과 검증: MD5 비교
+즉, fixture 기반 검증은 CPU fallback으로 통과할 수 있고, GPU parity가 필요한 실제 운영에서는
+해당 라이브러리가 `module` 환경에 준비되어 있어야 합니다.
 
-파이프라인 로직이 바뀌었을 때는 기존 출력과 새 출력을 비교해, 의도하지 않은 결과 차이가 없는지 확인할 수 있습니다.
-현재 README 수정만으로는 이 검증이 필요하지 않지만, 실제 로직 변경 시에는 아래 절차를 그대로 재사용하면 됩니다.
+## 검증
 
-## 현재 제한 사항
+pytest 전체 실행:
 
-- `feature_extractor.type: cnn` 은 placeholder 경로입니다.
-- 기본 클러스터링 구현은 `cuml_kmeans` 기준으로 설명되어 있습니다.
-- 전체 파이프라인을 완전한 CPU-only로 운용하려면, 클러스터링 단계에도 CPU 대체 구현이 필요합니다.
-- Excel 입력 경로가 로컬 OneDrive 경로를 가리키므로, 환경이 바뀌면 경로 수정이 필요할 수 있습니다.
+```bash
+conda run -n module python -m pytest tests -q
+```
 
+curated MD5 비교:
+
+```bash
+conda run -n module python main.py \
+  --config tests/fixtures/global_config.yaml \
+  --out tests/reference_outputs/reference_baseline \
+  --overwrite
+
+conda run -n module python main.py \
+  --config tests/fixtures/global_config.yaml \
+  --out outputs/runs/fixture_run \
+  --overwrite
+
+conda run -n module python scripts/emg/99_md5_compare_outputs.py \
+  --base tests/reference_outputs/reference_baseline \
+  --new outputs/runs/fixture_run
+```
+
+이 비교는 변동성이 큰 로그/매니페스트를 제외하고 stable CSV만 검사합니다.
+
+## 현재 범위와 제한
+
+- `analysis/`는 아직 비어 있으며, 이후 분석 코드는 `outputs/final.parquet`만 읽어야 합니다.
+- heatmap PNG/SVG는 아직 reference 수준으로 구현하지 않았고, 현재 우선순위는 runnable scaffold와 stable tabular outputs입니다.
+- reference repo의 GPU 경로와 완전 parity를 내려면 `module` 환경에 `torch`, `torchnmf`, `cupy`, `cuml`이 준비되어야 합니다.

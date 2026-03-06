@@ -1,0 +1,23 @@
+﻿muscles:
+  names: ["TA", "EHL", "MG", "SOL", "PL", "RF", "VL", "ST", "RA", "EO", "IO", "SCM", "GM", "ESC", "EST", "ESL"]
+feature_extractor:
+  type: "nmf"
+  nmf:
+    backend: "auto"
+    vaf_threshold: 0.90
+    max_components_to_try: 8
+    random_state: 42
+    fit_params:
+      max_iter: 1000
+      tol: 0.0001
+      beta: 2
+synergy_clustering:
+  algorithm: "cuml_kmeans"
+  disallow_within_trial_duplicate_assignment: true
+  max_clusters: 12
+  repeats: 25
+  random_state: 42
+  max_iter: 300
+  representative:
+    h_output_interpolation:
+      target_windows: 100
