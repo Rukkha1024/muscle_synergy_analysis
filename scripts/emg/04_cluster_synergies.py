@@ -7,29 +7,46 @@ import logging
 from src.synergy_stats import cluster_feature_group
 
 
+def _meta_flag(meta: dict, key: str) -> bool:
+    value = meta.get(key, False)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y"}
+    if value is None:
+        return False
+    try:
+        if value != value:
+            return False
+    except Exception:
+        pass
+    return bool(value)
+
+
 def run(context: dict) -> dict:
     cfg = context["config"]
     grouping_mode = str(cfg["synergy_clustering"].get("grouping", {}).get("mode", "global_step_nonstep")).strip().lower()
     if grouping_mode != "global_step_nonstep":
         raise ValueError(f"Unsupported grouping mode: {grouping_mode}")
 
-    selected_rows = [
-        item
-        for item in context["feature_rows"]
-        if bool(item.bundle.meta.get("analysis_selected_group", False))
-    ]
     grouped_rows = {
-        "global_step": [
-            item
-            for item in selected_rows
-            if bool(item.bundle.meta.get("analysis_is_step", False))
-        ],
-        "global_nonstep": [
-            item
-            for item in selected_rows
-            if bool(item.bundle.meta.get("analysis_is_nonstep", False))
-        ],
+        "global_step": [],
+        "global_nonstep": [],
     }
+    invalid_trials = []
+    for item in context["feature_rows"]:
+        if not _meta_flag(item.bundle.meta, "analysis_selected_group"):
+            continue
+        is_step = _meta_flag(item.bundle.meta, "analysis_is_step")
+        is_nonstep = _meta_flag(item.bundle.meta, "analysis_is_nonstep")
+        if is_step == is_nonstep:
+            invalid_trials.append(f"{item.subject}_v{item.velocity}_T{item.trial_num}")
+            continue
+        target_group = "global_step" if is_step else "global_nonstep"
+        grouped_rows[target_group].append(item)
+    if invalid_trials:
+        raise ValueError(
+            "Selected trials must belong to exactly one global group: "
+            + ", ".join(invalid_trials)
+        )
     empty_groups = [group_id for group_id, feature_rows in grouped_rows.items() if not feature_rows]
     if empty_groups:
         raise ValueError(f"Global clustering requires non-empty groups for: {empty_groups}")

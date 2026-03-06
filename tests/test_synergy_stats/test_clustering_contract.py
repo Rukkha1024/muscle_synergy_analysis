@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from types import SimpleNamespace
 
 import numpy as np
@@ -42,6 +43,16 @@ def _load_group_helpers():
     except LookupError as exc:
         pytest.xfail(f"Global clustering helpers are not implemented yet: {exc}")
     return cluster_func, export_func, result_cls
+
+
+def _load_cluster_stage_run(repo_root):
+    module_path = repo_root / "scripts" / "emg" / "04_cluster_synergies.py"
+    spec = importlib.util.spec_from_file_location("cluster_synergies_stage", module_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Could not load clustering stage module: {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.run
 
 
 def _make_feature_rows(group_kind: str):
@@ -129,3 +140,76 @@ def test_group_exports_include_group_summary_schema() -> None:
     label_columns = set(exports["labels"].columns)
     assert {"group_id", "status", "n_trials", "n_components", "n_clusters", "algorithm_used"}.issubset(metadata_columns)
     assert {"group_id", "subject", "velocity", "trial_num", "component_index", "cluster_id"}.issubset(label_columns)
+
+
+@pytest.mark.parametrize(
+    ("is_step", "is_nonstep"),
+    [
+        (True, True),
+        (False, False),
+    ],
+)
+def test_cluster_stage_rejects_selected_trials_without_exactly_one_group(
+    repo_root,
+    is_step: bool,
+    is_nonstep: bool,
+) -> None:
+    """Selected trials must map to exactly one global target group."""
+    _, _, result_cls = _load_group_helpers()
+    run_stage = _load_cluster_stage_run(repo_root)
+    feature_rows = [
+        result_cls(
+            subject="S01",
+            velocity=1,
+            trial_num=1,
+            bundle=SimpleNamespace(
+                W_muscle=np.array([[1.0], [0.0], [0.0]], dtype=np.float32),
+                H_time=np.array([[1.0]], dtype=np.float32),
+                meta={
+                    "analysis_selected_group": True,
+                    "analysis_is_step": is_step,
+                    "analysis_is_nonstep": is_nonstep,
+                },
+            ),
+        )
+    ]
+    context = {
+        "config": {
+            "synergy_clustering": {
+                "grouping": {"mode": "global_step_nonstep"},
+                "algorithm": "sklearn_kmeans",
+                "max_clusters": 2,
+                "max_iter": 10,
+                "repeats": 1,
+                "random_state": 7,
+                "disallow_within_trial_duplicate_assignment": True,
+            }
+        },
+        "feature_rows": feature_rows,
+    }
+    with pytest.raises(ValueError, match="exactly one global group"):
+        run_stage(context)
+
+
+def test_cluster_intra_subject_compatibility_wrapper_still_returns_success() -> None:
+    """The public compatibility wrapper should remain callable for legacy imports."""
+    try:
+        cluster_func, _, _ = resolve_callable(
+            ["src.synergy_stats", "src.synergy_stats.clustering"],
+            ["cluster_intra_subject"],
+        )
+    except LookupError as exc:
+        pytest.xfail(f"Compatibility clustering wrapper is not implemented yet: {exc}")
+    w_list, trial_keys = _sample_w_list()
+    cfg = {
+        "algorithm": "sklearn_kmeans",
+        "max_clusters": 4,
+        "max_iter": 50,
+        "repeats": 5,
+        "random_state": 7,
+        "disallow_within_trial_duplicate_assignment": True,
+    }
+    result = cluster_func(w_list, trial_keys, cfg)
+    assert result.get("status") == "success"
+    assert result.get("group_id") == "compatibility_group"
+    assert len(result.get("duplicate_trials", [])) == 0

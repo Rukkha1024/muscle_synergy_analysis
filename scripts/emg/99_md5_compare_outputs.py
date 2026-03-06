@@ -49,6 +49,10 @@ def _stable_files(root: Path) -> dict[str, str]:
     return files
 
 
+def _missing_paths(file_map: dict[str, str]) -> list[str]:
+    return sorted(STABLE_RELATIVE_PATHS - set(file_map))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Curated MD5 comparison for stable EMG outputs.")
     parser.add_argument("--base", required=True, help="Reference output directory.")
@@ -56,6 +60,16 @@ def main() -> int:
     args = parser.parse_args()
     base_map = _stable_files(Path(args.base))
     new_map = _stable_files(Path(args.new))
+    base_missing = _missing_paths(base_map)
+    new_missing = _missing_paths(new_map)
+    if base_missing or new_missing:
+        for key in base_missing:
+            print(f"MISSING {key}: base=absent new={new_map.get(key, 'absent')}")
+        for key in new_missing:
+            if key in base_missing:
+                continue
+            print(f"MISSING {key}: base={base_map.get(key, 'absent')} new=absent")
+        return 1
     all_keys = sorted(set(base_map) | set(new_map))
     diffs = [key for key in all_keys if base_map.get(key) != new_map.get(key)]
     if diffs:
