@@ -1,4 +1,9 @@
-﻿"""Generate deterministic EMG fixture files for pytest scenarios."""
+﻿"""Generate deterministic fixture inputs for windowed synergy tests.
+
+The fixtures model mixed step/nonstep comparison groups, surrogate
+nonstep end points, and a second velocity that should be filtered out
+by the mixed-comparison selection rule.
+"""
 
 from __future__ import annotations
 
@@ -11,9 +16,10 @@ import polars as pl
 
 MUSCLES = ["TA", "MG", "SOL", "RF"]
 FRAME_RATIO = 10
+N_FRAMES = 24
 
 
-def _trial_signal(trial_seed: int, n_frames: int = 20) -> np.ndarray:
+def _trial_signal(trial_seed: int, n_frames: int = N_FRAMES) -> np.ndarray:
     """Return a smooth nonnegative trial matrix shaped (frames, muscles)."""
     t = np.linspace(0.0, 1.0, n_frames, dtype=np.float32)
     basis = np.stack(
@@ -39,44 +45,133 @@ def _trial_signal(trial_seed: int, n_frames: int = 20) -> np.ndarray:
     return np.maximum(signal.astype(np.float32), 0.0)
 
 
-def _build_emg_table() -> pl.DataFrame:
-    """Build a small EMG table covering two subjects and four trials each."""
+def _event_rows_for_subject(subject: str) -> list[dict[str, object]]:
+    """Build two velocity groups: one valid mixed set and one filtered-out set."""
+    return [
+        {
+            "subject": subject,
+            "velocity": 1,
+            "trial_num": 1,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": 11,
+            "state": "step_L",
+            "step_TF": "step",
+            "RPS": "1",
+            "mixed": 1,
+        },
+        {
+            "subject": subject,
+            "velocity": 1,
+            "trial_num": 2,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": 13,
+            "state": "step_R",
+            "step_TF": "step",
+            "RPS": "2",
+            "mixed": 1,
+        },
+        {
+            "subject": subject,
+            "velocity": 1,
+            "trial_num": 3,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": np.nan,
+            "state": "nonstep",
+            "step_TF": "nonstep",
+            "RPS": "3",
+            "mixed": 1,
+        },
+        {
+            "subject": subject,
+            "velocity": 1,
+            "trial_num": 4,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": np.nan,
+            "state": "footlift",
+            "step_TF": "nonstep",
+            "RPS": "4",
+            "mixed": 1,
+        },
+        {
+            "subject": subject,
+            "velocity": 2,
+            "trial_num": 1,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": 10,
+            "state": "step_L",
+            "step_TF": "step",
+            "RPS": "5",
+            "mixed": 0,
+        },
+        {
+            "subject": subject,
+            "velocity": 2,
+            "trial_num": 2,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": 12,
+            "state": "step_R",
+            "step_TF": "step",
+            "RPS": "6",
+            "mixed": 0,
+        },
+        {
+            "subject": subject,
+            "velocity": 2,
+            "trial_num": 3,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": 14,
+            "state": "step_L",
+            "step_TF": "step",
+            "RPS": "7",
+            "mixed": 0,
+        },
+        {
+            "subject": subject,
+            "velocity": 2,
+            "trial_num": 4,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": 15,
+            "state": "step_R",
+            "step_TF": "step",
+            "RPS": "8",
+            "mixed": 0,
+        },
+    ]
+
+
+def _build_emg_table(event_rows: list[dict[str, object]]) -> pl.DataFrame:
+    """Build EMG rows that mirror the event-table trial structure."""
     rows: list[dict[str, object]] = []
-    for subject_idx, subject in enumerate(["S01", "S02"], start=1):
-        for velocity in [1, 2]:
-            for trial_num in [1, 2]:
-                trial_seed = subject_idx * 10 + velocity * 2 + trial_num
-                trial_signal = _trial_signal(trial_seed)
-                for mocap_frame in range(trial_signal.shape[0]):
-                    row = {
-                        "subject": subject,
-                        "velocity": velocity,
-                        "trial_num": trial_num,
-                        "MocapFrame": mocap_frame,
-                        "original_DeviceFrame": mocap_frame * FRAME_RATIO,
-                    }
-                    for muscle_idx, muscle in enumerate(MUSCLES):
-                        row[muscle] = float(trial_signal[mocap_frame, muscle_idx])
-                    rows.append(row)
+    for subject_idx, event_row in enumerate(event_rows, start=1):
+        trial_seed = subject_idx * 10 + int(event_row["velocity"]) * 2 + int(event_row["trial_num"])
+        trial_signal = _trial_signal(trial_seed)
+        for mocap_frame in range(trial_signal.shape[0]):
+            row = {
+                "subject": event_row["subject"],
+                "velocity": event_row["velocity"],
+                "trial_num": event_row["trial_num"],
+                "MocapFrame": mocap_frame,
+                "original_DeviceFrame": mocap_frame * FRAME_RATIO,
+            }
+            for muscle_idx, muscle in enumerate(MUSCLES):
+                row[muscle] = float(trial_signal[mocap_frame, muscle_idx])
+            rows.append(row)
     return pl.DataFrame(rows)
 
 
 def _build_event_table() -> pd.DataFrame:
     """Build trial-level event metadata in the MocapFrame domain."""
-    rows = []
+    rows: list[dict[str, object]] = []
     for subject in ["S01", "S02"]:
-        for velocity in [1, 2]:
-            for trial_num in [1, 2]:
-                rows.append(
-                    {
-                        "subject": subject,
-                        "velocity": velocity,
-                        "trial_num": trial_num,
-                        "platform_onset": 3,
-                        "platform_offset": 14,
-                        "step_onset": 11,
-                    }
-                )
+        rows.extend(_event_rows_for_subject(subject))
     return pd.DataFrame(rows)
 
 
@@ -88,8 +183,8 @@ def _write_yaml(path: Path, payload: str) -> None:
 def ensure_fixture_bundle(base_dir: Path) -> dict[str, Path]:
     """Create fixture data files and return their resolved paths."""
     base_dir.mkdir(parents=True, exist_ok=True)
-    emg_df = _build_emg_table()
     event_df = _build_event_table()
+    emg_df = _build_emg_table(event_df.to_dict(orient="records"))
 
     parquet_path = base_dir / "emg_fixture.parquet"
     csv_path = base_dir / "emg_fixture.csv"
@@ -111,7 +206,21 @@ def ensure_fixture_bundle(base_dir: Path) -> dict[str, Path]:
                 "windowing:",
                 f"  mocap_to_device_ratio: {FRAME_RATIO}",
                 "  onset_column: platform_onset",
-                "  offset_column: platform_offset",
+                "  offset_column: analysis_window_end",
+                "  selection:",
+                "    mixed_only: true",
+                "    mixed_column: mixed",
+                "    require_step_trials: 2",
+                "    require_nonstep_trials: 2",
+                "  surrogate_step_onset:",
+                "    enabled: true",
+                "    source_column: step_onset",
+                "    output_column: analysis_window_end",
+                "    step_class_column: step_TF",
+                "    step_value: step",
+                "    nonstep_value: nonstep",
+                "  stance_metadata:",
+                "    state_column: state",
                 "",
             ]
         ),
@@ -123,18 +232,26 @@ def ensure_fixture_bundle(base_dir: Path) -> dict[str, Path]:
                 "feature_extractor:",
                 "  type: nmf",
                 "  nmf:",
+                "    backend: sklearn_nmf",
                 "    vaf_threshold: 0.9",
                 "    max_components_to_try: 4",
                 "    fit_params:",
                 "      max_iter: 1000",
                 "      tol: 0.0001",
                 "synergy_clustering:",
-                "  algorithm: cuml_kmeans",
+                "  algorithm: sklearn_kmeans",
                 "  max_clusters: 4",
                 "  max_iter: 100",
                 "  repeats: 10",
                 "  random_state: 7",
                 "  disallow_within_trial_duplicate_assignment: true",
+                "  representative:",
+                "    h_output_interpolation:",
+                "      target_windows: 100",
+                "figures:",
+                "  format: png",
+                "  dpi: 120",
+                "  overview_columns: 2",
                 "",
             ]
         ),

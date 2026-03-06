@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from tests.helpers import read_final_parquet, repo_python
@@ -39,6 +40,17 @@ def test_fixture_run_writes_expected_artifacts(
 
     final_parquet = repo_root / "outputs" / "final.parquet"
     manifest_path = run_dir / "run_manifest.json"
+    trial_window_metadata = run_dir / "all_trial_window_metadata.csv"
+    subject_figure = run_dir / "figures" / "subject_S01_clusters.png"
+    overview_figure = run_dir / "figures" / "overview_all_subject_clusters.png"
     assert manifest_path.exists()
+    assert trial_window_metadata.exists()
+    assert subject_figure.exists()
+    assert overview_figure.exists()
     final_df = read_final_parquet(final_parquet)
     assert {"subject", "velocity", "trial_num"}.issubset(set(final_df.columns))
+    assert set(final_df["velocity"].unique().to_list()) == {1}
+
+    window_df = pd.read_csv(trial_window_metadata, encoding="utf-8-sig")
+    assert set(window_df["analysis_window_source"].unique()) == {"step_onset", "subject_velocity_mean_step_onset"}
+    assert window_df["analysis_window_is_surrogate"].astype(str).str.lower().eq("true").any()

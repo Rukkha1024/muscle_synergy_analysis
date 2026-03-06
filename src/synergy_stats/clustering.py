@@ -146,6 +146,17 @@ def _interpolate_series(values: np.ndarray, target_windows: int) -> np.ndarray:
     return np.interp(x_new, x_old, values).astype(np.float32)
 
 
+def _scalar_metadata(meta: dict[str, Any]) -> dict[str, Any]:
+    excluded = {"extractor_metric_elapsed_sec"}
+    exported = {}
+    for key, value in meta.items():
+        if key in excluded:
+            continue
+        if isinstance(value, (str, int, float, bool, np.integer, np.floating, np.bool_)) or pd.isna(value):
+            exported[key] = value
+    return exported
+
+
 def build_subject_exports(
     subject_id: str,
     feature_rows: list[SubjectFeatureResult],
@@ -153,6 +164,10 @@ def build_subject_exports(
     muscle_names: list[str],
     target_windows: int,
 ) -> dict[str, pd.DataFrame]:
+    trial_meta_lookup = {
+        (item.subject, item.velocity, item.trial_num): _scalar_metadata(item.bundle.meta)
+        for item in feature_rows
+    }
     metadata_df = pd.DataFrame(
         [
             {
@@ -175,6 +190,7 @@ def build_subject_exports(
                 "trial_num": sample["trial_num"],
                 "component_index": sample["component_index"],
                 "cluster_id": int(label),
+                **trial_meta_lookup.get((sample["subject"], sample["velocity"], sample["trial_num"]), {}),
             }
             for sample, label in zip(sample_map, labels)
         ]
@@ -187,10 +203,20 @@ def build_subject_exports(
     representative_h_rows = []
     minimal_w_rows = []
     minimal_h_rows = []
+    trial_window_rows = []
 
     for item in feature_rows:
         W = item.bundle.W_muscle
         H = item.bundle.H_time
+        trial_meta = trial_meta_lookup.get((item.subject, item.velocity, item.trial_num), {})
+        trial_window_rows.append(
+            {
+                "subject": item.subject,
+                "velocity": item.velocity,
+                "trial_num": item.trial_num,
+                **trial_meta,
+            }
+        )
         for component_index in range(W.shape[1]):
             for muscle_index, value in enumerate(W[:, component_index]):
                 minimal_w_rows.append(
@@ -201,6 +227,7 @@ def build_subject_exports(
                         "component_index": component_index,
                         "muscle": muscle_names[muscle_index],
                         "W_value": float(value),
+                        **trial_meta,
                     }
                 )
             interpolated_h = _interpolate_series(H[:, component_index], target_windows)
@@ -213,6 +240,7 @@ def build_subject_exports(
                         "component_index": component_index,
                         "frame_idx": frame_idx,
                         "h_value": float(value),
+                        **trial_meta,
                     }
                 )
 
@@ -234,6 +262,7 @@ def build_subject_exports(
                         "velocity": sample["velocity"],
                         "trial_num": sample["trial_num"],
                         "component_index": component_index,
+                        **trial_meta_lookup.get((sample["subject"], sample["velocity"], sample["trial_num"]), {}),
                     }
                 )
             representative_w = np.mean(np.stack(W_members, axis=1), axis=1)
@@ -268,6 +297,7 @@ def build_subject_exports(
         "rep_H_long": pd.DataFrame(representative_h_rows),
         "minimal_W": pd.DataFrame(minimal_w_rows),
         "minimal_H_long": pd.DataFrame(minimal_h_rows),
+        "trial_windows": pd.DataFrame(trial_window_rows).drop_duplicates(),
     }
 
 
@@ -281,6 +311,12 @@ def save_subject_outputs(subject_dir: Path, exports: dict[str, pd.DataFrame]) ->
         "rep_H_long": "representative_H_posthoc_long.csv",
         "minimal_W": "minimal_units_W.csv",
         "minimal_H_long": "minimal_units_H_long.csv",
+        "trial_windows": "trial_window_metadata.csv",
     }
     for key, filename in name_map.items():
-        exports.get(key, pd.DataFrame()).to_csv(subject_dir / filename, index=False, encoding="utf-8-sig")
+        exports.get(key, pd.DataFrame()).to_csv(
+            subject_dir / filename,
+            index=False,
+            encoding="utf-8-sig",
+            float_format="%.10f",
+        )

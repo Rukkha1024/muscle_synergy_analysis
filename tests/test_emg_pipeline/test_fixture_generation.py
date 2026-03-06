@@ -18,12 +18,12 @@ def test_emg_fixture_schema(fixture_bundle: dict[str, object]) -> None:
     required = {"subject", "velocity", "trial_num", "MocapFrame", "original_DeviceFrame"}
     assert required.issubset(df.columns)
     assert {"TA", "MG", "SOL", "RF"}.issubset(df.columns)
-    assert df.select(pl.len()).item() == 160
+    assert df.select(pl.len()).item() == 384
 
 
 def test_event_fixture_schema(fixture_bundle: dict[str, object]) -> None:
     """Event workbook stores the trial-level onset and offset contract."""
     df = pd.read_excel(fixture_bundle["xlsm"])
     assert set(["subject", "velocity", "trial_num"]).issubset(df.columns)
-    assert set(["platform_onset", "platform_offset", "step_onset"]).issubset(df.columns)
+    assert set(["platform_onset", "platform_offset", "step_onset", "step_TF", "state", "mixed"]).issubset(df.columns)
     assert df["platform_onset"].nunique() == 1

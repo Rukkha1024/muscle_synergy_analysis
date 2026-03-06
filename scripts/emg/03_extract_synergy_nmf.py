@@ -16,6 +16,14 @@ def run(context: dict) -> dict:
     for trial in context["trial_records"]:
         X_trial = trial.frame[muscle_names].to_numpy(dtype="float32")
         bundle = extract_trial_features(X_trial, cfg)
+        bundle.meta.update(
+            {
+                "subject": trial.key[0],
+                "velocity": trial.key[1],
+                "trial_num": trial.key[2],
+                **trial.metadata,
+            }
+        )
         feature_rows[trial.key[0]].append(
             SubjectFeatureResult(
                 subject=trial.key[0],

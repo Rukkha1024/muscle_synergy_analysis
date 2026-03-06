@@ -8,10 +8,15 @@ from typing import Any
 import pandas as pd
 
 from .clustering import build_subject_exports, save_subject_outputs
+from .figures import save_overview_figure, save_subject_cluster_figure
 
 
 def summarize_subject_results(subject_rows: list[dict[str, Any]]) -> pd.DataFrame:
     return pd.DataFrame(subject_rows)
+
+
+def _write_csv(frame: pd.DataFrame, path: Path) -> None:
+    frame.to_csv(path, index=False, encoding="utf-8-sig", float_format="%.10f")
 
 
 def export_results(context: dict[str, Any]) -> dict[str, Any]:
@@ -35,8 +40,11 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         "rep_H_long": [],
         "minimal_W": [],
         "minimal_H_long": [],
+        "trial_windows": [],
     }
     subject_summaries = []
+    subject_figure_paths: list[Path] = []
+    figure_dir = output_dir / "figures"
     for subject_id, payload in context["subject_results"].items():
         exports = build_subject_exports(
             subject_id=subject_id,
@@ -47,6 +55,16 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         )
         subject_dir = output_dir / f"subject_{subject_id}"
         save_subject_outputs(subject_dir, exports)
+        subject_figure_path = figure_dir / f"subject_{subject_id}_clusters.png"
+        save_subject_cluster_figure(
+            subject_id=subject_id,
+            rep_w=exports.get("rep_W", pd.DataFrame()),
+            rep_h=exports.get("rep_H_long", pd.DataFrame()),
+            muscle_names=muscle_names,
+            cfg=cfg,
+            output_path=subject_figure_path,
+        )
+        subject_figure_paths.append(subject_figure_path)
         for key in all_frames:
             frame = exports.get(key, pd.DataFrame())
             if not frame.empty:
@@ -59,11 +77,15 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
                 "status": payload["cluster_result"].get("status", "unknown"),
                 "duplicate_trials": str(payload["cluster_result"].get("duplicate_trials", [])),
                 "algorithm_used": payload["cluster_result"].get("algorithm_used", ""),
+                "subject_figure_path": str(subject_figure_path.relative_to(output_dir)),
             }
         )
 
+    overview_path = figure_dir / "overview_all_subject_clusters.png"
+    save_overview_figure(subject_figure_paths, cfg, overview_path)
+
     summary_df = summarize_subject_results(subject_summaries)
-    summary_df.to_csv(output_dir / "final_summary.csv", index=False, encoding="utf-8-sig")
+    _write_csv(summary_df, output_dir / "final_summary.csv")
 
     aggregate_name_map = {
         "metadata": "all_clustering_metadata.csv",
@@ -73,11 +95,12 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         "rep_H_long": "all_representative_H_posthoc_long.csv",
         "minimal_W": "all_minimal_units_W.csv",
         "minimal_H_long": "all_minimal_units_H_long.csv",
+        "trial_windows": "all_trial_window_metadata.csv",
     }
     final_parquet_frame = None
     for key, filename in aggregate_name_map.items():
         frame = pd.concat(all_frames[key], ignore_index=True) if all_frames[key] else pd.DataFrame()
-        frame.to_csv(output_dir / filename, index=False, encoding="utf-8-sig")
+        _write_csv(frame, output_dir / filename)
         if key == "minimal_W":
             final_parquet_frame = frame
 
@@ -88,4 +111,6 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     final_parquet_frame.to_parquet(final_parquet_path, index=False)
     context["artifacts"]["summary_path"] = str(output_dir / "final_summary.csv")
     context["artifacts"]["final_parquet_path"] = str(final_parquet_path)
+    context["artifacts"]["subject_figure_paths"] = [str(path) for path in subject_figure_paths]
+    context["artifacts"]["overview_figure_path"] = str(overview_path)
     return context

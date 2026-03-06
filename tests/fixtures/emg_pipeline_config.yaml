@@ -3,4 +3,18 @@
 windowing:
   mocap_to_device_ratio: 10
   onset_column: platform_onset
-  offset_column: platform_offset
+  offset_column: analysis_window_end
+  selection:
+    mixed_only: true
+    mixed_column: mixed
+    require_step_trials: 2
+    require_nonstep_trials: 2
+  surrogate_step_onset:
+    enabled: true
+    source_column: step_onset
+    output_column: analysis_window_end
+    step_class_column: step_TF
+    step_value: step
+    nonstep_value: nonstep
+  stance_metadata:
+    state_column: state

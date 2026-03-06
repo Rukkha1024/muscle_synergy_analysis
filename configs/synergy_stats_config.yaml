@@ -1,5 +1,7 @@
 ﻿muscles:
   names: ["TA", "EHL", "MG", "SOL", "PL", "RF", "VL", "ST", "RA", "EO", "IO", "SCM", "GM", "ESC", "EST", "ESL"]
+
+
 feature_extractor:
   type: "nmf"
   nmf:
@@ -11,6 +13,8 @@ feature_extractor:
       max_iter: 1000
       tol: 0.0001
       beta: 2
+
+      
 synergy_clustering:
   algorithm: "cuml_kmeans"
   disallow_within_trial_duplicate_assignment: true
@@ -21,3 +25,8 @@ synergy_clustering:
   representative:
     h_output_interpolation:
       target_windows: 100
+
+figures:
+  format: "png"
+  dpi: 150
+  overview_columns: 2
