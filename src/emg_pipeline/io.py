@@ -222,16 +222,14 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
         if pd.isna(step_mean):
             raise ValueError(f"No valid step_onset donor for subject={subject}")
         step_latency_mean = float((group.loc[step_mask, actual_step_column] - group.loc[step_mask, onset_column]).mean())
-        # Latency mean is exported as metadata, but it is not required for the
-        # README-aligned surrogate rule (absolute mean step_onset).
         if pd.isna(step_latency_mean):
-            step_latency_mean = float("nan")
+            raise ValueError(f"No valid step latency donor for subject={subject}")
         nonstep_mask_group = group["analysis_is_nonstep"]
         if nonstep_mask_group.any():
             if surrogate_enabled:
-                # README contract: nonstep trials use the subject's mean step_onset
-                # (absolute event time) as the surrogate window end.
-                prepared.loc[group.index[nonstep_mask_group], output_column] = step_mean
+                prepared.loc[group.index[nonstep_mask_group], output_column] = (
+                    group.loc[nonstep_mask_group, onset_column] + step_latency_mean
+                )
                 prepared.loc[group.index[nonstep_mask_group], "analysis_window_source"] = "subject_mean_step_onset"
                 prepared.loc[group.index[nonstep_mask_group], "analysis_window_is_surrogate"] = True
             elif group.loc[nonstep_mask_group, actual_step_column].isna().any():
