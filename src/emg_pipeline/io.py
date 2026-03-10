@@ -221,10 +221,15 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
         step_mean = float(group.loc[step_mask, actual_step_column].mean())
         if pd.isna(step_mean):
             raise ValueError(f"No valid step_onset donor for subject={subject}")
+        step_latency_mean = float((group.loc[step_mask, actual_step_column] - group.loc[step_mask, onset_column]).mean())
+        if pd.isna(step_latency_mean):
+            raise ValueError(f"No valid step latency donor for subject={subject}")
         nonstep_mask_group = group["analysis_is_nonstep"]
         if nonstep_mask_group.any():
             if surrogate_enabled:
-                prepared.loc[group.index[nonstep_mask_group], output_column] = step_mean
+                prepared.loc[group.index[nonstep_mask_group], output_column] = (
+                    group.loc[nonstep_mask_group, onset_column] + step_latency_mean
+                )
                 prepared.loc[group.index[nonstep_mask_group], "analysis_window_source"] = "subject_mean_step_onset"
                 prepared.loc[group.index[nonstep_mask_group], "analysis_window_is_surrogate"] = True
             elif group.loc[nonstep_mask_group, actual_step_column].isna().any():
@@ -233,6 +238,7 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
                     f"subject={subject}"
                 )
         prepared.loc[group.index, "analysis_subject_mean_step_onset"] = step_mean
+        prepared.loc[group.index, "analysis_subject_mean_step_latency"] = step_latency_mean
 
     return prepared
 
