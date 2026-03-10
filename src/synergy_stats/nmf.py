@@ -23,7 +23,10 @@ def _fit_rank_sklearn(X_trial: np.ndarray, rank: int, cfg: dict[str, Any]):
     from sklearn.decomposition import NMF
     from sklearn.exceptions import ConvergenceWarning
 
-    max_iter = max(int(cfg.get("fit_params", {}).get("max_iter", 1000)), 5000)
+    # Respect the centralized YAML config; do not silently override iteration caps.
+    max_iter = int(cfg.get("fit_params", {}).get("max_iter", 1000))
+    if max_iter < 1:
+        raise ValueError(f"fit_params.max_iter must be >= 1 (got {max_iter}).")
     model = NMF(
         n_components=rank,
         init="nndsvda",
@@ -44,8 +47,11 @@ def _fit_rank_torchnmf(X_trial: np.ndarray, rank: int, cfg: dict[str, Any]):
 
     X = torch.from_numpy(X_trial.astype(np.float32))
     model = torchnmf.nmf.NMF(X.shape, rank=rank)
+    max_iter = int(cfg.get("fit_params", {}).get("max_iter", 1000))
+    if max_iter < 1:
+        raise ValueError(f"fit_params.max_iter must be >= 1 (got {max_iter}).")
     fit_kwargs = {
-        "max_iter": int(cfg.get("fit_params", {}).get("max_iter", 1000)),
+        "max_iter": max_iter,
         "tol": float(cfg.get("fit_params", {}).get("tol", 1e-4)),
     }
     beta = cfg.get("fit_params", {}).get("beta")

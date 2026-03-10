@@ -176,7 +176,6 @@ def test_cluster_stage_rejects_selected_trials_without_exactly_one_group(
     context = {
         "config": {
             "synergy_clustering": {
-                "grouping": {"mode": "global_step_nonstep"},
                 "algorithm": "sklearn_kmeans",
                 "max_clusters": 2,
                 "max_iter": 10,
@@ -188,6 +187,27 @@ def test_cluster_stage_rejects_selected_trials_without_exactly_one_group(
         "feature_rows": feature_rows,
     }
     with pytest.raises(ValueError, match="exactly one global group"):
+        run_stage(context)
+
+
+def test_cluster_stage_rejects_legacy_grouping_key(repo_root) -> None:
+    """Legacy configs should not include a `synergy_clustering.grouping` section."""
+    run_stage = _load_cluster_stage_run(repo_root)
+    context = {
+        "config": {
+            "synergy_clustering": {
+                "grouping": {"mode": "global_step_nonstep"},
+                "algorithm": "sklearn_kmeans",
+                "max_clusters": 2,
+                "max_iter": 10,
+                "repeats": 1,
+                "random_state": 7,
+                "disallow_within_trial_duplicate_assignment": True,
+            }
+        },
+        "feature_rows": [],
+    }
+    with pytest.raises(ValueError, match="grouping` is no longer supported"):
         run_stage(context)
 
 

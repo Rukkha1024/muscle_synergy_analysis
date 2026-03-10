@@ -23,9 +23,12 @@ def _meta_flag(meta: dict, key: str) -> bool:
 
 def run(context: dict) -> dict:
     cfg = context["config"]
-    grouping_mode = str(cfg["synergy_clustering"].get("grouping", {}).get("mode", "global_step_nonstep")).strip().lower()
-    if grouping_mode != "global_step_nonstep":
-        raise ValueError(f"Unsupported grouping mode: {grouping_mode}")
+    # Grouping is intentionally fixed to global step vs nonstep.
+    if "grouping" in cfg.get("synergy_clustering", {}):
+        raise ValueError(
+            "`synergy_clustering.grouping` is no longer supported. "
+            "Remove it from the YAML config; global grouping is fixed to step vs nonstep."
+        )
 
     grouped_rows = {
         "global_step": [],

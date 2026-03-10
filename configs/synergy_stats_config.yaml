@@ -16,8 +16,6 @@ feature_extractor:
 
       
 synergy_clustering:
-  grouping:
-    mode: "global_step_nonstep"
   algorithm: "cuml_kmeans"
   disallow_within_trial_duplicate_assignment: true
   max_clusters: 12

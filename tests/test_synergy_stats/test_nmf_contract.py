@@ -67,3 +67,66 @@ def test_nmf_returns_normalized_weights_and_vaf() -> None:
     norms = np.linalg.norm(np.asarray(w_muscle), axis=0)
     assert np.allclose(norms, np.ones_like(norms), atol=1e-3)
     assert float(meta["vaf"]) >= 0.9
+
+
+def test_nmf_rejects_nonpositive_max_iter_for_sklearn_backend() -> None:
+    """Non-positive max_iter should raise a clear error (sklearn backend)."""
+    try:
+        nmf_func, _, _ = resolve_callable(
+            [
+                "src.synergy_stats",
+                "src.synergy_stats.nmf",
+                "src.synergy_stats.pipeline",
+            ],
+            [
+                "run_trial_nmf",
+                "trial_nmf",
+                "_trial_nmf",
+            ],
+        )
+    except LookupError as exc:
+        pytest.xfail(f"NMF callable is not implemented yet: {exc}")
+
+    x_trial = _synthetic_trial_matrix()
+    cfg = {
+        "backend": "sklearn_nmf",
+        "vaf_threshold": 0.9,
+        "max_components_to_try": 2,
+        "fit_params": {"max_iter": 0, "tol": 1e-4},
+    }
+    with pytest.raises(ValueError, match="max_iter must be >= 1"):
+        nmf_func(x_trial.copy(), cfg)
+
+
+def test_nmf_rejects_nonpositive_max_iter_for_torchnmf_backend() -> None:
+    """Non-positive max_iter should raise a clear error (torchnmf backend)."""
+    try:
+        import torchnmf  # noqa: F401
+    except Exception:
+        pytest.skip("torchnmf is not available in this environment.")
+
+    try:
+        nmf_func, _, _ = resolve_callable(
+            [
+                "src.synergy_stats",
+                "src.synergy_stats.nmf",
+                "src.synergy_stats.pipeline",
+            ],
+            [
+                "run_trial_nmf",
+                "trial_nmf",
+                "_trial_nmf",
+            ],
+        )
+    except LookupError as exc:
+        pytest.xfail(f"NMF callable is not implemented yet: {exc}")
+
+    x_trial = _synthetic_trial_matrix()
+    cfg = {
+        "backend": "torchnmf",
+        "vaf_threshold": 0.9,
+        "max_components_to_try": 2,
+        "fit_params": {"max_iter": 0, "tol": 1e-4},
+    }
+    with pytest.raises(ValueError, match="max_iter must be >= 1"):
+        nmf_func(x_trial.copy(), cfg)
