@@ -2,7 +2,7 @@
 
 이 저장소는 platform translation perturbation 과제에서 수집된 EMG parquet와 이벤트 xlsm을 입력으로 받아, `subject-velocity-trial` 단위 trial을 정의하고 step과 non-step 비교를 위한 근육 시너지를 추출하는 파이프라인이다. 문서의 설명 순서는 실행 가이드보다 분석 설계와 처리 절차를 먼저 제시하는 방법론 형식을 따른다.
 
-기본 분석 구간은 `platform_onset ~ analysis_window_end`이며, step trial은 실제 `step_onset`을 종료점으로 사용하고 nonstep trial은 같은 피험자에서 선택된 comparison velocity의 step trial 평균 `step_onset`을 surrogate 종료점으로 사용한다. 최종 산출물은 trial window provenance와 함께, `mixed comparison` 필터를 통과한 전체 step 집단과 전체 nonstep 집단에 대해 계산한 representative synergy 및 figure를 포함한다.
+기본 분석 구간은 `platform_onset ~ analysis_window_end`이며, step trial은 실제 `step_onset`을 종료점으로 사용한다. 반면 nonstep trial은 실제 step event가 존재하지 않으므로, 같은 피험자에서 선택된 comparison velocity의 step trial 평균 step latency(`step_onset - platform_onset`)를 적용하여 `analysis_window_end = platform_onset + mean(step_onset - platform_onset)` 형태의 surrogate 종료점을 사용한다. 최종 산출물은 trial window provenance와 함께, `mixed comparison` 필터를 통과한 전체 step 집단과 전체 nonstep 집단에 대해 계산한 representative synergy 및 figure를 포함한다.
 
 ## 1. 분석 목적과 비교 단위
 
@@ -75,7 +75,7 @@ EMG parquet는 최소한 아래 컬럼을 포함해야 한다.
 
 분석 창 정의는 [configs/emg_pipeline_config.yaml](configs/emg_pipeline_config.yaml)의 `windowing` 설정을 따른다. 시작 이벤트는 항상 `platform_onset`이며, 종료 이벤트는 파생 컬럼 `analysis_window_end`로 통일한다.
 
-step trial의 경우 실제 `step_onset`이 `analysis_window_end`로 직접 사용된다. 반면 nonstep trial은 실제 step event가 존재하지 않으므로, 같은 피험자에서 선택된 comparison velocity의 step trial 평균 `step_onset`을 surrogate 종료점으로 사용한다. 이 규칙은 step과 non-step을 동일한 시간 기준에서 비교하기 위한 것으로, 결과 메타데이터에는 실제 종료점인지 surrogate 종료점인지가 함께 기록된다.
+step trial의 경우 실제 `step_onset`이 `analysis_window_end`로 직접 사용된다. 반면 nonstep trial은 실제 step event가 존재하지 않으므로, 같은 피험자에서 선택된 comparison velocity의 step trial 평균 step latency(`step_onset - platform_onset`)를 적용하여 `analysis_window_end = platform_onset + mean(step_onset - platform_onset)` 형태로 surrogate 종료점을 정의한다. 이 규칙은 step과 non-step을 동일한 시간 기준에서 비교하기 위한 것으로, 결과 메타데이터에는 실제 종료점인지 surrogate 종료점인지가 함께 기록된다.
 
 이전과 같이 `platform_onset ~ platform_offset` 구간을 사용하려면 `windowing.offset_column`을 `platform_offset`으로 바꾸고 mixed selection을 비활성화하면 된다. 다만 현재 README가 설명하는 기본 방법론은 `platform_onset ~ step_onset` 비교 구조를 전제로 한다.
 
