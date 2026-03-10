@@ -5,13 +5,26 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib
-
-matplotlib.use("Agg", force=True)
-import matplotlib.pyplot as plt
 import pandas as pd
 
 
 SUPPORTED_FIGURE_FORMATS = {"png", "jpg", "jpeg", "tif", "tiff"}
+
+_PYPLOT = None
+
+
+def _pyplot():
+    global _PYPLOT
+    if _PYPLOT is not None:
+        return _PYPLOT
+    try:
+        matplotlib.use("Agg", force=True)
+    except Exception:
+        pass
+    import matplotlib.pyplot as plt
+
+    _PYPLOT = plt
+    return plt
 
 
 def _figure_cfg(cfg: dict) -> dict:
@@ -51,6 +64,7 @@ def save_group_cluster_figure(
     cfg: dict,
     output_path: Path,
 ) -> None:
+    plt = _pyplot()
     cluster_ids = sorted(rep_w["cluster_id"].dropna().unique().tolist()) if not rep_w.empty else []
     n_clusters = max(len(cluster_ids), 1)
     fig, axes = plt.subplots(n_clusters, 2, figsize=(14, 3.5 * n_clusters), squeeze=False)
