@@ -327,3 +327,67 @@ def test_event_preparation_step_latency_means_are_per_subject_velocity(
     assert float(v2_step["analysis_subject_mean_step_onset"]) == pytest.approx(23.0)
     assert float(v1_step["analysis_subject_mean_step_latency"]) == pytest.approx(10.0)
     assert float(v2_step["analysis_subject_mean_step_latency"]) == pytest.approx(20.0)
+
+
+def test_event_preparation_major_step_side_does_not_leak_across_velocities(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """Major step side/stance inference should be scoped to (subject, velocity)."""
+    cfg = deepcopy(load_pipeline_config(str(fixture_bundle["global_config"])))
+    cfg["windowing"]["surrogate_step_onset"]["enabled"] = False
+
+    path = _write_event_workbook(
+        tmp_path,
+        platform_rows=[
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 13,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "11",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 2,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 12,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "12",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 2,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 22,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "21",
+                "mixed": 1,
+            },
+        ],
+        transpose_meta_rows=[{"subject": "S01", "나이": 24, "주손 or 주발": "R"}],
+        name="major_side_per_velocity.xlsx",
+    )
+
+    prepared = load_event_metadata(str(path), cfg)
+    v1_nonstep = prepared.loc[(prepared["subject"] == "S01") & (prepared["velocity"] == 1) & (prepared["trial_num"] == 2)].iloc[0]
+    v2_nonstep = prepared.loc[(prepared["subject"] == "S01") & (prepared["velocity"] == 2) & (prepared["trial_num"] == 1)].iloc[0]
+
+    assert bool(v1_nonstep["analysis_selected_group"]) is True
+    assert bool(v2_nonstep["analysis_selected_group"]) is True
+    assert v1_nonstep["analysis_major_step_side"] == "step_r"
+    assert v1_nonstep["analysis_stance_side"] == "left"
+    assert v2_nonstep["analysis_major_step_side"] == ""
+    assert v2_nonstep["analysis_stance_side"] == ""
