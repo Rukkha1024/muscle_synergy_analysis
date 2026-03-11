@@ -362,18 +362,33 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
             if missing_donor_mask.any():
                 if "platform_offset" not in prepared.columns:
                     raise ValueError("platform_offset is required to window donorless nonstep trials.")
+                missing_platform_offset_mask = missing_donor_mask & prepared["platform_offset"].isna()
+                if missing_platform_offset_mask.any():
+                    bad_keys = (
+                        prepared.loc[missing_platform_offset_mask, ["subject", "velocity", "trial_num"]]
+                        .drop_duplicates()
+                        .to_dict(orient="records")
+                    )
+                    logging.warning(
+                        "Dropping selected donorless nonstep rows with missing platform_offset: %s",
+                        bad_keys,
+                    )
+                    prepared.loc[missing_platform_offset_mask, "analysis_selected_group"] = False
+                    missing_donor_mask = missing_donor_mask & ~missing_platform_offset_mask
+
                 bad_groups = (
                     prepared.loc[missing_donor_mask, ["subject", "velocity"]]
                     .drop_duplicates()
                     .to_dict(orient="records")
                 )
-                logging.warning(
-                    "No eligible step donor found for selected nonstep group(s); using platform_offset: %s",
-                    bad_groups,
-                )
-                prepared.loc[missing_donor_mask, output_column] = prepared.loc[missing_donor_mask, "platform_offset"]
-                prepared.loc[missing_donor_mask, "analysis_window_source"] = _source_label("platform_offset")
-                prepared.loc[missing_donor_mask, "analysis_window_is_surrogate"] = False
+                if bad_groups:
+                    logging.warning(
+                        "No eligible step donor found for selected nonstep group(s); using platform_offset: %s",
+                        bad_groups,
+                    )
+                    prepared.loc[missing_donor_mask, output_column] = prepared.loc[missing_donor_mask, "platform_offset"]
+                    prepared.loc[missing_donor_mask, "analysis_window_source"] = _source_label("platform_offset")
+                    prepared.loc[missing_donor_mask, "analysis_window_is_surrogate"] = False
 
             surrogate_mask = selected_nonstep_mask & ~missing_donor_mask
             if surrogate_mask.any():

@@ -56,6 +56,70 @@ def test_merge_event_metadata_rejects_fractional_trial_num() -> None:
         merge_event_metadata(emg_df, event_df)
 
 
+def test_donorless_nonstep_group_slices_using_platform_offset(
+    fixture_bundle: dict[str, object],
+    tmp_path,
+) -> None:
+    """Donorless nonstep trials should still slice when platform_offset exists."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    workbook_path = tmp_path / "donorless_nonstep_slice.xlsx"
+    platform_rows = [
+        {
+            "subject": "S99",
+            "velocity": 1,
+            "trial": 1,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": 11,
+            "state": "step_L",  # contralateral for dominant=R => filtered out
+            "step_TF": "step",
+            "RPS": "1",
+            "mixed": 1,
+        },
+        {
+            "subject": "S99",
+            "velocity": 1,
+            "trial": 2,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": pd.NA,
+            "state": "nonstep",
+            "step_TF": "nonstep",
+            "RPS": "2",
+            "mixed": 1,
+        },
+    ]
+    meta = pd.DataFrame(
+        {
+            "subject": ["나이", "주손 or 주발"],
+            "S99": [24, "R"],
+        }
+    )
+    with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
+        pd.DataFrame(platform_rows).to_excel(writer, sheet_name="platform", index=False)
+        meta.to_excel(writer, sheet_name="meta", index=False)
+
+    event_df = load_event_metadata(str(workbook_path), cfg)
+    assert event_df.loc[event_df["analysis_selected_group"]].shape[0] == 1
+
+    mocap_frames = list(range(21))
+    emg_df = pd.DataFrame(
+        {
+            "subject": ["S99"] * len(mocap_frames),
+            "velocity": [1] * len(mocap_frames),
+            "trial_num": [2] * len(mocap_frames),
+            "MocapFrame": mocap_frames,
+            "original_DeviceFrame": [frame * 10 for frame in mocap_frames],
+        }
+    )
+    merged = merge_event_metadata(emg_df, event_df)
+    records = build_trial_records(merged, cfg)
+    assert len(records) == 1
+    record = records[0]
+    assert int(record.frame["DeviceFrame"].max()) == 150
+    assert record.metadata["analysis_window_source"] == "platform_offset"
+
+
 def test_legacy_platform_offset_window_remains_configurable(
     fixture_bundle: dict[str, object],
 ) -> None:
