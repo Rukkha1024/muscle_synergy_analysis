@@ -28,5 +28,8 @@ def test_event_fixture_schema(fixture_bundle: dict[str, object]) -> None:
     assert set(["platform_onset", "platform_offset", "step_onset", "step_TF", "state", "mixed"]).issubset(platform.columns)
     assert platform["platform_onset"].nunique() == 1
 
-    transpose_meta = pd.read_excel(fixture_bundle["xlsm"], sheet_name="transpose_meta")
-    assert set(["subject", "나이", "주손 or 주발"]).issubset(transpose_meta.columns)
+    meta = pd.read_excel(fixture_bundle["xlsm"], sheet_name="meta")
+    assert "subject" in meta.columns
+    assert {"S01", "S02"}.issubset(set(meta.columns))
+    fields = set(meta["subject"].astype(str).str.strip().tolist())
+    assert set(["나이", "주손 or 주발"]).issubset(fields)

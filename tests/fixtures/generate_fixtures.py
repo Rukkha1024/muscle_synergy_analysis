@@ -17,6 +17,7 @@ import polars as pl
 MUSCLES = ["TA", "MG", "SOL", "RF"]
 FRAME_RATIO = 10
 N_FRAMES = 24
+META_FIELDS = ["나이", "주손 or 주발"]
 
 
 def _trial_signal(trial_seed: int, n_frames: int = N_FRAMES) -> np.ndarray:
@@ -197,15 +198,16 @@ def ensure_fixture_bundle(base_dir: Path) -> dict[str, Path]:
     emg_df.write_parquet(parquet_path)
     emg_df.to_pandas().to_csv(csv_path, index=False, encoding="utf-8-sig")
     platform_df = event_df.rename(columns={"trial_num": "trial"})
-    transpose_meta_df = pd.DataFrame(
-        [
-            {"subject": "S01", "나이": 24, "주손 or 주발": "R"},
-            {"subject": "S02", "나이": 24, "주손 or 주발": "L"},
-        ]
+    meta_df = pd.DataFrame(
+        {
+            "subject": META_FIELDS,
+            "S01": [24, "R"],
+            "S02": [24, "L"],
+        }
     )
     with pd.ExcelWriter(xlsm_path, engine="openpyxl") as writer:
         platform_df.to_excel(writer, sheet_name="platform", index=False)
-        transpose_meta_df.to_excel(writer, sheet_name="transpose_meta", index=False)
+        meta_df.to_excel(writer, sheet_name="meta", index=False)
 
     _write_yaml(
         emg_config_path,

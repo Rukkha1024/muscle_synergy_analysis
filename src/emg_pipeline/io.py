@@ -7,6 +7,7 @@ returns a table that can be merged directly onto EMG rows.
 
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ import polars as pl
 
 
 BASE_KEYS = ["subject", "velocity", "trial_num"]
+META_REQUIRED_FIELDS = ["나이", "주손 or 주발"]
 
 
 def _normalize_dominant_side(value: Any) -> str:
@@ -37,6 +39,68 @@ def _safe_read_excel(path: Path, *, sheet_name: str | int | None = None) -> pl.D
         return pl.from_pandas(table)
 
 
+def _load_subject_meta_from_meta_sheet(path: Path) -> pl.DataFrame:
+    meta_raw = _safe_read_excel(path, sheet_name="meta")
+    if "subject" not in meta_raw.columns:
+        raise ValueError("meta sheet must contain `subject` column for field labels.")
+
+    meta_raw = meta_raw.rename({"subject": "field"}).with_columns(
+        pl.col("field").cast(pl.Utf8, strict=False).str.strip_chars()
+    )
+    meta_filtered = meta_raw.filter(pl.col("field").is_in(META_REQUIRED_FIELDS))
+    present_fields = set(meta_filtered.get_column("field").to_list())
+    missing_fields = sorted(set(META_REQUIRED_FIELDS) - present_fields)
+    if missing_fields:
+        raise ValueError(f"meta sheet missing required field rows: {missing_fields}")
+
+    meta_long = meta_filtered.melt(id_vars=["field"], variable_name="subject", value_name="value")
+    meta_wide = meta_long.pivot(index="subject", columns="field", values="value", aggregate_function="first")
+    meta_wide = meta_wide.with_columns(pl.col("subject").cast(pl.Utf8, strict=False).str.strip_chars())
+
+    dupe_mask = meta_wide.get_column("subject").is_duplicated()
+    if dupe_mask.any():
+        duplicates = meta_wide.filter(dupe_mask).get_column("subject").unique().to_list()
+        raise ValueError(f"meta sheet has duplicate subjects: {duplicates}")
+
+    return meta_wide.select(["subject"] + META_REQUIRED_FIELDS)
+
+
+def _load_subject_meta_from_transpose_meta_sheet(path: Path) -> pl.DataFrame:
+    meta = _safe_read_excel(path, sheet_name="transpose_meta")
+    meta_required = {"subject", *META_REQUIRED_FIELDS}
+    meta_missing = sorted(meta_required - set(meta.columns))
+    if meta_missing:
+        raise ValueError(f"transpose_meta sheet missing required columns: {meta_missing}")
+
+    meta = (
+        meta.select(["subject"] + META_REQUIRED_FIELDS)
+        .with_columns(
+            pl.col("subject").cast(pl.Utf8, strict=False).str.strip_chars(),
+            pl.col("나이").cast(pl.Int64, strict=False),
+            pl.col("주손 or 주발").cast(pl.Utf8, strict=False).str.strip_chars().str.to_uppercase(),
+        )
+    )
+
+    dupe_mask = meta.get_column("subject").is_duplicated()
+    if dupe_mask.any():
+        duplicates = meta.filter(dupe_mask).get_column("subject").unique().to_list()
+        raise ValueError(f"transpose_meta has duplicate subjects: {duplicates}")
+
+    return meta
+
+
+def _load_subject_meta(path: Path) -> pl.DataFrame:
+    try:
+        meta = _load_subject_meta_from_meta_sheet(path)
+        return meta.with_columns(
+            pl.col("나이").cast(pl.Int64, strict=False),
+            pl.col("주손 or 주발").cast(pl.Utf8, strict=False).str.strip_chars().str.to_uppercase(),
+        )
+    except Exception as exc:
+        logging.warning("Failed to read subject meta from `meta` sheet; falling back to `transpose_meta`: %s", exc)
+        return _load_subject_meta_from_transpose_meta_sheet(path)
+
+
 def _load_platform_with_subject_meta(path: Path) -> pd.DataFrame:
     platform = _safe_read_excel(path, sheet_name="platform")
     if "trial" in platform.columns and "trial_num" not in platform.columns:
@@ -52,29 +116,7 @@ def _load_platform_with_subject_meta(path: Path) -> pd.DataFrame:
         pl.col("trial_num").cast(pl.Int64, strict=False),
     )
 
-    try:
-        meta = _safe_read_excel(path, sheet_name="transpose_meta")
-    except Exception as exc:
-        raise ValueError("event workbook must contain `transpose_meta` sheet for replace_V3D filtering.") from exc
-
-    meta_required = {"subject", "나이", "주손 or 주발"}
-    meta_missing = sorted(meta_required - set(meta.columns))
-    if meta_missing:
-        raise ValueError(f"transpose_meta sheet missing required columns: {meta_missing}")
-
-    meta = (
-        meta.select(["subject", "나이", "주손 or 주발"])
-        .with_columns(
-            pl.col("subject").cast(pl.Utf8, strict=False).str.strip_chars(),
-            pl.col("나이").cast(pl.Int64, strict=False),
-            pl.col("주손 or 주발").cast(pl.Utf8, strict=False).str.strip_chars().str.to_uppercase(),
-        )
-    )
-
-    dupe_mask = meta.get_column("subject").is_duplicated()
-    if dupe_mask.any():
-        duplicates = meta.filter(dupe_mask).get_column("subject").unique().to_list()
-        raise ValueError(f"transpose_meta has duplicate subjects: {duplicates}")
+    meta = _load_subject_meta(path)
 
     merged = platform.join(meta, on="subject", how="left")
     missing_meta_subjects = (
@@ -85,7 +127,7 @@ def _load_platform_with_subject_meta(path: Path) -> pd.DataFrame:
         .to_list()
     )
     if missing_meta_subjects:
-        raise ValueError(f"Missing transpose_meta rows for subject(s): {missing_meta_subjects}")
+        logging.warning("Missing subject meta for subject(s): %s", missing_meta_subjects)
 
     return merged.to_pandas(use_pyarrow_extension_array=False)
 
@@ -263,6 +305,18 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
         raise ValueError("No trials remain after replace_V3D meta prefilter selection.")
 
     selected_step_mask = prepared["analysis_selected_group"] & prepared["analysis_is_step"]
+    missing_step_onset_mask = selected_step_mask & prepared[actual_step_column].isna()
+    if missing_step_onset_mask.any():
+        bad_keys = (
+            prepared.loc[missing_step_onset_mask, ["subject", "velocity", "trial_num"]]
+            .drop_duplicates()
+            .to_dict(orient="records")
+        )
+        logging.warning("Dropping selected step rows with missing %s: %s", actual_step_column, bad_keys)
+        prepared.loc[missing_step_onset_mask, "analysis_selected_group"] = False
+        selected_step_mask = prepared["analysis_selected_group"] & prepared["analysis_is_step"]
+        if not prepared["analysis_selected_group"].any():
+            raise ValueError("No trials remain after replace_V3D meta prefilter selection and step_onset requirement.")
 
     subject_major = (
         prepared.loc[selected_step_mask]
@@ -280,13 +334,24 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
     prepared.loc[nonstep_mask, "analysis_stance_side"] = prepared.loc[nonstep_mask, "analysis_major_step_side"].map(_major_stance_from_step_state)
 
     selected_nonstep_mask = prepared["analysis_selected_group"] & prepared["analysis_is_nonstep"]
-    if surrogate_enabled and selected_nonstep_mask.any() and (not selected_step_mask.any()):
-        bad_groups = (
-            prepared.loc[selected_nonstep_mask, ["subject", "velocity"]]
-            .drop_duplicates()
-            .to_dict(orient="records")
-        )
-        raise ValueError(f"Selected nonstep trial has no eligible step donor in subject-velocity group(s): {bad_groups}")
+    if surrogate_enabled and selected_nonstep_mask.any():
+        group_has_step = selected_step_mask.groupby([prepared["subject"], prepared["velocity"]]).transform("any")
+        invalid_nonstep_mask = selected_nonstep_mask & ~group_has_step
+        if invalid_nonstep_mask.any():
+            bad_groups = (
+                prepared.loc[invalid_nonstep_mask, ["subject", "velocity"]]
+                .drop_duplicates()
+                .to_dict(orient="records")
+            )
+            logging.warning(
+                "Dropping selected nonstep rows without eligible step donors in subject-velocity group(s): %s",
+                bad_groups,
+            )
+            prepared.loc[invalid_nonstep_mask, "analysis_selected_group"] = False
+            selected_step_mask = prepared["analysis_selected_group"] & prepared["analysis_is_step"]
+            selected_nonstep_mask = prepared["analysis_selected_group"] & prepared["analysis_is_nonstep"]
+            if not prepared["analysis_selected_group"].any():
+                raise ValueError("No trials remain after replace_V3D meta prefilter selection and donor requirement.")
 
     prepared[output_column] = pd.NA
     prepared.loc[selected_step_mask, output_column] = prepared.loc[selected_step_mask, actual_step_column]

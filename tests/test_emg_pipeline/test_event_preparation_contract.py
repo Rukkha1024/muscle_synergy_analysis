@@ -16,6 +16,16 @@ import pytest
 from src.emg_pipeline import load_event_metadata, load_pipeline_config
 
 
+def _transpose_meta_rows_to_meta_sheet(transpose_meta_rows: list[dict[str, object]]) -> pd.DataFrame:
+    """Convert subject-row meta into the `meta` sheet layout (field x subject)."""
+    fields = ["나이", "주손 or 주발"]
+    payload: dict[str, list[object]] = {"subject": fields}
+    for row in transpose_meta_rows:
+        subject = str(row["subject"])
+        payload[subject] = [row.get("나이"), row.get("주손 or 주발")]
+    return pd.DataFrame(payload)
+
+
 def _write_event_workbook(
     tmp_path: Path,
     *,
@@ -27,15 +37,15 @@ def _write_event_workbook(
     workbook_path = tmp_path / name
     with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
         pd.DataFrame(platform_rows).to_excel(writer, sheet_name="platform", index=False)
-        pd.DataFrame(transpose_meta_rows).to_excel(writer, sheet_name="transpose_meta", index=False)
+        _transpose_meta_rows_to_meta_sheet(transpose_meta_rows).to_excel(writer, sheet_name="meta", index=False)
     return workbook_path
 
 
-def test_event_preparation_fails_without_step_donor(
+def test_event_preparation_drops_selected_nonstep_rows_without_step_donor(
     fixture_bundle: dict[str, Path],
     tmp_path: Path,
 ) -> None:
-    """A mixed group without valid step donors should fail early."""
+    """Selected nonstep rows without eligible step donors should be unselected instead of crashing."""
     cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
     invalid_path = _write_event_workbook(
         tmp_path,
@@ -64,13 +74,102 @@ def test_event_preparation_fails_without_step_donor(
                 "RPS": "2",
                 "mixed": 1,
             },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 11,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "3",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 2,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": np.nan,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "4",
+                "mixed": 1,
+            },
         ],
-        transpose_meta_rows=[{"subject": "S99", "나이": 20, "주손 or 주발": "R"}],
+        transpose_meta_rows=[
+            {"subject": "S99", "나이": 20, "주손 or 주발": "R"},
+            {"subject": "S01", "나이": 24, "주손 or 주발": "R"},
+        ],
         name="invalid_events.xlsx",
     )
 
-    with pytest.raises(ValueError, match="no eligible step donor|No eligible step trials"):
-        load_event_metadata(str(invalid_path), cfg)
+    prepared = load_event_metadata(str(invalid_path), cfg)
+    invalid_rows = prepared.loc[(prepared["subject"] == "S99") & (prepared["velocity"] == 1)]
+    assert invalid_rows["analysis_selected_group"].eq(False).all()
+    assert prepared["analysis_selected_group"].any()
+
+
+def test_event_preparation_drops_selected_step_rows_missing_step_onset(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """Selected step trials must provide step_onset, otherwise they should be excluded."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    path = _write_event_workbook(
+        tmp_path,
+        platform_rows=[
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": np.nan,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "1",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 2,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 13,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "2",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 3,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": np.nan,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "3",
+                "mixed": 1,
+            },
+        ],
+        transpose_meta_rows=[{"subject": "S01", "나이": 24, "주손 or 주발": "R"}],
+        name="missing_step_onset_drop.xlsx",
+    )
+
+    prepared = load_event_metadata(str(path), cfg)
+    dropped_step = prepared.loc[(prepared["subject"] == "S01") & (prepared["velocity"] == 1) & (prepared["trial_num"] == 1)].iloc[0]
+    kept_step = prepared.loc[(prepared["subject"] == "S01") & (prepared["velocity"] == 1) & (prepared["trial_num"] == 2)].iloc[0]
+    nonstep = prepared.loc[(prepared["subject"] == "S01") & (prepared["velocity"] == 1) & (prepared["trial_num"] == 3)].iloc[0]
+
+    assert bool(dropped_step["analysis_selected_group"]) is False
+    assert bool(kept_step["analysis_selected_group"]) is True
+    assert bool(nonstep["analysis_selected_group"]) is True
 
 
 def test_event_preparation_excludes_contralateral_step_trials(
