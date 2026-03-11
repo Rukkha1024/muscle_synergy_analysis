@@ -242,7 +242,7 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
     _require_columns(table, required, "event")
 
     prepared = table.copy()
-    numeric_candidates = {onset_column, offset_column, actual_step_column}
+    numeric_candidates = {onset_column, offset_column, actual_step_column, "platform_offset"}
     for column in sorted(numeric_candidates):
         if column in prepared.columns:
             prepared[column] = pd.to_numeric(prepared[column], errors="coerce")
@@ -344,24 +344,6 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
     prepared.loc[nonstep_mask, "analysis_stance_side"] = prepared.loc[nonstep_mask, "analysis_major_step_side"].map(_major_stance_from_step_state)
 
     selected_nonstep_mask = prepared["analysis_selected_group"] & prepared["analysis_is_nonstep"]
-    if surrogate_enabled and selected_nonstep_mask.any():
-        group_has_step = selected_step_mask.groupby([prepared["subject"], prepared["velocity"]]).transform("any")
-        invalid_nonstep_mask = selected_nonstep_mask & ~group_has_step
-        if invalid_nonstep_mask.any():
-            bad_groups = (
-                prepared.loc[invalid_nonstep_mask, ["subject", "velocity"]]
-                .drop_duplicates()
-                .to_dict(orient="records")
-            )
-            logging.warning(
-                "Dropping selected nonstep rows without eligible step donors in subject-velocity group(s): %s",
-                bad_groups,
-            )
-            prepared.loc[invalid_nonstep_mask, "analysis_selected_group"] = False
-            selected_step_mask = prepared["analysis_selected_group"] & prepared["analysis_is_step"]
-            selected_nonstep_mask = prepared["analysis_selected_group"] & prepared["analysis_is_nonstep"]
-            if not prepared["analysis_selected_group"].any():
-                raise ValueError("No trials remain after replace_V3D meta prefilter selection and donor requirement.")
 
     prepared[output_column] = pd.NA
     prepared.loc[selected_step_mask, output_column] = prepared.loc[selected_step_mask, actual_step_column]
@@ -376,19 +358,30 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
 
     if selected_nonstep_mask.any():
         if surrogate_enabled:
-            if group_latency_mean.loc[selected_nonstep_mask].isna().any():
+            missing_donor_mask = selected_nonstep_mask & group_latency_mean.isna()
+            if missing_donor_mask.any():
+                if "platform_offset" not in prepared.columns:
+                    raise ValueError("platform_offset is required to window donorless nonstep trials.")
                 bad_groups = (
-                    prepared.loc[selected_nonstep_mask & group_latency_mean.isna(), ["subject", "velocity"]]
+                    prepared.loc[missing_donor_mask, ["subject", "velocity"]]
                     .drop_duplicates()
                     .to_dict(orient="records")
                 )
-                raise ValueError(f"Selected nonstep trial has no eligible step donor in subject-velocity group(s): {bad_groups}")
+                logging.warning(
+                    "No eligible step donor found for selected nonstep group(s); using platform_offset: %s",
+                    bad_groups,
+                )
+                prepared.loc[missing_donor_mask, output_column] = prepared.loc[missing_donor_mask, "platform_offset"]
+                prepared.loc[missing_donor_mask, "analysis_window_source"] = _source_label("platform_offset")
+                prepared.loc[missing_donor_mask, "analysis_window_is_surrogate"] = False
 
-            prepared.loc[selected_nonstep_mask, output_column] = (
-                prepared.loc[selected_nonstep_mask, onset_column].astype(float) + group_latency_mean.loc[selected_nonstep_mask]
-            )
-            prepared.loc[selected_nonstep_mask, "analysis_window_source"] = "subject_mean_step_onset"
-            prepared.loc[selected_nonstep_mask, "analysis_window_is_surrogate"] = True
+            surrogate_mask = selected_nonstep_mask & ~missing_donor_mask
+            if surrogate_mask.any():
+                prepared.loc[surrogate_mask, output_column] = (
+                    prepared.loc[surrogate_mask, onset_column].astype(float) + group_latency_mean.loc[surrogate_mask]
+                )
+                prepared.loc[surrogate_mask, "analysis_window_source"] = "subject_mean_step_onset"
+                prepared.loc[surrogate_mask, "analysis_window_is_surrogate"] = True
         else:
             if prepared.loc[selected_nonstep_mask, actual_step_column].isna().any():
                 raise ValueError("Nonstep trial requires a surrogate step_onset, but surrogate_step_onset.enabled is false.")

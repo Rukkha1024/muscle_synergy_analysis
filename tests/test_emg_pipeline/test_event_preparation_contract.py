@@ -41,11 +41,11 @@ def _write_event_workbook(
     return workbook_path
 
 
-def test_event_preparation_drops_selected_nonstep_rows_without_step_donor(
+def test_event_preparation_keeps_donorless_nonstep_rows_by_using_platform_offset(
     fixture_bundle: dict[str, Path],
     tmp_path: Path,
 ) -> None:
-    """Selected nonstep rows without eligible step donors should be unselected instead of crashing."""
+    """Donorless nonstep rows should remain selected and use platform_offset as the window end."""
     cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
     invalid_path = _write_event_workbook(
         tmp_path,
@@ -108,8 +108,12 @@ def test_event_preparation_drops_selected_nonstep_rows_without_step_donor(
 
     prepared = load_event_metadata(str(invalid_path), cfg)
     invalid_rows = prepared.loc[(prepared["subject"] == "S99") & (prepared["velocity"] == 1)]
-    assert invalid_rows["analysis_selected_group"].eq(False).all()
-    assert prepared["analysis_selected_group"].any()
+    assert invalid_rows["analysis_selected_group"].any()
+    assert invalid_rows["analysis_is_nonstep"].any()
+    invalid_nonstep = invalid_rows.loc[invalid_rows["analysis_is_nonstep"]].iloc[0]
+    assert invalid_nonstep["analysis_window_source"] == "platform_offset"
+    assert bool(invalid_nonstep["analysis_window_is_surrogate"]) is False
+    assert float(invalid_nonstep["analysis_window_end"]) == pytest.approx(float(invalid_nonstep["platform_offset"]))
 
 
 def test_event_preparation_drops_selected_step_rows_missing_step_onset(
