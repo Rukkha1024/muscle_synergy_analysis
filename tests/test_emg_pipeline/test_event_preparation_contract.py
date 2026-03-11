@@ -262,6 +262,119 @@ def test_event_preparation_falls_back_to_transpose_meta_when_meta_is_malformed(
     assert prepared["analysis_selected_group"].any()
 
 
+def test_event_preparation_ignores_fully_blank_platform_rows(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """Fully blank platform rows should be ignored instead of failing metadata joins."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    path = _write_event_workbook(
+        tmp_path,
+        platform_rows=[
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 11,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "1",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 2,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": np.nan,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "2",
+                "mixed": 1,
+            },
+            {
+                "subject": np.nan,
+                "velocity": np.nan,
+                "trial": np.nan,
+                "platform_onset": np.nan,
+                "platform_offset": np.nan,
+                "step_onset": np.nan,
+                "state": np.nan,
+                "step_TF": np.nan,
+                "RPS": np.nan,
+                "mixed": np.nan,
+            },
+        ],
+        transpose_meta_rows=[{"subject": "S01", "나이": 24, "주손 or 주발": "R"}],
+        name="blank_platform_rows.xlsx",
+    )
+
+    prepared = load_event_metadata(str(path), cfg)
+    assert prepared["subject"].notna().all()
+    assert prepared["subject"].astype(str).str.strip().ne("").all()
+    assert prepared.shape[0] == 2
+    assert prepared["analysis_selected_group"].any()
+
+
+def test_event_preparation_ignores_platform_rows_with_unusable_merge_keys(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """Rows without mergeable velocity/trial keys should be dropped as workbook noise."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    path = _write_event_workbook(
+        tmp_path,
+        platform_rows=[
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 11,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "1",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 2,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": np.nan,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "2",
+                "mixed": 1,
+            },
+            {
+                "subject": "S99",
+                "velocity": "?",
+                "trial": "?",
+                "platform_onset": np.nan,
+                "platform_offset": np.nan,
+                "step_onset": np.nan,
+                "state": np.nan,
+                "step_TF": np.nan,
+                "RPS": np.nan,
+                "mixed": np.nan,
+            },
+        ],
+        transpose_meta_rows=[{"subject": "S01", "나이": 24, "주손 or 주발": "R"}],
+        name="invalid_platform_keys.xlsx",
+    )
+
+    prepared = load_event_metadata(str(path), cfg)
+    assert set(prepared["subject"].tolist()) == {"S01"}
+    assert prepared.shape[0] == 2
+    assert prepared["analysis_selected_group"].any()
+
+
 def test_event_preparation_raises_when_subject_meta_is_missing(
     fixture_bundle: dict[str, Path],
     tmp_path: Path,

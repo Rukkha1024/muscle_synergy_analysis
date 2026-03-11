@@ -118,6 +118,20 @@ def _load_platform_with_subject_meta(path: Path) -> pd.DataFrame:
         pl.col("velocity").cast(pl.Float64, strict=False),
         pl.col("trial_num").cast(pl.Int64, strict=False),
     )
+    invalid_platform_key_mask = (
+        (pl.col("subject").is_null() | (pl.col("subject") == ""))
+        | pl.col("velocity").is_null()
+        | pl.col("trial_num").is_null()
+    )
+    invalid_platform_key_rows = platform.filter(invalid_platform_key_mask)
+    if invalid_platform_key_rows.height:
+        logging.warning(
+            "Dropping %s platform row(s) with unusable subject/velocity/trial_num keys from %s: %s",
+            invalid_platform_key_rows.height,
+            path,
+            invalid_platform_key_rows.select(["subject", "velocity", "trial_num"]).head(5).to_dicts(),
+        )
+        platform = platform.filter(~invalid_platform_key_mask)
     for column in ["platform_onset", "platform_offset", "step_onset"]:
         if column in platform.columns:
             platform = platform.with_columns(pl.col(column).cast(pl.Float64, strict=False))
