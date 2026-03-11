@@ -47,6 +47,7 @@ def _trial_signal(trial_seed: int, n_frames: int = N_FRAMES) -> np.ndarray:
 
 def _event_rows_for_subject(subject: str) -> list[dict[str, object]]:
     """Build two velocity groups: one valid mixed set and one filtered-out set."""
+    ipsilateral_state = "step_R" if subject == "S01" else "step_L"
     return [
         {
             "subject": subject,
@@ -55,7 +56,7 @@ def _event_rows_for_subject(subject: str) -> list[dict[str, object]]:
             "platform_onset": 3,
             "platform_offset": 18,
             "step_onset": 11,
-            "state": "step_L",
+            "state": ipsilateral_state,
             "step_TF": "step",
             "RPS": "1",
             "mixed": 1,
@@ -67,7 +68,7 @@ def _event_rows_for_subject(subject: str) -> list[dict[str, object]]:
             "platform_onset": 3,
             "platform_offset": 18,
             "step_onset": 13,
-            "state": "step_R",
+            "state": ipsilateral_state,
             "step_TF": "step",
             "RPS": "2",
             "mixed": 1,
@@ -195,7 +196,16 @@ def ensure_fixture_bundle(base_dir: Path) -> dict[str, Path]:
 
     emg_df.write_parquet(parquet_path)
     emg_df.to_pandas().to_csv(csv_path, index=False, encoding="utf-8-sig")
-    event_df.to_excel(xlsm_path, index=False, engine="openpyxl")
+    platform_df = event_df.rename(columns={"trial_num": "trial"})
+    transpose_meta_df = pd.DataFrame(
+        [
+            {"subject": "S01", "나이": 24, "주손 or 주발": "R"},
+            {"subject": "S02", "나이": 24, "주손 or 주발": "L"},
+        ]
+    )
+    with pd.ExcelWriter(xlsm_path, engine="openpyxl") as writer:
+        platform_df.to_excel(writer, sheet_name="platform", index=False)
+        transpose_meta_df.to_excel(writer, sheet_name="transpose_meta", index=False)
 
     _write_yaml(
         emg_config_path,
@@ -210,10 +220,6 @@ def ensure_fixture_bundle(base_dir: Path) -> dict[str, Path]:
                 "  selection:",
                 "    mixed_only: true",
                 "    mixed_column: mixed",
-                "    require_total_trials: 4",
-                "    require_step_trials: 2",
-                "    require_nonstep_trials: 2",
-                "    single_velocity_per_subject: true",
                 "  surrogate_step_onset:",
                 "    enabled: true",
                 "    source_column: step_onset",

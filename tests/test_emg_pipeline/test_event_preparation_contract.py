@@ -16,10 +16,18 @@ import pytest
 from src.emg_pipeline import load_event_metadata, load_pipeline_config
 
 
-def _write_event_workbook(tmp_path: Path, rows: list[dict[str, object]], name: str) -> Path:
+def _write_event_workbook(
+    tmp_path: Path,
+    *,
+    platform_rows: list[dict[str, object]],
+    transpose_meta_rows: list[dict[str, object]],
+    name: str,
+) -> Path:
     """Persist a small event workbook for contract checks."""
     workbook_path = tmp_path / name
-    pd.DataFrame(rows).to_excel(workbook_path, index=False, engine="openpyxl")
+    with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
+        pd.DataFrame(platform_rows).to_excel(writer, sheet_name="platform", index=False)
+        pd.DataFrame(transpose_meta_rows).to_excel(writer, sheet_name="transpose_meta", index=False)
     return workbook_path
 
 
@@ -31,41 +39,53 @@ def test_event_preparation_fails_without_step_donor(
     cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
     invalid_path = _write_event_workbook(
         tmp_path,
-        [
+        platform_rows=[
             {
                 "subject": "S99",
                 "velocity": 1,
-                "trial_num": trial_num,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 11,
+                "state": "step_L",  # contralateral for dominant=R
+                "step_TF": "step",
+                "RPS": "1",
+                "mixed": 1,
+            },
+            {
+                "subject": "S99",
+                "velocity": 1,
+                "trial": 2,
                 "platform_onset": 3,
                 "platform_offset": 18,
                 "step_onset": np.nan,
                 "state": "nonstep",
                 "step_TF": "nonstep",
-                "RPS": str(trial_num),
+                "RPS": "2",
                 "mixed": 1,
-            }
-            for trial_num in range(1, 5)
+            },
         ],
-        "invalid_events.xlsx",
+        transpose_meta_rows=[{"subject": "S99", "나이": 20, "주손 or 주발": "R"}],
+        name="invalid_events.xlsx",
     )
 
-    with pytest.raises(ValueError, match="No valid mixed-velocity groups remain after event filtering"):
+    with pytest.raises(ValueError, match="no eligible step donor|No eligible step trials"):
         load_event_metadata(str(invalid_path), cfg)
 
 
-def test_event_preparation_rejects_groups_with_extra_trials(
+def test_event_preparation_excludes_contralateral_step_trials(
     fixture_bundle: dict[str, Path],
     tmp_path: Path,
 ) -> None:
-    """Only exact 2-step plus 2-nonstep groups should be selected."""
+    """Contralateral step trials should be excluded even if mixed+young."""
     cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
-    invalid_path = _write_event_workbook(
+    path = _write_event_workbook(
         tmp_path,
-        [
+        platform_rows=[
             {
                 "subject": "S01",
                 "velocity": 1,
-                "trial_num": 1,
+                "trial": 1,
                 "platform_onset": 3,
                 "platform_offset": 18,
                 "step_onset": 11,
@@ -77,7 +97,7 @@ def test_event_preparation_rejects_groups_with_extra_trials(
             {
                 "subject": "S01",
                 "velocity": 1,
-                "trial_num": 2,
+                "trial": 2,
                 "platform_onset": 3,
                 "platform_offset": 18,
                 "step_onset": 13,
@@ -89,7 +109,7 @@ def test_event_preparation_rejects_groups_with_extra_trials(
             {
                 "subject": "S01",
                 "velocity": 1,
-                "trial_num": 3,
+                "trial": 3,
                 "platform_onset": 3,
                 "platform_offset": 18,
                 "step_onset": np.nan,
@@ -98,102 +118,83 @@ def test_event_preparation_rejects_groups_with_extra_trials(
                 "RPS": "3",
                 "mixed": 1,
             },
+        ],
+        transpose_meta_rows=[{"subject": "S01", "나이": 24, "주손 or 주발": "R"}],
+        name="ipsilateral_filter_events.xlsx",
+    )
+
+    prepared = load_event_metadata(str(path), cfg)
+    selected = prepared.loc[prepared["analysis_selected_group"]].copy()
+    assert selected.shape[0] > 0
+    assert (selected["analysis_is_step"] | selected["analysis_is_nonstep"]).all()
+    assert selected.loc[selected["analysis_is_step"], "analysis_state_norm"].eq("step_r").all()
+
+
+def test_event_preparation_allows_multiple_selected_velocities_per_subject(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """The replace_V3D rule allows multiple velocities if they satisfy the row filter."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    path = _write_event_workbook(
+        tmp_path,
+        platform_rows=[
             {
                 "subject": "S01",
                 "velocity": 1,
-                "trial_num": 4,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 13,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "11",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 2,
                 "platform_onset": 3,
                 "platform_offset": 18,
                 "step_onset": np.nan,
                 "state": "nonstep",
                 "step_TF": "nonstep",
-                "RPS": "4",
+                "RPS": "12",
                 "mixed": 1,
             },
             {
                 "subject": "S01",
-                "velocity": 1,
-                "trial_num": 5,
+                "velocity": 2,
+                "trial": 1,
                 "platform_onset": 3,
                 "platform_offset": 18,
-                "step_onset": 9,
-                "state": "other",
-                "step_TF": "other",
-                "RPS": "5",
+                "step_onset": 14,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "21",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 2,
+                "trial": 2,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": np.nan,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "22",
                 "mixed": 1,
             },
         ],
-        "extra_trial_events.xlsx",
+        transpose_meta_rows=[{"subject": "S01", "나이": 24, "주손 or 주발": "R"}],
+        name="multiple_velocity_events.xlsx",
     )
 
-    with pytest.raises(ValueError, match="No valid mixed-velocity groups remain after event filtering"):
-        load_event_metadata(str(invalid_path), cfg)
-
-
-def test_event_preparation_rejects_multiple_selected_velocities_per_subject(
-    fixture_bundle: dict[str, Path],
-    tmp_path: Path,
-) -> None:
-    """A subject should not retain more than one mixed comparison velocity."""
-    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
-    invalid_rows: list[dict[str, object]] = []
-    for velocity in [1, 2]:
-        invalid_rows.extend(
-            [
-                {
-                    "subject": "S01",
-                    "velocity": velocity,
-                    "trial_num": 1,
-                    "platform_onset": 3,
-                    "platform_offset": 18,
-                    "step_onset": 11,
-                    "state": "step_L",
-                    "step_TF": "step",
-                    "RPS": f"{velocity}1",
-                    "mixed": 1,
-                },
-                {
-                    "subject": "S01",
-                    "velocity": velocity,
-                    "trial_num": 2,
-                    "platform_onset": 3,
-                    "platform_offset": 18,
-                    "step_onset": 13,
-                    "state": "step_R",
-                    "step_TF": "step",
-                    "RPS": f"{velocity}2",
-                    "mixed": 1,
-                },
-                {
-                    "subject": "S01",
-                    "velocity": velocity,
-                    "trial_num": 3,
-                    "platform_onset": 3,
-                    "platform_offset": 18,
-                    "step_onset": np.nan,
-                    "state": "nonstep",
-                    "step_TF": "nonstep",
-                    "RPS": f"{velocity}3",
-                    "mixed": 1,
-                },
-                {
-                    "subject": "S01",
-                    "velocity": velocity,
-                    "trial_num": 4,
-                    "platform_onset": 3,
-                    "platform_offset": 18,
-                    "step_onset": np.nan,
-                    "state": "nonstep",
-                    "step_TF": "nonstep",
-                    "RPS": f"{velocity}4",
-                    "mixed": 1,
-                },
-            ]
-        )
-    invalid_path = _write_event_workbook(tmp_path, invalid_rows, "multiple_velocity_events.xlsx")
-
-    with pytest.raises(ValueError, match="Multiple mixed velocities remain for subject"):
-        load_event_metadata(str(invalid_path), cfg)
+    prepared = load_event_metadata(str(path), cfg)
+    selected = prepared.loc[prepared["analysis_selected_group"]]
+    assert set(selected["velocity"].unique().tolist()) == {1, 2}
 
 
 def test_event_preparation_honors_disabled_surrogate_flag(

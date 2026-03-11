@@ -18,6 +18,78 @@ import polars as pl
 BASE_KEYS = ["subject", "velocity", "trial_num"]
 
 
+def _normalize_dominant_side(value: Any) -> str:
+    if pd.isna(value):
+        return ""
+    text = str(value).strip().upper()
+    if text in {"R", "RIGHT"}:
+        return "R"
+    if text in {"L", "LEFT"}:
+        return "L"
+    return ""
+
+
+def _safe_read_excel(path: Path, *, sheet_name: str | int | None = None) -> pl.DataFrame:
+    try:
+        return pl.read_excel(str(path), sheet_name=sheet_name)
+    except Exception:
+        table = pd.read_excel(path, sheet_name=sheet_name, engine="openpyxl")
+        return pl.from_pandas(table)
+
+
+def _load_platform_with_subject_meta(path: Path) -> pd.DataFrame:
+    platform = _safe_read_excel(path, sheet_name="platform")
+    if "trial" in platform.columns and "trial_num" not in platform.columns:
+        platform = platform.rename({"trial": "trial_num"})
+    platform_required = {"subject", "velocity", "trial_num"}
+    platform_missing = sorted(platform_required - set(platform.columns))
+    if platform_missing:
+        raise ValueError(f"platform sheet missing required columns: {platform_missing}")
+
+    platform = platform.with_columns(
+        pl.col("subject").cast(pl.Utf8, strict=False).str.strip_chars(),
+        pl.col("velocity").cast(pl.Float64, strict=False),
+        pl.col("trial_num").cast(pl.Int64, strict=False),
+    )
+
+    try:
+        meta = _safe_read_excel(path, sheet_name="transpose_meta")
+    except Exception as exc:
+        raise ValueError("event workbook must contain `transpose_meta` sheet for replace_V3D filtering.") from exc
+
+    meta_required = {"subject", "나이", "주손 or 주발"}
+    meta_missing = sorted(meta_required - set(meta.columns))
+    if meta_missing:
+        raise ValueError(f"transpose_meta sheet missing required columns: {meta_missing}")
+
+    meta = (
+        meta.select(["subject", "나이", "주손 or 주발"])
+        .with_columns(
+            pl.col("subject").cast(pl.Utf8, strict=False).str.strip_chars(),
+            pl.col("나이").cast(pl.Int64, strict=False),
+            pl.col("주손 or 주발").cast(pl.Utf8, strict=False).str.strip_chars().str.to_uppercase(),
+        )
+    )
+
+    dupe_mask = meta.get_column("subject").is_duplicated()
+    if dupe_mask.any():
+        duplicates = meta.filter(dupe_mask).get_column("subject").unique().to_list()
+        raise ValueError(f"transpose_meta has duplicate subjects: {duplicates}")
+
+    merged = platform.join(meta, on="subject", how="left")
+    missing_meta_subjects = (
+        merged.filter(pl.col("나이").is_null() | pl.col("주손 or 주발").is_null())
+        .select("subject")
+        .unique()
+        .to_series()
+        .to_list()
+    )
+    if missing_meta_subjects:
+        raise ValueError(f"Missing transpose_meta rows for subject(s): {missing_meta_subjects}")
+
+    return merged.to_pandas(use_pyarrow_extension_array=False)
+
+
 def _windowing_cfg(cfg: dict[str, Any] | None) -> dict[str, Any]:
     if not cfg:
         return {}
@@ -98,6 +170,9 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
     onset_column = str(window_cfg.get("onset_column", "platform_onset"))
     offset_column = str(window_cfg.get("offset_column", "platform_offset"))
     mixed_column = str(selection_cfg.get("mixed_column", "mixed"))
+    dominant_column = str(selection_cfg.get("dominant_column", "주손 or 주발"))
+    age_column = str(selection_cfg.get("age_column", "나이"))
+    young_age_threshold = int(selection_cfg.get("young_age_threshold", 30))
     step_class_column = str(surrogate_cfg.get("step_class_column", "step_TF"))
     step_value = _normalize_label(surrogate_cfg.get("step_value", "step"))
     nonstep_value = _normalize_label(surrogate_cfg.get("nonstep_value", "nonstep"))
@@ -105,15 +180,13 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
     output_column = str(surrogate_cfg.get("output_column", "analysis_window_end"))
     state_column = str(stance_cfg.get("state_column", "state"))
     require_mixed = bool(selection_cfg.get("mixed_only", False))
-    require_step_trials = selection_cfg.get("require_step_trials")
-    require_nonstep_trials = selection_cfg.get("require_nonstep_trials")
-    require_total_trials = selection_cfg.get("require_total_trials")
-    require_single_velocity_per_subject = bool(selection_cfg.get("single_velocity_per_subject", False))
     surrogate_enabled = bool(surrogate_cfg.get("enabled", True))
 
     required = {onset_column}
     if require_mixed:
-        required.update({mixed_column, step_class_column, actual_step_column})
+        required.update({mixed_column, step_class_column, actual_step_column, dominant_column})
+        if "age_group" not in table.columns:
+            required.add(age_column)
     elif offset_column != output_column:
         required.add(offset_column)
     if state_column:
@@ -135,18 +208,8 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
         prepared["analysis_state"] = prepared[state_column].fillna("").astype(str)
     else:
         prepared["analysis_state"] = ""
-    prepared["analysis_stance_side"] = prepared["analysis_state"].map(_step_stance_side)
-    subject_major = (
-        prepared.loc[prepared["analysis_is_step"]]
-        .groupby("subject", sort=False)["analysis_state"]
-        .agg(_major_step_state)
-        .rename("analysis_major_step_side")
-        .reset_index()
-    )
-    prepared = prepared.merge(subject_major, on="subject", how="left")
-    prepared["analysis_major_step_side"] = prepared["analysis_major_step_side"].fillna("")
-    nonstep_mask = prepared["analysis_is_nonstep"] & prepared["analysis_stance_side"].eq("")
-    prepared.loc[nonstep_mask, "analysis_stance_side"] = prepared.loc[nonstep_mask, "analysis_major_step_side"].map(_major_stance_from_step_state)
+    prepared["analysis_state_norm"] = prepared["analysis_state"].map(_normalize_label)
+    prepared["analysis_stance_side"] = prepared["analysis_state_norm"].map(_step_stance_side)
 
     if not require_mixed:
         if offset_column == output_column:
@@ -162,83 +225,99 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
             prepared["analysis_window_source"] = _source_label(offset_column)
         prepared["analysis_selection_rule"] = "all_trials"
         prepared["analysis_selected_group"] = True
+        subject_major = (
+            prepared.loc[prepared["analysis_is_step"]]
+            .groupby("subject", sort=False)["analysis_state"]
+            .agg(_major_step_state)
+            .rename("analysis_major_step_side")
+            .reset_index()
+        )
+        prepared = prepared.merge(subject_major, on="subject", how="left")
+        prepared["analysis_major_step_side"] = prepared["analysis_major_step_side"].fillna("")
+        nonstep_mask = prepared["analysis_is_nonstep"] & prepared["analysis_stance_side"].eq("")
+        prepared.loc[nonstep_mask, "analysis_stance_side"] = prepared.loc[nonstep_mask, "analysis_major_step_side"].map(
+            _major_stance_from_step_state
+        )
         return prepared
 
-    selection_summary = (
-        prepared.groupby(["subject", "velocity"], sort=True)
-        .agg(
-            analysis_mixed_group_step_trials=("analysis_is_step", "sum"),
-            analysis_mixed_group_nonstep_trials=("analysis_is_nonstep", "sum"),
-            analysis_mixed_group_total_trials=("trial_num", "size"),
-            analysis_group_is_mixed_flag=("analysis_is_mixed_flag", "max"),
-            analysis_group_has_complete_step_onset=(actual_step_column, lambda series: bool(series.loc[prepared.loc[series.index, "analysis_is_step"]].notna().all())),
+    prepared["analysis_dominant_side"] = prepared[dominant_column].map(_normalize_dominant_side)
+    if "age_group" in prepared.columns:
+        prepared["analysis_age_group"] = prepared["age_group"].map(_normalize_label)
+    else:
+        prepared["analysis_age_group"] = prepared[age_column].apply(
+            lambda value: "young" if (not pd.isna(value) and float(value) < young_age_threshold) else "old"
         )
+
+    ipsilateral_step = prepared["analysis_is_step"] & (
+        ((prepared["analysis_dominant_side"] == "R") & prepared["analysis_state_norm"].eq("step_r"))
+        | ((prepared["analysis_dominant_side"] == "L") & prepared["analysis_state_norm"].eq("step_l"))
+    )
+    prepared["analysis_selected_group"] = (
+        prepared["analysis_is_mixed_flag"]
+        & prepared["analysis_age_group"].eq("young")
+        & (prepared["analysis_is_nonstep"] | ipsilateral_step)
+    )
+    prepared["analysis_selection_rule"] = "replace_v3d_meta_prefilter"
+
+    if not prepared["analysis_selected_group"].any():
+        raise ValueError("No trials remain after replace_V3D meta prefilter selection.")
+
+    selected_step_mask = prepared["analysis_selected_group"] & prepared["analysis_is_step"]
+
+    subject_major = (
+        prepared.loc[selected_step_mask]
+        .groupby("subject", sort=False)["analysis_state"]
+        .agg(_major_step_state)
+        .rename("analysis_major_step_side")
         .reset_index()
     )
-    valid_groups = selection_summary["analysis_group_is_mixed_flag"]
-    if require_step_trials is not None:
-        valid_groups &= selection_summary["analysis_mixed_group_step_trials"].eq(int(require_step_trials))
-    else:
-        valid_groups &= selection_summary["analysis_mixed_group_step_trials"].gt(0)
-    if require_nonstep_trials is not None:
-        valid_groups &= selection_summary["analysis_mixed_group_nonstep_trials"].eq(int(require_nonstep_trials))
-    else:
-        valid_groups &= selection_summary["analysis_mixed_group_nonstep_trials"].gt(0)
-    if require_total_trials is not None:
-        valid_groups &= selection_summary["analysis_mixed_group_total_trials"].eq(int(require_total_trials))
-    valid_groups &= selection_summary["analysis_group_has_complete_step_onset"]
-    selection_summary["analysis_selected_group"] = valid_groups
-    selection_summary["analysis_selection_rule"] = "mixed_velocity_exact_counts"
+    prepared = prepared.drop(columns=["analysis_major_step_side"], errors="ignore").merge(subject_major, on="subject", how="left")
+    prepared["analysis_major_step_side"] = prepared["analysis_major_step_side"].fillna("")
+    nonstep_mask = prepared["analysis_is_nonstep"] & prepared["analysis_stance_side"].eq("")
+    prepared.loc[nonstep_mask, "analysis_stance_side"] = prepared.loc[nonstep_mask, "analysis_major_step_side"].map(_major_stance_from_step_state)
 
-    prepared = prepared.merge(selection_summary, on=["subject", "velocity"], how="left")
-    if not prepared["analysis_selected_group"].fillna(False).any():
-        raise ValueError("No valid mixed-velocity groups remain after event filtering.")
-    prepared["analysis_selected_group"] = prepared["analysis_selected_group"].fillna(False)
-    prepared["analysis_selection_rule"] = prepared["analysis_selection_rule"].fillna("mixed_velocity_exact_counts")
-    if require_single_velocity_per_subject:
-        subject_velocity_counts = (
-            prepared.loc[prepared["analysis_selected_group"]]
-            .groupby("subject", sort=True)["velocity"]
-            .nunique()
+    selected_nonstep_mask = prepared["analysis_selected_group"] & prepared["analysis_is_nonstep"]
+    if selected_nonstep_mask.any() and (not selected_step_mask.any()):
+        bad_groups = (
+            prepared.loc[selected_nonstep_mask, ["subject", "velocity"]]
+            .drop_duplicates()
+            .to_dict(orient="records")
         )
-        ambiguous_subjects = subject_velocity_counts.loc[subject_velocity_counts.gt(1)].index.tolist()
-        if ambiguous_subjects:
-            raise ValueError(
-                "Multiple mixed velocities remain for subject(s): "
-                + ", ".join(str(subject) for subject in ambiguous_subjects)
-            )
+        raise ValueError(f"Selected nonstep trial has no eligible step donor in subject-velocity group(s): {bad_groups}")
 
     prepared[output_column] = pd.NA
-    selected_mask = prepared["analysis_selected_group"]
-    prepared.loc[selected_mask, output_column] = prepared.loc[selected_mask, actual_step_column]
-    prepared.loc[selected_mask, "analysis_window_source"] = _source_label(actual_step_column)
-    prepared.loc[selected_mask, "analysis_window_is_surrogate"] = False
-    selected_groups = prepared.loc[selected_mask].groupby("subject", sort=True)
-    for subject, group in selected_groups:
-        step_mask = group["analysis_is_step"]
-        if not step_mask.any():
-            raise ValueError(f"No step trials available for surrogate derivation: subject={subject}")
-        step_mean = float(group.loc[step_mask, actual_step_column].mean())
-        if pd.isna(step_mean):
-            raise ValueError(f"No valid step_onset donor for subject={subject}")
-        step_latency_mean = float((group.loc[step_mask, actual_step_column] - group.loc[step_mask, onset_column]).mean())
-        if pd.isna(step_latency_mean):
-            raise ValueError(f"No valid step latency donor for subject={subject}")
-        nonstep_mask_group = group["analysis_is_nonstep"]
-        if nonstep_mask_group.any():
-            if surrogate_enabled:
-                prepared.loc[group.index[nonstep_mask_group], output_column] = (
-                    group.loc[nonstep_mask_group, onset_column] + step_latency_mean
-                )
-                prepared.loc[group.index[nonstep_mask_group], "analysis_window_source"] = "subject_mean_step_onset"
-                prepared.loc[group.index[nonstep_mask_group], "analysis_window_is_surrogate"] = True
-            elif group.loc[nonstep_mask_group, actual_step_column].isna().any():
-                raise ValueError(
-                    "Nonstep trial requires a surrogate step_onset, but surrogate_step_onset.enabled is false: "
-                    f"subject={subject}"
-                )
-        prepared.loc[group.index, "analysis_subject_mean_step_onset"] = step_mean
-        prepared.loc[group.index, "analysis_subject_mean_step_latency"] = step_latency_mean
+    prepared.loc[selected_step_mask, output_column] = prepared.loc[selected_step_mask, actual_step_column]
+    prepared.loc[selected_step_mask, "analysis_window_source"] = _source_label(actual_step_column)
+    prepared.loc[selected_step_mask, "analysis_window_is_surrogate"] = False
+
+    latency_series = pd.Series(pd.NA, index=prepared.index, dtype="Float64")
+    latency_series.loc[selected_step_mask] = (
+        prepared.loc[selected_step_mask, actual_step_column] - prepared.loc[selected_step_mask, onset_column]
+    ).astype(float)
+    group_latency_mean = latency_series.groupby([prepared["subject"], prepared["velocity"]]).transform("mean")
+
+    if selected_nonstep_mask.any():
+        if group_latency_mean.loc[selected_nonstep_mask].isna().any():
+            bad_groups = (
+                prepared.loc[selected_nonstep_mask & group_latency_mean.isna(), ["subject", "velocity"]]
+                .drop_duplicates()
+                .to_dict(orient="records")
+            )
+            raise ValueError(f"Selected nonstep trial has no eligible step donor in subject-velocity group(s): {bad_groups}")
+
+        if surrogate_enabled:
+            prepared.loc[selected_nonstep_mask, output_column] = (
+                prepared.loc[selected_nonstep_mask, onset_column].astype(float) + group_latency_mean.loc[selected_nonstep_mask]
+            )
+            prepared.loc[selected_nonstep_mask, "analysis_window_source"] = "subject_mean_step_onset"
+            prepared.loc[selected_nonstep_mask, "analysis_window_is_surrogate"] = True
+        elif prepared.loc[selected_nonstep_mask, actual_step_column].isna().any():
+            raise ValueError("Nonstep trial requires a surrogate step_onset, but surrogate_step_onset.enabled is false.")
+
+    subject_step_mean = prepared.loc[selected_step_mask].groupby("subject", sort=True)[actual_step_column].mean()
+    subject_latency_mean = latency_series.groupby(prepared["subject"]).mean()
+    prepared["analysis_subject_mean_step_onset"] = prepared["subject"].map(subject_step_mean).astype(float)
+    prepared["analysis_subject_mean_step_latency"] = prepared["subject"].map(subject_latency_mean).astype(float)
 
     return prepared
 
@@ -259,9 +338,7 @@ def load_event_metadata(xlsm_path: str, cfg: dict[str, Any] | None = None) -> pd
     path = Path(xlsm_path)
     if not path.exists():
         raise FileNotFoundError(f"Event workbook not found: {path}")
-    table = pd.read_excel(path, engine="openpyxl")
-    if "trial" in table.columns and "trial_num" not in table.columns:
-        table = table.rename(columns={"trial": "trial_num"})
+    table = _load_platform_with_subject_meta(path)
     _require_columns(table, set(BASE_KEYS), "event")
     prepared = _prepare_event_metadata(table, cfg)
     window_cfg = _windowing_cfg(cfg)
@@ -273,6 +350,20 @@ def load_event_metadata(xlsm_path: str, cfg: dict[str, Any] | None = None) -> pd
 
 def merge_event_metadata(emg_df: pd.DataFrame, event_df: pd.DataFrame) -> pd.DataFrame:
     merged = emg_df.copy()
+
+    def _normalize_keys(df: pd.DataFrame) -> pd.DataFrame:
+        normalized = df.copy()
+        normalized["subject"] = normalized["subject"].astype(str).str.strip()
+        normalized["velocity"] = pd.to_numeric(normalized["velocity"], errors="coerce").astype(float)
+        trial_numeric = pd.to_numeric(normalized["trial_num"], errors="coerce")
+        if trial_numeric.isna().any():
+            raise ValueError("trial_num must be numeric and non-null for event/EMG merging.")
+        normalized["trial_num"] = trial_numeric.astype(int)
+        return normalized
+
+    merged = _normalize_keys(merged)
+    event_df = _normalize_keys(event_df)
+
     if event_df.duplicated(BASE_KEYS).any():
         duplicate_keys = event_df.loc[event_df.duplicated(BASE_KEYS, keep=False), BASE_KEYS].drop_duplicates()
         raise ValueError(f"Duplicate event rows found for keys: {duplicate_keys.to_dict(orient='records')}")

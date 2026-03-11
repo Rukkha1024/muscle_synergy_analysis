@@ -7,10 +7,6 @@ windowing:
   selection:
     mixed_only: true
     mixed_column: mixed
-    require_total_trials: 4
-    require_step_trials: 2
-    require_nonstep_trials: 2
-    single_velocity_per_subject: true
   surrogate_step_onset:
     enabled: true
     source_column: step_onset

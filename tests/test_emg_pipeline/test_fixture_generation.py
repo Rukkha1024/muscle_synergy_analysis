@@ -23,7 +23,10 @@ def test_emg_fixture_schema(fixture_bundle: dict[str, object]) -> None:
 
 def test_event_fixture_schema(fixture_bundle: dict[str, object]) -> None:
     """Event workbook stores the trial-level onset and offset contract."""
-    df = pd.read_excel(fixture_bundle["xlsm"])
-    assert set(["subject", "velocity", "trial_num"]).issubset(df.columns)
-    assert set(["platform_onset", "platform_offset", "step_onset", "step_TF", "state", "mixed"]).issubset(df.columns)
-    assert df["platform_onset"].nunique() == 1
+    platform = pd.read_excel(fixture_bundle["xlsm"], sheet_name="platform")
+    assert set(["subject", "velocity", "trial"]).issubset(platform.columns)
+    assert set(["platform_onset", "platform_offset", "step_onset", "step_TF", "state", "mixed"]).issubset(platform.columns)
+    assert platform["platform_onset"].nunique() == 1
+
+    transpose_meta = pd.read_excel(fixture_bundle["xlsm"], sheet_name="transpose_meta")
+    assert set(["subject", "나이", "주손 or 주발"]).issubset(transpose_meta.columns)
