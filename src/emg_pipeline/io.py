@@ -374,8 +374,11 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
                         bad_keys,
                     )
                     prepared.loc[missing_platform_offset_mask, "analysis_selected_group"] = False
-                    missing_donor_mask = missing_donor_mask & ~missing_platform_offset_mask
+                    if not prepared["analysis_selected_group"].any():
+                        raise ValueError("No selected trial groups remain after event filtering.")
 
+                selected_nonstep_mask = prepared["analysis_selected_group"] & prepared["analysis_is_nonstep"]
+                missing_donor_mask = selected_nonstep_mask & group_latency_mean.isna()
                 bad_groups = (
                     prepared.loc[missing_donor_mask, ["subject", "velocity"]]
                     .drop_duplicates()
@@ -390,6 +393,8 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
                     prepared.loc[missing_donor_mask, "analysis_window_source"] = _source_label("platform_offset")
                     prepared.loc[missing_donor_mask, "analysis_window_is_surrogate"] = False
 
+            selected_nonstep_mask = prepared["analysis_selected_group"] & prepared["analysis_is_nonstep"]
+            missing_donor_mask = selected_nonstep_mask & group_latency_mean.isna()
             surrogate_mask = selected_nonstep_mask & ~missing_donor_mask
             if surrogate_mask.any():
                 prepared.loc[surrogate_mask, output_column] = (
