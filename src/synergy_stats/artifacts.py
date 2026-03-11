@@ -75,6 +75,8 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
             muscle_names=muscle_names,
             cfg=cfg,
             output_path=group_figure_path,
+            cluster_labels=exports.get("labels", pd.DataFrame()),
+            trial_metadata=exports.get("trial_windows", pd.DataFrame()),
         )
         group_figure_paths.append(group_figure_path)
         for key in all_frames:
