@@ -242,6 +242,10 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
     _require_columns(table, required, "event")
 
     prepared = table.copy()
+    numeric_candidates = {onset_column, offset_column, actual_step_column}
+    for column in sorted(numeric_candidates):
+        if column in prepared.columns:
+            prepared[column] = pd.to_numeric(prepared[column], errors="coerce")
     prepared["analysis_step_class"] = prepared[step_class_column].map(_normalize_label)
     prepared["analysis_is_step"] = prepared["analysis_step_class"].eq(step_value)
     prepared["analysis_is_nonstep"] = prepared["analysis_step_class"].eq(nonstep_value)

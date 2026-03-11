@@ -214,6 +214,50 @@ def test_event_preparation_falls_back_to_transpose_meta_when_meta_missing(
     assert prepared["analysis_selected_group"].any()
 
 
+def test_event_preparation_falls_back_to_transpose_meta_when_meta_is_malformed(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """A malformed `meta` sheet should fall back to transpose_meta when available."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    workbook_path = tmp_path / "fallback_transpose_meta_when_meta_malformed.xlsx"
+    platform_rows = [
+        {
+            "subject": "S01",
+            "velocity": 1,
+            "trial": 1,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": 11,
+            "state": "step_R",
+            "step_TF": "step",
+            "RPS": "1",
+            "mixed": 1,
+        },
+        {
+            "subject": "S01",
+            "velocity": 1,
+            "trial": 2,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": np.nan,
+            "state": "nonstep",
+            "step_TF": "nonstep",
+            "RPS": "2",
+            "mixed": 1,
+        },
+    ]
+    malformed_meta = pd.DataFrame({"subject": ["foo", "bar"], "S01": ["x", "y"]})
+    transpose_meta_rows = [{"subject": "S01", "나이": 24, "주손 or 주발": "R"}]
+    with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
+        pd.DataFrame(platform_rows).to_excel(writer, sheet_name="platform", index=False)
+        malformed_meta.to_excel(writer, sheet_name="meta", index=False)
+        pd.DataFrame(transpose_meta_rows).to_excel(writer, sheet_name="transpose_meta", index=False)
+
+    prepared = load_event_metadata(str(workbook_path), cfg)
+    assert prepared["analysis_selected_group"].any()
+
+
 def test_event_preparation_raises_when_subject_meta_is_missing(
     fixture_bundle: dict[str, Path],
     tmp_path: Path,
