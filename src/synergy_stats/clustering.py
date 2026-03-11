@@ -89,6 +89,111 @@ def _fit_kmeans(data: np.ndarray, n_clusters: int, cfg: dict[str, Any]):
     return np.asarray(labels), float(model.inertia_), "sklearn_kmeans"
 
 
+def _subject_hmax(feature_rows: list[SubjectFeatureResult]) -> int:
+    subject_max: dict[str, int] = defaultdict(int)
+    for item in feature_rows:
+        n_components = int(item.bundle.W_muscle.shape[1])
+        if getattr(item.bundle, "H_time", None) is not None:
+            h_time = np.asarray(item.bundle.H_time)
+            if h_time.ndim == 2 and h_time.shape[1] > 0:
+                n_components = int(h_time.shape[1])
+        subject_max[str(item.subject)] = max(subject_max[str(item.subject)], n_components)
+    return max(subject_max.values()) if subject_max else 1
+
+
+def _cluster_centroids(data: np.ndarray, labels: np.ndarray, n_clusters: int) -> np.ndarray:
+    centroids = np.zeros((n_clusters, data.shape[1]), dtype=np.float32)
+    fallback = data.mean(axis=0, dtype=np.float64).astype(np.float32)
+    for cluster_id in range(n_clusters):
+        cluster_mask = labels == cluster_id
+        if np.any(cluster_mask):
+            centroids[cluster_id] = data[cluster_mask].mean(axis=0, dtype=np.float64).astype(np.float32)
+        else:
+            centroids[cluster_id] = fallback
+    return centroids
+
+
+def _minimum_cost_unique_assignment(costs: np.ndarray) -> np.ndarray:
+    """Return an exact or greedy unique assignment, depending on matrix size."""
+    n_components, n_clusters = costs.shape
+    if n_clusters < n_components:
+        raise ValueError("Unique assignment requires n_clusters >= n_components.")
+    if n_clusters > 16 or n_components > 10:
+        return _greedy_unique_assignment(costs)
+    states: dict[int, tuple[float, tuple[int, ...]]] = {0: (0.0, tuple())}
+    for component_index in range(n_components):
+        next_states: dict[int, tuple[float, tuple[int, ...]]] = {}
+        for mask, (running_cost, path) in states.items():
+            for cluster_id in range(n_clusters):
+                if mask & (1 << cluster_id):
+                    continue
+                next_mask = mask | (1 << cluster_id)
+                next_cost = running_cost + float(costs[component_index, cluster_id])
+                previous = next_states.get(next_mask)
+                if previous is None or (next_cost, path + (cluster_id,)) < (previous[0], previous[1]):
+                    next_states[next_mask] = (next_cost, path + (cluster_id,))
+        states = next_states
+    best_path = min(states.values(), key=lambda pair: (pair[0], pair[1]))[1]
+    return np.asarray(best_path, dtype=np.int32)
+
+
+def _greedy_unique_assignment(costs: np.ndarray) -> np.ndarray:
+    n_components, n_clusters = costs.shape
+    assigned = np.full(n_components, -1, dtype=np.int32)
+    available = set(range(n_clusters))
+    margins = []
+    for row_index in range(n_components):
+        sorted_costs = np.sort(costs[row_index])
+        margin = float(sorted_costs[1] - sorted_costs[0]) if n_clusters > 1 else float("inf")
+        margins.append((margin, row_index))
+    for _, row_index in sorted(margins):
+        cluster_id = min(available, key=lambda cid: (float(costs[row_index, cid]), int(cid)))
+        assigned[row_index] = int(cluster_id)
+        available.remove(cluster_id)
+    return assigned
+
+
+def _enforce_unique_trial_labels(
+    data: np.ndarray,
+    sample_map: list[dict[str, Any]],
+    labels: np.ndarray,
+    n_clusters: int,
+) -> np.ndarray:
+    repaired = np.asarray(labels).astype(np.int32, copy=True)
+    if n_clusters <= 1:
+        return repaired
+    centroids = _cluster_centroids(data, repaired, n_clusters)
+    by_trial: dict[tuple[Any, Any, Any], list[int]] = defaultdict(list)
+    for sample_index, sample in enumerate(sample_map):
+        by_trial[sample["trial_key"]].append(sample_index)
+    for indices in by_trial.values():
+        if len(indices) <= 1 or n_clusters < len(indices):
+            continue
+        trial_labels = repaired[indices]
+        if len(set(trial_labels.tolist())) == len(indices):
+            continue
+        trial_data = data[np.asarray(indices, dtype=np.int32)]
+        sq_distance = ((trial_data[:, None, :] - centroids[None, :, :]) ** 2).sum(axis=2, dtype=np.float64)
+        for row_index, current_label in enumerate(trial_labels.tolist()):
+            sq_distance[row_index, :] += 1e-6
+            sq_distance[row_index, int(current_label)] -= 1e-6
+        repaired[indices] = _minimum_cost_unique_assignment(sq_distance)
+    return repaired
+
+
+def _inertia_from_labels(data: np.ndarray, labels: np.ndarray) -> float:
+    """Recompute inertia for labels after post-processing reassignment."""
+    inertia = 0.0
+    for cluster_id in np.unique(labels):
+        members = data[labels == cluster_id]
+        if members.shape[0] == 0:
+            continue
+        centroid = members.mean(axis=0, dtype=np.float64)
+        residual = members.astype(np.float64) - centroid
+        inertia += float(np.sum(residual * residual))
+    return inertia
+
+
 def cluster_feature_group(
     feature_rows: list[SubjectFeatureResult],
     cfg: dict[str, Any],
@@ -98,16 +203,30 @@ def cluster_feature_group(
         return {"status": "failed", "group_id": group_id, "reason": "No feature rows supplied."}
 
     data, sample_map = _stack_weight_vectors(feature_rows, group_id)
-    per_trial_components = defaultdict(int)
-    for item in feature_rows:
-        per_trial_components[_trial_identity(item)] = item.bundle.W_muscle.shape[1]
-    max_per_trial = max(per_trial_components.values())
-    k_max = min(int(cfg.get("max_clusters", max_per_trial)), int(data.shape[0]))
-    k_min = min(max(2, max_per_trial), k_max)
+    subject_hmax = _subject_hmax(feature_rows)
+    k_min = max(2, subject_hmax)
+    k_max = min(int(cfg.get("max_clusters", subject_hmax)), int(data.shape[0]))
+    if k_max < k_min:
+        return {
+            "status": "failed",
+            "group_id": group_id,
+            "reason": (
+                f"Invalid K range: subject Hmax requires k_min={k_min}, "
+                f"but resolved k_max={k_max}. Increase synergy_clustering.max_clusters."
+            ),
+            "n_trials": len(feature_rows),
+            "n_components": int(data.shape[0]),
+        }
 
     best = None
     for n_clusters in range(k_min, k_max + 1):
-        labels, inertia, algorithm_used = _fit_kmeans(data, n_clusters, cfg)
+        raw_labels, raw_inertia, algorithm_used = _fit_kmeans(data, n_clusters, cfg)
+        labels = np.asarray(raw_labels).astype(np.int32, copy=False)
+        inertia = float(raw_inertia)
+        if cfg.get("disallow_within_trial_duplicate_assignment", True):
+            labels = _enforce_unique_trial_labels(data, sample_map, labels, n_clusters)
+            if not np.array_equal(labels, raw_labels):
+                inertia = _inertia_from_labels(data, labels)
         duplicates = _duplicate_trials(sample_map, labels)
         candidate = {
             "status": "success",
@@ -124,7 +243,8 @@ def cluster_feature_group(
         if cfg.get("disallow_within_trial_duplicate_assignment", True):
             if not duplicates:
                 return candidate
-            best = candidate
+            if best is None or len(duplicates) < len(best.get("duplicate_trials", [])):
+                best = candidate
         elif best is None or len(duplicates) < len(best.get("duplicate_trials", [])):
             best = candidate
 

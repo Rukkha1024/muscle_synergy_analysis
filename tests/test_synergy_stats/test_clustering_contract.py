@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+from collections import defaultdict
 from types import SimpleNamespace
 
 import numpy as np
@@ -233,3 +234,144 @@ def test_cluster_intra_subject_compatibility_wrapper_still_returns_success() -> 
     assert result.get("status") == "success"
     assert result.get("group_id") == "compatibility_group"
     assert len(result.get("duplicate_trials", [])) == 0
+
+
+def test_k_min_starts_from_subject_hmax(monkeypatch: pytest.MonkeyPatch) -> None:
+    """K search should start at the global max of per-subject NMF H structures."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, result_cls = _load_group_helpers()
+    feature_rows = [
+        result_cls(
+            subject="S01",
+            velocity=1,
+            trial_num=1,
+            bundle=SimpleNamespace(
+                W_muscle=np.ones((3, 5), dtype=np.float32),
+                H_time=np.ones((10, 5), dtype=np.float32),
+                meta={},
+            ),
+        ),
+        result_cls(
+            subject="S01",
+            velocity=1,
+            trial_num=2,
+            bundle=SimpleNamespace(
+                W_muscle=np.ones((3, 2), dtype=np.float32),
+                H_time=np.ones((10, 2), dtype=np.float32),
+                meta={},
+            ),
+        ),
+        result_cls(
+            subject="S02",
+            velocity=1,
+            trial_num=1,
+            bundle=SimpleNamespace(
+                W_muscle=np.ones((3, 3), dtype=np.float32),
+                H_time=np.ones((10, 3), dtype=np.float32),
+                meta={},
+            ),
+        ),
+    ]
+    seen_k = []
+
+    def _fake_fit(data: np.ndarray, n_clusters: int, cfg: dict):
+        seen_k.append(n_clusters)
+        labels = np.arange(data.shape[0], dtype=np.int32) % n_clusters
+        return labels, 0.0, "mock_kmeans"
+
+    monkeypatch.setattr(clustering_module, "_fit_kmeans", _fake_fit)
+    cfg = {
+        "algorithm": "sklearn_kmeans",
+        "max_clusters": 6,
+        "max_iter": 10,
+        "repeats": 1,
+        "random_state": 7,
+        "disallow_within_trial_duplicate_assignment": False,
+    }
+    clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
+    assert seen_k[0] == 5
+
+
+def test_duplicate_assignments_are_repaired_when_disallow_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Within-trial duplicate labels should be repaired to satisfy zero-duplicate rule."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, feature_rows = _make_feature_rows("step")
+
+    def _fake_fit(data: np.ndarray, n_clusters: int, cfg: dict):
+        labels = np.zeros(data.shape[0], dtype=np.int32)
+        return labels, 0.0, "mock_kmeans"
+
+    monkeypatch.setattr(clustering_module, "_fit_kmeans", _fake_fit)
+    cfg = {
+        "algorithm": "sklearn_kmeans",
+        "max_clusters": 2,
+        "max_iter": 10,
+        "repeats": 1,
+        "random_state": 7,
+        "disallow_within_trial_duplicate_assignment": True,
+    }
+    result = clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
+
+    assert result.get("status") == "success"
+    assert len(result.get("duplicate_trials", [])) == 0
+    assert float(result.get("inertia", 0.0)) > 0.0
+
+    trial_clusters = defaultdict(list)
+    for sample, label in zip(result.get("sample_map", []), np.asarray(result.get("labels"))):
+        trial_clusters[sample["trial_key"]].append(int(label))
+    assert trial_clusters
+    assert all(len(values) == len(set(values)) for values in trial_clusters.values())
+
+
+def test_cluster_fails_when_max_clusters_is_lower_than_subject_hmax() -> None:
+    """Clustering should fail fast when config max_clusters cannot satisfy subject Hmax k_min."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, result_cls = _load_group_helpers()
+    feature_rows = [
+        result_cls(
+            subject="S01",
+            velocity=1,
+            trial_num=1,
+            bundle=SimpleNamespace(
+                W_muscle=np.ones((3, 5), dtype=np.float32),
+                H_time=np.ones((10, 5), dtype=np.float32),
+                meta={},
+            ),
+        ),
+        result_cls(
+            subject="S02",
+            velocity=1,
+            trial_num=1,
+            bundle=SimpleNamespace(
+                W_muscle=np.ones((3, 2), dtype=np.float32),
+                H_time=np.ones((10, 2), dtype=np.float32),
+                meta={},
+            ),
+        ),
+    ]
+    cfg = {
+        "algorithm": "sklearn_kmeans",
+        "max_clusters": 4,
+        "max_iter": 10,
+        "repeats": 1,
+        "random_state": 7,
+        "disallow_within_trial_duplicate_assignment": True,
+    }
+    result = clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
+    assert result.get("status") == "failed"
+    assert "Invalid K range" in str(result.get("reason"))
+
+
+def test_greedy_fallback_assignment_is_deterministic_for_ties() -> None:
+    """Fallback assignment should remain deterministic even when costs tie."""
+    import src.synergy_stats.clustering as clustering_module
+
+    costs = np.ones((11, 17), dtype=np.float64)
+    first = clustering_module._minimum_cost_unique_assignment(costs)
+    second = clustering_module._minimum_cost_unique_assignment(costs)
+
+    assert np.array_equal(first, second)
+    assert len(set(first.tolist())) == costs.shape[0]
