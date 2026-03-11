@@ -36,7 +36,10 @@ def _safe_read_excel(path: Path, *, sheet_name: str | int | None = None) -> pl.D
         return pl.read_excel(str(path), sheet_name=sheet_name)
     except Exception:
         table = pd.read_excel(path, sheet_name=sheet_name, engine="openpyxl")
-        return pl.from_pandas(table)
+        try:
+            return pl.from_pandas(table)
+        except Exception:
+            return pl.from_pandas(table.astype("string"))
 
 
 def _load_subject_meta_from_meta_sheet(path: Path) -> pl.DataFrame:
@@ -115,6 +118,9 @@ def _load_platform_with_subject_meta(path: Path) -> pd.DataFrame:
         pl.col("velocity").cast(pl.Float64, strict=False),
         pl.col("trial_num").cast(pl.Int64, strict=False),
     )
+    for column in ["platform_onset", "platform_offset", "step_onset"]:
+        if column in platform.columns:
+            platform = platform.with_columns(pl.col(column).cast(pl.Float64, strict=False))
 
     meta = _load_subject_meta(path)
 
@@ -127,7 +133,7 @@ def _load_platform_with_subject_meta(path: Path) -> pd.DataFrame:
         .to_list()
     )
     if missing_meta_subjects:
-        logging.warning("Missing subject meta for subject(s): %s", missing_meta_subjects)
+        raise ValueError(f"Missing subject meta for subject(s): {missing_meta_subjects}")
 
     return merged.to_pandas(use_pyarrow_extension_array=False)
 

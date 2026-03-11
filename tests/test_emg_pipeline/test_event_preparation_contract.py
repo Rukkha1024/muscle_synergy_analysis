@@ -172,6 +172,78 @@ def test_event_preparation_drops_selected_step_rows_missing_step_onset(
     assert bool(nonstep["analysis_selected_group"]) is True
 
 
+def test_event_preparation_falls_back_to_transpose_meta_when_meta_missing(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """If the `meta` sheet is absent, subject metadata should fall back to transpose_meta."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    workbook_path = tmp_path / "fallback_transpose_meta.xlsx"
+    platform_rows = [
+        {
+            "subject": "S01",
+            "velocity": 1,
+            "trial": 1,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": 11,
+            "state": "step_R",
+            "step_TF": "step",
+            "RPS": "1",
+            "mixed": 1,
+        },
+        {
+            "subject": "S01",
+            "velocity": 1,
+            "trial": 2,
+            "platform_onset": 3,
+            "platform_offset": 18,
+            "step_onset": np.nan,
+            "state": "nonstep",
+            "step_TF": "nonstep",
+            "RPS": "2",
+            "mixed": 1,
+        },
+    ]
+    transpose_meta_rows = [{"subject": "S01", "나이": 24, "주손 or 주발": "R"}]
+    with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
+        pd.DataFrame(platform_rows).to_excel(writer, sheet_name="platform", index=False)
+        pd.DataFrame(transpose_meta_rows).to_excel(writer, sheet_name="transpose_meta", index=False)
+
+    prepared = load_event_metadata(str(workbook_path), cfg)
+    assert prepared["analysis_selected_group"].any()
+
+
+def test_event_preparation_raises_when_subject_meta_is_missing(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """Missing required subject meta fields should fail-fast to avoid silent cohort loss."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    path = _write_event_workbook(
+        tmp_path,
+        platform_rows=[
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 11,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "1",
+                "mixed": 1,
+            }
+        ],
+        transpose_meta_rows=[{"subject": "S99", "나이": 24, "주손 or 주발": "R"}],
+        name="missing_subject_meta.xlsx",
+    )
+
+    with pytest.raises(ValueError, match="Missing subject meta"):
+        load_event_metadata(str(path), cfg)
+
+
 def test_event_preparation_excludes_contralateral_step_trials(
     fixture_bundle: dict[str, Path],
     tmp_path: Path,
