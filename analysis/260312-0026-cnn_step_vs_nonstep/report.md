@@ -32,6 +32,9 @@ This prototype stays inside `analysis/260312-0026-cnn_step_vs_nonstep/` so the o
 - **Models**:
   - baseline = logistic regression on flattened trial tensors
   - CNN = small 1D CNN with two early convolution blocks and global average pooling
+- **Figure outputs**:
+  - the full run saves six PNG figures under `analysis/260312-0026-cnn_step_vs_nonstep/figures/`
+  - figures are intended to explain dataset shape, resampling, fold variability, and pooled held-out behavior
 - **Sanity check**:
   - filtered trial count should be close to `125`
   - the current prototype treats `125 ± 5` as the acceptable range
@@ -75,13 +78,55 @@ The first prototype is intended as a feasibility check. The important question i
 
 Both models remain above chance under subject-wise evaluation, which means the filtered `step` vs `nonstep` question is learnable from the current normalized EMG tensor. The small 1D CNN is not dramatically better than the baseline, but it is consistently slightly higher on the four mean metrics that were tracked in this prototype.
 
+The fold-level spread still matters. One fold remains noticeably harder than the others, so a single average metric line should not be read as "CNN has solved the problem." The more accurate reading is that a simple temporal model shows a modest but real advantage while still depending on which subjects are held out.
+
+## Figures
+
+The figures are arranged in a beginner-friendly order. The easiest reading path is: first confirm which trials entered the analysis, then look at what the resampled EMG tensor looks like, then compare model performance, and finally check the pooled held-out classification behavior.
+
+### 1. `01_dataset_label_counts.png`
+
+This figure shows how many `step` and `nonstep` trials survive the current filtering logic. It is the quickest way to confirm that the classifier is learning from the intended comparison set rather than from a heavily imbalanced subset.
+
+When reading this figure, the first question is simple: are both classes meaningfully represented? In the current run, the answer is yes, although `nonstep` still has more trials than `step`.
+
+### 2. `02_emg_class_average_heatmaps.png`
+
+This figure shows the class-average EMG tensor after every trial has been resampled to `100` time steps. Each row is one muscle channel, and each column is normalized time from the start to the end of the analysis window.
+
+This is the most important beginner figure because it turns the abstract phrase "CNN input" into something visible. The CNN is not reading synergy weights here. It is reading a `16 x 100` pattern, and the two panels show how that average pattern differs between `nonstep` and `step`.
+
+### 3. `03_trial_length_by_class.png`
+
+This figure shows the original frame-length distribution before resampling. The point is not that one class is always longer. The point is that trial durations vary enough that a fixed-length representation has to be created before the CNN can use the data consistently.
+
+If this distribution were already very tight, the resampling step would be less important. In the current dataset, the spread is wide enough that resampling is a practical requirement.
+
+### 4. `04_fold_metric_comparison.png`
+
+This figure compares logistic regression and the small 1D CNN on each held-out fold for `accuracy`, `balanced accuracy`, `F1`, and `ROC AUC`. The dashed horizontal lines mark each model's mean value for that metric.
+
+This is the best figure for seeing the real tradeoff in the current prototype. The CNN is usually a little better, but it does not dominate every fold by a large margin. That pattern supports the interpretation that the CNN adds useful temporal structure without yet producing a dramatic modeling jump.
+
+### 5. `05_confusion_matrices.png`
+
+This figure pools all held-out predictions and shows where each model tends to be correct or wrong. The cell text includes both raw counts and row-wise percentages, so it is easier to compare `step` and `nonstep` performance even though the class counts differ.
+
+For a beginner, this figure is more concrete than accuracy alone. It answers questions like "Is the model missing many step trials?" or "Is it overcalling one class?" in one glance.
+
+### 6. `06_pooled_roc_curves.png`
+
+This figure compares the pooled held-out ROC curves for logistic regression and the small 1D CNN. The ROC AUC values in the legend summarize how well each model ranks `step` above `nonstep` across many possible thresholds, not just at the default `0.5` cutoff.
+
+This is useful because it shows that the CNN's advantage is not only a threshold artifact. In the current run, the CNN curve stays slightly above the logistic baseline across most of the operating range.
+
 ## Interpretation
 
 The filtered trial count matters more than the first score. If the count is far from `125`, the classifier is not answering the intended research question because the trial population no longer matches the expected step-vs-nonstep comparison set.
 
-In the current run, the small 1D CNN is modestly ahead of logistic regression on accuracy, balanced accuracy, F1, and ROC AUC. This suggests that a simple temporal model can recover a little more useful structure from the EMG sequence than a flattened baseline, even before any deeper architecture tuning.
+In the current run, the small 1D CNN is modestly ahead of logistic regression on accuracy, balanced accuracy, F1, and ROC AUC. The new figures make that result easier to read in context: the class-average heatmaps show that the model is seeing structured multichannel time series, the fold-comparison figure shows that the gain is small but consistent, and the confusion-matrix/ROC figures show that the gain is not coming from only one lucky threshold.
 
-The margin is still small enough that it should be treated as a prototype signal, not as a settled modeling conclusion. The next useful comparisons would be repeated runs, explicit raw-EMG support, and ablations on resampling length or channel subsets.
+The margin is still small enough that it should be treated as a prototype signal, not as a settled modeling conclusion. The next useful comparisons would be repeated runs, explicit raw-EMG support, and more explicit explanation tools such as channel-level attribution or saliency maps.
 
 ## Reproduction
 
@@ -98,8 +143,5 @@ conda run --no-capture-output -n cuda python analysis/260312-0026-cnn_step_vs_no
 **Output**
 
 - stdout summary for dry-run and full-run metrics
+- six PNG figures under `analysis/260312-0026-cnn_step_vs_nonstep/figures/`
 - no Excel or CSV files
-
-## Figures
-
-This first prototype does not generate figures. The immediate focus is validating the filtered trial population, the fixed-length tensor conversion, and the subject-wise baseline/CNN comparison.

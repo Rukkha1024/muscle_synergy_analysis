@@ -28,7 +28,7 @@ import pandas as pd
 import polars as pl
 import torch
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, confusion_matrix, f1_score, roc_auc_score, roc_curve
 from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -46,6 +46,20 @@ DEFAULT_LR = 1e-3
 DEFAULT_SEED = 42
 DEFAULT_EXPECTED_TRIALS = 125
 DEFAULT_TRIAL_TOLERANCE = 5
+MODEL_DISPLAY_NAMES = {
+    "logistic_regression": "Logistic regression",
+    "small_1d_cnn": "Small 1D CNN",
+}
+MODEL_COLORS = {
+    "logistic_regression": "#4C6EF5",
+    "small_1d_cnn": "#2F9E44",
+}
+LABEL_COLORS = {
+    "step": "#D9480F",
+    "nonstep": "#1971C2",
+}
+FIGURE_DPI = 300
+_PYPLOT = None
 
 
 @dataclass
@@ -58,6 +72,14 @@ class DatasetBundle:
     muscles: list[str]
     input_path: str
     input_label: str
+
+
+@dataclass
+class EvaluationResult:
+    """Metric summaries and held-out predictions from one evaluation path."""
+
+    metrics: pd.DataFrame
+    predictions: pd.DataFrame
 
 
 class SmallEmgCnn(nn.Module):
@@ -85,6 +107,22 @@ class SmallEmgCnn(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.features(x)).squeeze(1)
+
+
+def _pyplot():
+    global _PYPLOT
+    if _PYPLOT is not None:
+        return _PYPLOT
+    import matplotlib
+
+    try:
+        matplotlib.use("Agg", force=True)
+    except Exception:
+        pass
+    import matplotlib.pyplot as plt
+
+    _PYPLOT = plt
+    return plt
 
 
 def parse_args() -> argparse.Namespace:
@@ -258,6 +296,33 @@ def build_subject_folds(bundle: DatasetBundle, n_splits: int) -> list[tuple[np.n
     return list(splitter.split(bundle.X, bundle.y, groups=subjects))
 
 
+def prediction_rows(
+    *,
+    bundle: DatasetBundle,
+    model_name: str,
+    fold_idx: int,
+    test_idx: np.ndarray,
+    probabilities: np.ndarray,
+) -> list[dict[str, Any]]:
+    preds = (probabilities >= 0.5).astype(np.int64)
+    fold_meta = bundle.meta.iloc[test_idx].reset_index(drop=True)
+    rows: list[dict[str, Any]] = []
+    for row_idx, meta_row in fold_meta.iterrows():
+        rows.append(
+            {
+                "model": model_name,
+                "fold": fold_idx,
+                "trial_id": str(meta_row["trial_id"]),
+                "subject": str(meta_row["subject"]),
+                "label_name": str(meta_row["label_name"]),
+                "y_true": int(meta_row["label"]),
+                "probability": float(probabilities[row_idx]),
+                "y_pred": int(preds[row_idx]),
+            }
+        )
+    return rows
+
+
 def fold_metric_row(
     *,
     model_name: str,
@@ -283,8 +348,9 @@ def fold_metric_row(
     }
 
 
-def evaluate_logistic(bundle: DatasetBundle, folds: list[tuple[np.ndarray, np.ndarray]], seed: int) -> pd.DataFrame:
-    rows: list[dict[str, Any]] = []
+def evaluate_logistic(bundle: DatasetBundle, folds: list[tuple[np.ndarray, np.ndarray]], seed: int) -> EvaluationResult:
+    metric_rows: list[dict[str, Any]] = []
+    prediction_record_rows: list[dict[str, Any]] = []
     flattened = bundle.X.reshape(bundle.X.shape[0], -1)
     for fold_idx, (train_idx, test_idx) in enumerate(folds, start=1):
         pipe = Pipeline(
@@ -302,7 +368,7 @@ def evaluate_logistic(bundle: DatasetBundle, folds: list[tuple[np.ndarray, np.nd
         )
         pipe.fit(flattened[train_idx], bundle.y[train_idx])
         probabilities = pipe.predict_proba(flattened[test_idx])[:, 1]
-        rows.append(
+        metric_rows.append(
             fold_metric_row(
                 model_name="logistic_regression",
                 fold_idx=fold_idx,
@@ -311,7 +377,19 @@ def evaluate_logistic(bundle: DatasetBundle, folds: list[tuple[np.ndarray, np.nd
                 test_subjects=bundle.meta.iloc[test_idx]["subject"].to_numpy(),
             )
         )
-    return pd.DataFrame(rows)
+        prediction_record_rows.extend(
+            prediction_rows(
+                bundle=bundle,
+                model_name="logistic_regression",
+                fold_idx=fold_idx,
+                test_idx=test_idx,
+                probabilities=probabilities,
+            )
+        )
+    return EvaluationResult(
+        metrics=pd.DataFrame(metric_rows),
+        predictions=pd.DataFrame(prediction_record_rows),
+    )
 
 
 def standardize_tensors(train_x: np.ndarray, test_x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -366,8 +444,9 @@ def fit_cnn_fold(
     return probabilities.astype(np.float64)
 
 
-def evaluate_cnn(bundle: DatasetBundle, folds: list[tuple[np.ndarray, np.ndarray]], args: argparse.Namespace) -> pd.DataFrame:
-    rows: list[dict[str, Any]] = []
+def evaluate_cnn(bundle: DatasetBundle, folds: list[tuple[np.ndarray, np.ndarray]], args: argparse.Namespace) -> EvaluationResult:
+    metric_rows: list[dict[str, Any]] = []
+    prediction_record_rows: list[dict[str, Any]] = []
     for fold_idx, (train_idx, test_idx) in enumerate(folds, start=1):
         probabilities = fit_cnn_fold(
             bundle.X[train_idx],
@@ -378,7 +457,7 @@ def evaluate_cnn(bundle: DatasetBundle, folds: list[tuple[np.ndarray, np.ndarray
             lr=args.lr,
             seed=args.seed + fold_idx,
         )
-        rows.append(
+        metric_rows.append(
             fold_metric_row(
                 model_name="small_1d_cnn",
                 fold_idx=fold_idx,
@@ -387,7 +466,19 @@ def evaluate_cnn(bundle: DatasetBundle, folds: list[tuple[np.ndarray, np.ndarray
                 test_subjects=bundle.meta.iloc[test_idx]["subject"].to_numpy(),
             )
         )
-    return pd.DataFrame(rows)
+        prediction_record_rows.extend(
+            prediction_rows(
+                bundle=bundle,
+                model_name="small_1d_cnn",
+                fold_idx=fold_idx,
+                test_idx=test_idx,
+                probabilities=probabilities,
+            )
+        )
+    return EvaluationResult(
+        metrics=pd.DataFrame(metric_rows),
+        predictions=pd.DataFrame(prediction_record_rows),
+    )
 
 
 def summarize_metrics(metric_df: pd.DataFrame) -> pl.DataFrame:
@@ -421,6 +512,246 @@ def print_metric_summary(summary: pl.DataFrame) -> None:
     print(summary)
 
 
+def ensure_figure_dir() -> Path:
+    figure_dir = SCRIPT_DIR / "figures"
+    figure_dir.mkdir(parents=True, exist_ok=True)
+    return figure_dir
+
+
+def save_dataset_label_counts_figure(bundle: DatasetBundle, output_path: Path) -> None:
+    plt = _pyplot()
+    counts = (
+        pl.from_pandas(bundle.meta)
+        .group_by("label_name")
+        .len()
+        .rename({"len": "count"})
+        .to_pandas()
+        .set_index("label_name")
+    )
+    order = ["step", "nonstep"]
+    values = [int(counts.loc[label, "count"]) for label in order]
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    bars = ax.bar(order, values, color=[LABEL_COLORS[label] for label in order], width=0.55)
+    for bar, value in zip(bars, values, strict=True):
+        ax.text(bar.get_x() + bar.get_width() / 2.0, value + 1.0, str(value), ha="center", va="bottom", fontsize=11)
+    ax.set_ylabel("Trial count")
+    ax.set_title(
+        "Selected trial counts by class\n"
+        f"{bundle.meta.shape[0]} trials across {bundle.meta['subject'].nunique()} subjects",
+        fontsize=12,
+    )
+    ax.set_ylim(0, max(values) + 12)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=FIGURE_DPI, facecolor="white")
+    plt.close(fig)
+
+
+def save_emg_class_average_heatmaps(bundle: DatasetBundle, output_path: Path) -> None:
+    plt = _pyplot()
+    masks = {
+        "step": bundle.meta["label_name"].to_numpy() == "step",
+        "nonstep": bundle.meta["label_name"].to_numpy() == "nonstep",
+    }
+    averaged = {label: bundle.X[mask].mean(axis=0) for label, mask in masks.items()}
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 7), sharey=True, constrained_layout=True)
+    image = None
+    for ax, label in zip(axes, ["step", "nonstep"], strict=True):
+        image = ax.imshow(
+            averaged[label],
+            aspect="auto",
+            cmap="viridis",
+            vmin=0.0,
+            vmax=1.0,
+            interpolation="nearest",
+        )
+        ax.set_title(f"{label.title()} class average")
+        ax.set_xlabel("Normalized trial time (%)")
+        ax.set_xticks(np.linspace(0, bundle.X.shape[2] - 1, num=6))
+        ax.set_xticklabels(["0", "20", "40", "60", "80", "100"])
+    axes[0].set_ylabel("EMG channel")
+    axes[0].set_yticks(np.arange(len(bundle.muscles)))
+    axes[0].set_yticklabels(bundle.muscles)
+    axes[1].set_yticks(np.arange(len(bundle.muscles)))
+    axes[1].set_yticklabels(bundle.muscles)
+    colorbar = fig.colorbar(image, ax=axes, shrink=0.92, pad=0.02)
+    colorbar.set_label("Mean normalized activation")
+    fig.suptitle("What the CNN sees after trial resampling", fontsize=13)
+    fig.savefig(output_path, dpi=FIGURE_DPI, facecolor="white")
+    plt.close(fig)
+
+
+def save_trial_length_figure(bundle: DatasetBundle, output_path: Path, seed: int) -> None:
+    plt = _pyplot()
+    fig, ax = plt.subplots(figsize=(8, 5))
+    label_order = ["step", "nonstep"]
+    data = [
+        bundle.meta.loc[bundle.meta["label_name"] == label, "n_original_frames"].to_numpy(dtype=np.float64)
+        for label in label_order
+    ]
+    positions = np.arange(1, len(label_order) + 1)
+    boxplot = ax.boxplot(
+        data,
+        positions=positions,
+        widths=0.5,
+        patch_artist=True,
+        tick_labels=[label.title() for label in label_order],
+    )
+    for patch, label in zip(boxplot["boxes"], label_order, strict=True):
+        patch.set_facecolor(LABEL_COLORS[label])
+        patch.set_alpha(0.35)
+    rng = np.random.default_rng(seed)
+    for pos, values, label in zip(positions, data, label_order, strict=True):
+        jitter = rng.uniform(-0.08, 0.08, size=values.shape[0])
+        ax.scatter(
+            np.full(values.shape[0], pos) + jitter,
+            values,
+            s=22,
+            alpha=0.75,
+            color=LABEL_COLORS[label],
+            edgecolors="none",
+        )
+    ax.set_ylabel("Original window length (frames)")
+    ax.set_title("Trial length varies before fixed-length resampling", fontsize=12)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=FIGURE_DPI, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+def save_fold_metric_figure(metric_df: pd.DataFrame, output_path: Path, seed: int) -> None:
+    plt = _pyplot()
+    fig, axes = plt.subplots(2, 2, figsize=(13, 9), sharex=True)
+    metric_specs = [
+        ("accuracy", "Accuracy"),
+        ("balanced_accuracy", "Balanced Accuracy"),
+        ("f1", "F1"),
+        ("roc_auc", "ROC AUC"),
+    ]
+    model_order = ["logistic_regression", "small_1d_cnn"]
+    rng = np.random.default_rng(seed)
+    for ax, (metric_key, metric_label) in zip(axes.flat, metric_specs, strict=True):
+        for pos, model_name in enumerate(model_order):
+            model_rows = metric_df.loc[metric_df["model"] == model_name, metric_key].to_numpy(dtype=np.float64)
+            jitter = rng.uniform(-0.07, 0.07, size=model_rows.shape[0])
+            ax.scatter(
+                np.full(model_rows.shape[0], pos) + jitter,
+                model_rows,
+                color=MODEL_COLORS[model_name],
+                alpha=0.85,
+                s=34,
+                label=MODEL_DISPLAY_NAMES[model_name] if metric_key == "accuracy" else None,
+            )
+            ax.hlines(
+                y=float(model_rows.mean()),
+                xmin=pos - 0.23,
+                xmax=pos + 0.23,
+                color=MODEL_COLORS[model_name],
+                linewidth=2.5,
+            )
+        ax.set_title(metric_label)
+        ax.set_ylim(0.0, 1.02)
+        ax.set_xticks(range(len(model_order)))
+        ax.set_xticklabels([MODEL_DISPLAY_NAMES[name] for name in model_order], rotation=8)
+        ax.grid(axis="y", alpha=0.25)
+    axes[0, 0].legend(loc="lower left")
+    fig.suptitle("Fold-by-fold metric comparison", fontsize=13)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=FIGURE_DPI, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+def confusion_matrix_annotations(matrix_counts: np.ndarray) -> list[list[str]]:
+    row_totals = matrix_counts.sum(axis=1, keepdims=True)
+    row_norm = np.divide(matrix_counts, row_totals, out=np.zeros_like(matrix_counts, dtype=np.float64), where=row_totals > 0)
+    annotations: list[list[str]] = []
+    for row_idx in range(matrix_counts.shape[0]):
+        row_annotations: list[str] = []
+        for col_idx in range(matrix_counts.shape[1]):
+            count = int(matrix_counts[row_idx, col_idx])
+            pct = 100.0 * row_norm[row_idx, col_idx]
+            row_annotations.append(f"{count}\n{pct:.1f}%")
+        annotations.append(row_annotations)
+    return annotations
+
+
+def save_confusion_matrix_figure(prediction_df: pd.DataFrame, output_path: Path) -> None:
+    plt = _pyplot()
+    labels = [0, 1]
+    tick_labels = ["Nonstep", "Step"]
+    model_order = ["logistic_regression", "small_1d_cnn"]
+    fig, axes = plt.subplots(1, 2, figsize=(11, 5), sharey=True, constrained_layout=True)
+    image = None
+    for ax, model_name in zip(axes, model_order, strict=True):
+        model_rows = prediction_df.loc[prediction_df["model"] == model_name]
+        counts = confusion_matrix(model_rows["y_true"], model_rows["y_pred"], labels=labels)
+        row_totals = counts.sum(axis=1, keepdims=True)
+        normalized = np.divide(counts, row_totals, out=np.zeros_like(counts, dtype=np.float64), where=row_totals > 0)
+        image = ax.imshow(normalized, cmap="Blues", vmin=0.0, vmax=1.0)
+        for row_idx, row in enumerate(confusion_matrix_annotations(counts)):
+            for col_idx, text in enumerate(row):
+                ax.text(col_idx, row_idx, text, ha="center", va="center", color="#0B1F33", fontsize=10)
+        ax.set_title(MODEL_DISPLAY_NAMES[model_name])
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(tick_labels)
+        ax.set_yticks([0, 1])
+        ax.set_yticklabels(tick_labels)
+        ax.set_xlabel("Predicted class")
+    axes[0].set_ylabel("True class")
+    colorbar = fig.colorbar(image, ax=axes, shrink=0.9, pad=0.02)
+    colorbar.set_label("Row-normalized proportion")
+    fig.suptitle("Pooled confusion matrices across held-out folds", fontsize=13)
+    fig.savefig(output_path, dpi=FIGURE_DPI, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+def save_pooled_roc_figure(prediction_df: pd.DataFrame, output_path: Path) -> None:
+    plt = _pyplot()
+    fig, ax = plt.subplots(figsize=(7, 6))
+    model_order = ["logistic_regression", "small_1d_cnn"]
+    for model_name in model_order:
+        model_rows = prediction_df.loc[prediction_df["model"] == model_name]
+        fpr, tpr, _ = roc_curve(model_rows["y_true"], model_rows["probability"])
+        auc = roc_auc_score(model_rows["y_true"], model_rows["probability"])
+        ax.plot(
+            fpr,
+            tpr,
+            color=MODEL_COLORS[model_name],
+            linewidth=2.0,
+            label=f"{MODEL_DISPLAY_NAMES[model_name]} (AUC={auc:.3f})",
+        )
+    ax.plot([0.0, 1.0], [0.0, 1.0], linestyle="--", color="#868E96", linewidth=1.2, label="Chance")
+    ax.set_xlim(0.0, 1.0)
+    ax.set_ylim(0.0, 1.0)
+    ax.set_xlabel("False positive rate")
+    ax.set_ylabel("True positive rate")
+    ax.set_title("Pooled ROC curves from held-out trials", fontsize=12)
+    ax.grid(alpha=0.25)
+    ax.legend(loc="lower right")
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=FIGURE_DPI, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+
+def save_figures(bundle: DatasetBundle, metric_df: pd.DataFrame, prediction_df: pd.DataFrame, seed: int) -> list[Path]:
+    figure_dir = ensure_figure_dir()
+    output_paths = [
+        figure_dir / "01_dataset_label_counts.png",
+        figure_dir / "02_emg_class_average_heatmaps.png",
+        figure_dir / "03_trial_length_by_class.png",
+        figure_dir / "04_fold_metric_comparison.png",
+        figure_dir / "05_confusion_matrices.png",
+        figure_dir / "06_pooled_roc_curves.png",
+    ]
+    save_dataset_label_counts_figure(bundle, output_paths[0])
+    save_emg_class_average_heatmaps(bundle, output_paths[1])
+    save_trial_length_figure(bundle, output_paths[2], seed)
+    save_fold_metric_figure(metric_df, output_paths[3], seed)
+    save_confusion_matrix_figure(prediction_df, output_paths[4])
+    save_pooled_roc_figure(prediction_df, output_paths[5])
+    return output_paths
+
+
 def main() -> None:
     args = parse_args()
     set_seed(args.seed)
@@ -434,12 +765,17 @@ def main() -> None:
 
     folds = build_subject_folds(dataset, args.splits)
     print(f"\nSubject-wise evaluation folds: {len(folds)}")
-    logistic_metrics = evaluate_logistic(dataset, folds, args.seed)
-    cnn_metrics = evaluate_cnn(dataset, folds, args)
-    metric_df = pd.concat([logistic_metrics, cnn_metrics], ignore_index=True)
+    logistic_result = evaluate_logistic(dataset, folds, args.seed)
+    cnn_result = evaluate_cnn(dataset, folds, args)
+    metric_df = pd.concat([logistic_result.metrics, cnn_result.metrics], ignore_index=True)
+    prediction_df = pd.concat([logistic_result.predictions, cnn_result.predictions], ignore_index=True)
 
     print_fold_details(metric_df)
     print_metric_summary(summarize_metrics(metric_df))
+    figure_paths = save_figures(dataset, metric_df, prediction_df, args.seed)
+    print("\nSaved figures:")
+    for figure_path in figure_paths:
+        print(f"- {figure_path}")
 
 
 if __name__ == "__main__":
