@@ -1,7 +1,7 @@
 ﻿# CUDA/WSL2 Environment Snapshot
 
 This file is a hardware and GPU stack snapshot only.
-The repository's official execution environment is `module`, so normal pipeline commands should use `conda run -n module python ...`.
+The repository's official execution environment is `cuda`, so normal pipeline commands should use `conda run -n cuda python ...`.
 Use this document when you need the local CUDA machine details for GPU parity work against the reference repository.
 
 - Snapshot date: 2026-03-05T16:31:25+09:00
@@ -125,7 +125,7 @@ LD_LIBRARY_PATH: /home/alice/miniconda3/envs/cuda/lib:
 - Driver supports CUDA 12.9; local toolkit is 12.8. Keep this pairing when reproducing.
 - cuDNN 9 system libs are present but not detected by CuPy; PyTorch links its own cuDNN (91002).
 - For repeatability of this snapshot, keep the `cuda` conda env unchanged and avoid upgrading CUDA/driver/cuDNN unintentionally.
-- For repository development and verification, continue using the `module` conda env unless a GPU-specific parity task explicitly requires this snapshot.
+- For repository development and verification, continue using the `cuda` conda env unless a GPU-specific parity task explicitly requires this snapshot.
 
 ## Refresh Commands
 
