@@ -206,3 +206,124 @@ def test_event_preparation_honors_disabled_surrogate_flag(
 
     with pytest.raises(ValueError, match="surrogate_step_onset.enabled is false"):
         load_event_metadata(str(fixture_bundle["xlsm"]), cfg)
+
+
+def test_event_preparation_disabled_surrogate_uses_actual_step_onset_for_nonstep(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """When surrogate is disabled, nonstep trials must provide step_onset and it should be used."""
+    cfg = deepcopy(load_pipeline_config(str(fixture_bundle["global_config"])))
+    cfg["windowing"]["surrogate_step_onset"]["enabled"] = False
+
+    path = _write_event_workbook(
+        tmp_path,
+        platform_rows=[
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 11,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "1",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 2,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 12,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "2",
+                "mixed": 1,
+            },
+        ],
+        transpose_meta_rows=[{"subject": "S01", "나이": 24, "주손 or 주발": "R"}],
+        name="disabled_surrogate_with_actual_nonstep.xlsx",
+    )
+
+    prepared = load_event_metadata(str(path), cfg)
+    row = prepared.loc[(prepared["subject"] == "S01") & (prepared["velocity"] == 1) & (prepared["trial_num"] == 2)].iloc[0]
+    assert bool(row["analysis_selected_group"]) is True
+    assert bool(row["analysis_is_nonstep"]) is True
+    assert float(row["analysis_window_end"]) == pytest.approx(12.0)
+    assert row["analysis_window_source"] == "actual_step_onset"
+    assert bool(row["analysis_window_is_surrogate"]) is False
+
+
+def test_event_preparation_step_latency_means_are_per_subject_velocity(
+    fixture_bundle: dict[str, Path],
+    tmp_path: Path,
+) -> None:
+    """Mean step-onset/latency metadata should not mix across velocities."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    path = _write_event_workbook(
+        tmp_path,
+        platform_rows=[
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 13,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "11",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 1,
+                "trial": 2,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": np.nan,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "12",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 2,
+                "trial": 1,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": 23,
+                "state": "step_R",
+                "step_TF": "step",
+                "RPS": "21",
+                "mixed": 1,
+            },
+            {
+                "subject": "S01",
+                "velocity": 2,
+                "trial": 2,
+                "platform_onset": 3,
+                "platform_offset": 18,
+                "step_onset": np.nan,
+                "state": "nonstep",
+                "step_TF": "nonstep",
+                "RPS": "22",
+                "mixed": 1,
+            },
+        ],
+        transpose_meta_rows=[{"subject": "S01", "나이": 24, "주손 or 주발": "R"}],
+        name="per_velocity_latency_means.xlsx",
+    )
+
+    prepared = load_event_metadata(str(path), cfg)
+    v1_step = prepared.loc[(prepared["subject"] == "S01") & (prepared["velocity"] == 1) & (prepared["trial_num"] == 1)].iloc[0]
+    v2_step = prepared.loc[(prepared["subject"] == "S01") & (prepared["velocity"] == 2) & (prepared["trial_num"] == 1)].iloc[0]
+
+    assert float(v1_step["analysis_subject_mean_step_onset"]) == pytest.approx(13.0)
+    assert float(v2_step["analysis_subject_mean_step_onset"]) == pytest.approx(23.0)
+    assert float(v1_step["analysis_subject_mean_step_latency"]) == pytest.approx(10.0)
+    assert float(v2_step["analysis_subject_mean_step_latency"]) == pytest.approx(20.0)

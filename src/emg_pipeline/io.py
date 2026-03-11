@@ -266,18 +266,21 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
 
     subject_major = (
         prepared.loc[selected_step_mask]
-        .groupby("subject", sort=False)["analysis_state"]
+        .groupby(["subject", "velocity"], sort=False)["analysis_state"]
         .agg(_major_step_state)
         .rename("analysis_major_step_side")
         .reset_index()
     )
-    prepared = prepared.drop(columns=["analysis_major_step_side"], errors="ignore").merge(subject_major, on="subject", how="left")
+    prepared = (
+        prepared.drop(columns=["analysis_major_step_side"], errors="ignore")
+        .merge(subject_major, on=["subject", "velocity"], how="left")
+    )
     prepared["analysis_major_step_side"] = prepared["analysis_major_step_side"].fillna("")
     nonstep_mask = prepared["analysis_is_nonstep"] & prepared["analysis_stance_side"].eq("")
     prepared.loc[nonstep_mask, "analysis_stance_side"] = prepared.loc[nonstep_mask, "analysis_major_step_side"].map(_major_stance_from_step_state)
 
     selected_nonstep_mask = prepared["analysis_selected_group"] & prepared["analysis_is_nonstep"]
-    if selected_nonstep_mask.any() and (not selected_step_mask.any()):
+    if surrogate_enabled and selected_nonstep_mask.any() and (not selected_step_mask.any()):
         bad_groups = (
             prepared.loc[selected_nonstep_mask, ["subject", "velocity"]]
             .drop_duplicates()
@@ -297,27 +300,35 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
     group_latency_mean = latency_series.groupby([prepared["subject"], prepared["velocity"]]).transform("mean")
 
     if selected_nonstep_mask.any():
-        if group_latency_mean.loc[selected_nonstep_mask].isna().any():
-            bad_groups = (
-                prepared.loc[selected_nonstep_mask & group_latency_mean.isna(), ["subject", "velocity"]]
-                .drop_duplicates()
-                .to_dict(orient="records")
-            )
-            raise ValueError(f"Selected nonstep trial has no eligible step donor in subject-velocity group(s): {bad_groups}")
-
         if surrogate_enabled:
+            if group_latency_mean.loc[selected_nonstep_mask].isna().any():
+                bad_groups = (
+                    prepared.loc[selected_nonstep_mask & group_latency_mean.isna(), ["subject", "velocity"]]
+                    .drop_duplicates()
+                    .to_dict(orient="records")
+                )
+                raise ValueError(f"Selected nonstep trial has no eligible step donor in subject-velocity group(s): {bad_groups}")
+
             prepared.loc[selected_nonstep_mask, output_column] = (
                 prepared.loc[selected_nonstep_mask, onset_column].astype(float) + group_latency_mean.loc[selected_nonstep_mask]
             )
             prepared.loc[selected_nonstep_mask, "analysis_window_source"] = "subject_mean_step_onset"
             prepared.loc[selected_nonstep_mask, "analysis_window_is_surrogate"] = True
-        elif prepared.loc[selected_nonstep_mask, actual_step_column].isna().any():
-            raise ValueError("Nonstep trial requires a surrogate step_onset, but surrogate_step_onset.enabled is false.")
+        else:
+            if prepared.loc[selected_nonstep_mask, actual_step_column].isna().any():
+                raise ValueError("Nonstep trial requires a surrogate step_onset, but surrogate_step_onset.enabled is false.")
+            prepared.loc[selected_nonstep_mask, output_column] = prepared.loc[selected_nonstep_mask, actual_step_column]
+            prepared.loc[selected_nonstep_mask, "analysis_window_source"] = _source_label(actual_step_column)
+            prepared.loc[selected_nonstep_mask, "analysis_window_is_surrogate"] = False
 
-    subject_step_mean = prepared.loc[selected_step_mask].groupby("subject", sort=True)[actual_step_column].mean()
-    subject_latency_mean = latency_series.groupby(prepared["subject"]).mean()
-    prepared["analysis_subject_mean_step_onset"] = prepared["subject"].map(subject_step_mean).astype(float)
-    prepared["analysis_subject_mean_step_latency"] = prepared["subject"].map(subject_latency_mean).astype(float)
+    group_step_mean = (
+        prepared[actual_step_column]
+        .where(selected_step_mask)
+        .groupby([prepared["subject"], prepared["velocity"]])
+        .transform("mean")
+    )
+    prepared["analysis_subject_mean_step_onset"] = group_step_mean.astype(float)
+    prepared["analysis_subject_mean_step_latency"] = group_latency_mean.astype(float)
 
     return prepared
 
@@ -358,7 +369,12 @@ def merge_event_metadata(emg_df: pd.DataFrame, event_df: pd.DataFrame) -> pd.Dat
         trial_numeric = pd.to_numeric(normalized["trial_num"], errors="coerce")
         if trial_numeric.isna().any():
             raise ValueError("trial_num must be numeric and non-null for event/EMG merging.")
-        normalized["trial_num"] = trial_numeric.astype(int)
+        rounded = trial_numeric.round()
+        non_integer_mask = (trial_numeric - rounded).abs() > 1e-9
+        if non_integer_mask.any():
+            bad_values = trial_numeric.loc[non_integer_mask].drop_duplicates().tolist()
+            raise ValueError(f"trial_num must be integer-valued for event/EMG merging. Bad values: {bad_values}")
+        normalized["trial_num"] = rounded.astype(int)
         return normalized
 
     merged = _normalize_keys(merged)

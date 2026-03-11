@@ -47,6 +47,15 @@ def test_merge_event_metadata_fails_when_emg_trial_has_no_event_match(
         merge_event_metadata(emg_df.copy(), missing_trial_event_df)
 
 
+def test_merge_event_metadata_rejects_fractional_trial_num() -> None:
+    """trial_num should fail-fast on non-integer numeric values."""
+    emg_df = pd.DataFrame({"subject": ["S01"], "velocity": [1], "trial_num": [1]})
+    event_df = pd.DataFrame({"subject": ["S01"], "velocity": [1], "trial_num": [1.5], "analysis_window_end": [10]})
+
+    with pytest.raises(ValueError, match="integer-valued"):
+        merge_event_metadata(emg_df, event_df)
+
+
 def test_legacy_platform_offset_window_remains_configurable(
     fixture_bundle: dict[str, object],
 ) -> None:
