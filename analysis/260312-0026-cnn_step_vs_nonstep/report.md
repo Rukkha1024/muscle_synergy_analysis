@@ -178,7 +178,7 @@ nn.Linear(32, 1)    # 두 번째 FC → 최종 출력 (1개)
 
 - **Train loss 감소** = weight가 최적화되고 있다 (`CNN_정리.md` §1.2: "학습을 통해 weight 자동 조절")
 - **Val loss 증가** = 과적합 시작 → **Early Stopping**으로 학습 중단
-- 각 fold별 패널에서 stopping point(빨간 점)가 표시됨
+- 각 fold별 패널에서 best epoch(빨간 점)과 stop epoch(회색 점선)이 표시됨
 - 평균 best epoch ≈ 11.3, 평균 stopping epoch ≈ 16.3
 
 **이 그림에서 배울 수 있는 CNN 개념**: Weight는 학습 과정에서 점진적으로 최적화된다. 그러나 너무 오래 학습하면 훈련 데이터에만 맞게 되어(과적합), 새로운 데이터에 대한 성능이 떨어진다.
@@ -225,6 +225,8 @@ Sigmoid 출력을 threshold=0.5로 판정하여 step/nonstep을 분류한 결과
 ![ROC Curve](figures/06_pooled_roc_curves.png)
 
 ROC AUC는 threshold를 변화시키면서 모델의 전반적 판별 성능을 측정한다. 대각선(Chance) 위에 있으면 학습 효과가 있다는 의미이다.
+
+> **참고**: Figure 06의 AUC는 `--seeds` 중 대표 seed(현재 결과는 seed=42)의 held-out trial 예측을 풀링(pooled)하여 계산한 값이다. §5.4 표의 ROC AUC는 5개 seed 결과를 seed 단위로 요약(mean ± std)한 값이라 수치가 다를 수 있다.
 
 ### 5.4 최종 결과 (Leakage-free, 5 seeds)
 
