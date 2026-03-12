@@ -1,187 +1,313 @@
-﻿# CNN Step vs Nonstep Prototype Report
+# CNN Step vs Nonstep: CNN 학습 가이드
 
-## Research Question
+## 이 문서의 목적
 
-**"Can a simple subject-wise classifier distinguish `step` and `nonstep` trials from normalized EMG time series while preserving the same trial meaning used by the current synergy workflow?"**
+이 문서는 **CNN을 처음 공부하는 학생**을 위한 학습 가이드이다. `CNN_정리.md`에 정리한 CNN 개념(Convolution, Channel, Padding, Stride, ReLU, Pooling, Dropout, GAP, FC, Softmax)이 **실제 EMG 분류 모델에서 어떻게 적용되었는지** 연결하는 것이 목표이다.
 
-This prototype stays inside `analysis/260312-0026-cnn_step_vs_nonstep/` so the official synergy pipeline remains untouched. The goal is not to prove that CNN is universally better than synergy, but to establish a clean first benchmark under the same step-vs-nonstep trial definition.
+- **연구 질문**: step과 nonstep 동작을 EMG 시계열 데이터로 구분할 수 있는가?
+- **데이터**: 125 trials (step=53, nonstep=72), 24 subjects, 16 EMG 채널
+- **모델**: Small 1D CNN vs Logistic Regression baseline
 
-## Data Summary
+---
 
-- **125 trials** after the current filtering logic (`step` = 53, `nonstep` = 72)
-- **24 subjects** in the filtered comparison set
-- Data source:
-  - normalized EMG parquet from `configs/global_config.yaml`
-  - event workbook from `configs/global_config.yaml`
-- EMG channels: `TA`, `EHL`, `MG`, `SOL`, `PL`, `RF`, `VL`, `ST`, `RA`, `EO`, `IO`, `SCM`, `GM`, `ESC`, `EST`, `ESL`
+## 1. 모델 아키텍처 — CNN_정리.md 개념 매핑
 
-## Analysis Methodology
+> **Figure**: `figures/00_model_architecture.png`
 
-- **Analysis workspace**: `analysis/260312-0026-cnn_step_vs_nonstep/`
-- **Analysis window**:
-  - start = `platform_onset`
-  - end = `analysis_window_end`
-  - filtering/labeling follows the repository helper flow that produces `analysis_selected_group`, `analysis_is_step`, and `analysis_is_nonstep`
-- **Input representation**:
-  - source = min-max normalized EMG
-  - each selected trial is resampled to `100` time steps
-  - final tensor shape = `(trial, 16 channels, 100 time steps)`
-- **Validation rule**:
-  - subject-wise `GroupKFold`
-  - same subject never appears in both train and test within the same fold
-  - CNN early stopping now uses an **inner subject-wise validation split** created only inside the outer training fold
-  - the outer held-out fold is reserved for final evaluation and is not reused for checkpoint selection
-- **Models**:
-  - baseline = logistic regression on flattened trial tensors
-  - CNN = small 1D CNN with two early convolution blocks and global average pooling
-- **Figure outputs**:
-  - the full run now saves ten PNG figures under `analysis/260312-0026-cnn_step_vs_nonstep/figures/`
-  - figures now cover dataset shape, resampling, representative fold behavior, multi-seed robustness, attribution, and training curves
-- **Sanity check**:
-  - filtered trial count should be close to `125`
-  - the current prototype treats `125 ± 5` as the acceptable range
-- **Coordinate & sign conventions**:
-  - Axis & Direction Sign
+![모델 아키텍처](figures/00_model_architecture.png)
 
-    | Axis | Positive (+) | Negative (-) | 대표 변수 |
-    |------|---------------|---------------|-----------|
-    | Time | later samples in the trial window | earlier samples in the trial window | resampled EMG timeline |
-    | Channel amplitude | larger normalized activation | smaller normalized activation | all 16 EMG channels |
-    | Spatial axis | not used in this classifier | not used in this classifier | N/A |
+아래 표는 `CNN_정리.md`에서 정리한 개념이 이 모델의 어디에 적용되었는지 보여준다.
 
-  - Signed Metrics Interpretation
+| CNN_정리.md 개념 | 실제 코드 (`analyze_cnn_step_nonstep.py:122-146`) | 차이점/보완 |
+|---|---|---|
+| Convolution (3D tensor) | `Conv1d(16→32, k=5, pad=2)` 등 3개 층 | 이미지=2D Conv, EMG=**1D Conv** (시간축만 스캔) |
+| Channel | 입력 16 EMG → 32 → 32 → 64 feature map | 동일 개념. EMG 채널 = CNN 입력 채널 |
+| Padding | `pad=2, 2, 1` (same padding) | 정리.md 설명 그대로 적용됨 |
+| Stride | 기본값 `1` (명시 안 함 = default) | 동일 |
+| ReLU | Conv 뒤 3번 + FC 뒤 1번 = **총 4번** | 동일: `f(x) = max(0, x)` |
+| Pooling | `MaxPool1d(2)` + `AdaptiveAvgPool1d(1)` | 두 종류 동시 사용 (아래 §3.4 참조) |
+| Dropout | FC 사이 `p=0.20` | 동일: 학습 시 뉴런 20% off |
+| GAP / Flattening | `AdaptiveAvgPool1d(1)` | 정리.md 설명 그대로. Flatten 대신 GAP 사용 |
+| FC layer | `64→32→1`, 2개 층 | 동일: 최종 분류기 |
+| **Softmax** | **미사용. `BCEWithLogitsLoss` → sigmoid** | **보완 필요** (§3.7 참조) |
+| Normalization | 입력 min-max만, BatchNorm 미사용 | 두 가지 의미 구분 필요 (§7 참조) |
 
-    | Metric | (+) meaning | (-) meaning | 판정 기준/참조 |
-    |--------|--------------|--------------|----------------|
-    | classifier logit | model leans toward `step` | model leans toward `nonstep` | sigmoid threshold = `0.5` |
-    | resampled EMG value | higher normalized activation | lower normalized activation | min-max normalized input |
-    | biomechanical signed metric | not used | not used | this prototype only uses EMG channels |
+**모델 전체 흐름** (코드 참조: `analyze_cnn_step_nonstep.py:122-146`):
 
-  - Joint/Force/Torque Sign Conventions
+```
+입력 (16ch × 100t)
+→ Conv1d(16→32, k=5, pad=2) → ReLU
+→ Conv1d(32→32, k=5, pad=2) → ReLU → MaxPool1d(2)
+→ Conv1d(32→64, k=3, pad=1) → ReLU → AdaptiveAvgPool1d(1) [=GAP]
+→ Flatten → FC(64→32) → ReLU → Dropout(0.20) → FC(32→1)
+→ BCEWithLogitsLoss (내부에서 sigmoid 적용)
+```
 
-    | Variable group | (+)/(-) meaning | 추가 규칙 |
-    |----------------|------------------|-----------|
-    | EMG channels | larger or smaller normalized magnitude | all channels remain non-directional amplitudes |
-    | Joint angles | not used | not used | excluded from this prototype |
-    | Force/Torque/COP | not used | not used | excluded from this prototype |
+---
 
-## Results
+## 2. 데이터 이해
 
-The first prototype was useful because it showed that the subject-wise `step` vs `nonstep` question was learnable at all. The enhancement run changes the emphasis. The more important question now is not "Did one lucky CNN run beat logistic regression?" but "What happens when the training loop is instrumented more carefully and repeated across several seeds without leaking outer test information into model selection?"
+### 2.1 데이터 분포 — Figure 01
 
-### Legacy prototype snapshot
+> **Figure**: `figures/01_dataset_label_counts.png`
 
-The original single-run prototype produced the following mean fold metrics:
+![데이터 분포](figures/01_dataset_label_counts.png)
 
-| Model | Accuracy | Balanced Accuracy | F1 | ROC AUC |
-|------|----------|-------------------|----|---------|
-| Logistic regression | 0.720 | 0.742 | 0.689 | 0.847 |
-| Small 1D CNN | 0.752 | 0.767 | 0.712 | 0.863 |
+step=53, nonstep=72로 불균형이 있다. 이 불균형은 `BCEWithLogitsLoss`의 `pos_weight` 파라미터로 보정한다.
 
-That snapshot was useful as a feasibility signal, but it did not yet show repeated seeds, training curves, or a leakage-free early-stopping path.
+**이 그림에서 배울 수 있는 CNN 개념**: CNN 학습 전에 데이터의 클래스 분포를 확인해야 한다. 불균형 데이터는 모델이 다수 클래스만 예측하는 편향을 만들 수 있다.
 
-### Leakage-free enhancement summary
+### 2.2 CNN 입력 텐서 — Figure 02 ← Channel 개념
 
-The enhancement run used `5` seeds (`42, 123, 456, 789, 1024`) and an inner subject-wise validation split for CNN early stopping. The table below reports the **mean of seed-level mean metrics**, not a p-value-based significance claim.
+> **Figure**: `figures/02_emg_class_average_heatmaps.png`
+
+![EMG 히트맵](figures/02_emg_class_average_heatmaps.png)
+
+CNN의 입력은 `(trial, 16 channels, 100 time steps)` 형태의 텐서이다.
+
+- **행(16개)** = EMG 채널 = CNN_정리.md에서 말하는 **Channel**
+- **열(100개)** = 시간 축 = **1D Convolution이 스캔하는 방향**
+- 이미지 CNN은 가로×세로를 2D로 스캔하지만, EMG CNN은 시간축만 1D로 스캔한다
+
+**이 그림에서 배울 수 있는 CNN 개념**: CNN 입력이 반드시 이미지(2D)일 필요는 없다. 시계열 데이터도 채널 × 시간의 2D 텐서로 구성하면 1D CNN으로 분석할 수 있다.
+
+### 2.3 리샘플링 필요성 — Figure 03
+
+> **Figure**: `figures/03_trial_length_by_class.png`
+
+![시행 길이](figures/03_trial_length_by_class.png)
+
+원본 시행(trial)의 길이가 제각각이다. CNN은 **고정 크기 입력**이 필요하므로, 모든 시행을 100 time step으로 리샘플링한다.
+
+**이 그림에서 배울 수 있는 CNN 개념**: CNN의 Conv/Pool 연산은 고정 크기 텐서를 전제한다. 가변 길이 데이터는 전처리 단계에서 고정 길이로 변환해야 한다.
+
+---
+
+## 3. CNN 구조 상세 — 각 개념별 설명
+
+이 절에서는 `CNN_정리.md`의 각 개념을 실제 코드와 연결하여 설명한다.
+
+### 3.1 1D Convolution — 이미지 CNN과의 차이
+
+```python
+# analyze_cnn_step_nonstep.py:128
+nn.Conv1d(in_channels, 32, kernel_size=5, padding=2)
+```
+
+- `CNN_정리.md`에서 배운 Convolution은 이미지(2D)에서 커널이 가로+세로를 스캔한다
+- 이 모델은 **1D Convolution**: 커널이 **시간축 한 방향만** 스캔한다
+- `kernel_size=5`: 한 번에 5개 time step을 보는 커널
+- 입력 16채널 → 출력 32채널: 32개의 서로 다른 커널이 각각 다른 특징을 추출
+
+### 3.2 Padding
+
+```python
+# Conv1: padding=2, Conv2: padding=2, Conv3: padding=1
+```
+
+- `CNN_정리.md` 설명 그대로: 가장자리(edge)가 적게 연산되는 것을 방지
+- `padding=2` + `kernel_size=5` → **same padding** (출력 크기 = 입력 크기)
+- `padding=1` + `kernel_size=3` → 역시 same padding
+
+### 3.3 ReLU
+
+```python
+# 총 4번 사용: Conv 뒤 3번 + FC 뒤 1번
+nn.ReLU()  # f(x) = max(0, x)
+```
+
+- `CNN_정리.md` 설명 그대로: 양수 값(특징)만 남기고 나머지는 0으로 변환
+- 비선형성을 추가하여 CNN이 복잡한 패턴을 학습할 수 있게 한다
+
+### 3.4 Pooling: MaxPool + GAP — 두 종류 동시 사용
+
+```python
+nn.MaxPool1d(kernel_size=2)       # 시간 해상도 ½로 압축 (100→50)
+nn.AdaptiveAvgPool1d(1)           # GAP: 채널당 평균값 1개만 남김 (50→1)
+```
+
+- **MaxPool1d(2)**: `CNN_정리.md`의 Pooling 개념. 2개 중 최대값만 남겨 시간축 압축
+- **AdaptiveAvgPool1d(1)**: `CNN_정리.md`의 **GAP** 개념. 각 채널의 전체 평균값만 FC layer에 전달
+- 이 모델은 MaxPool과 GAP를 **모두** 사용한다
+
+### 3.5 Dropout
+
+```python
+nn.Dropout(p=0.20)  # FC 층 사이에 위치
+```
+
+- `CNN_정리.md` 설명 그대로: 학습 시 뉴런 20%를 무작위로 off
+- FC layer 사이에 위치하여 과적합 방지
+- 추론(inference) 시에는 모든 뉴런 활성화
+
+### 3.6 FC Layer
+
+```python
+nn.Linear(64, 32)   # 첫 번째 FC
+nn.Linear(32, 1)    # 두 번째 FC → 최종 출력 (1개)
+```
+
+- GAP 출력(64차원) → 32차원 → **1차원** (이진 분류)
+- `CNN_정리.md`의 "neural layer에서의 final layer" 설명과 동일
+
+### 3.7 왜 Softmax가 아니라 Sigmoid인가?
+
+> **이것은 CNN_정리.md에서 보완이 필요한 핵심 포인트이다.**
+
+`CNN_정리.md`에서는 Softmax를 "classification 모델의 가장 마지막에 붙는 함수"로 설명했다. 이것은 **다중 클래스 분류**에서 맞는 말이다. 그러나:
+
+| 분류 유형 | 출력 수 | 마지막 함수 | 손실 함수 |
+|---|---|---|---|
+| 다중 클래스 (개, 고양이, 새) | N개 | **Softmax** | CrossEntropyLoss |
+| **이진 분류 (step vs nonstep)** | **1개** | **Sigmoid** | **BCEWithLogitsLoss** |
+
+이 모델은 step/nonstep **2가지만** 구분하므로:
+- 출력이 **1개** (step일 확률)
+- Softmax 대신 **Sigmoid** 사용: `σ(x) = 1/(1+e^(-x))`
+- `BCEWithLogitsLoss`가 내부에서 sigmoid를 적용하므로, 모델 코드에는 sigmoid가 명시되지 않는다
+
+---
+
+## 4. 학습 과정
+
+### 4.1 Training Curves — Figure 10 ← Weight 최적화, 과적합
+
+> **Figure**: `figures/10_training_curves.png`
+
+![학습 곡선](figures/10_training_curves.png)
+
+- **Train loss 감소** = weight가 최적화되고 있다 (`CNN_정리.md` §1.2: "학습을 통해 weight 자동 조절")
+- **Val loss 증가** = 과적합 시작 → **Early Stopping**으로 학습 중단
+- 각 fold별 패널에서 stopping point(빨간 점)가 표시됨
+- 평균 best epoch ≈ 11.3, 평균 stopping epoch ≈ 16.3
+
+**이 그림에서 배울 수 있는 CNN 개념**: Weight는 학습 과정에서 점진적으로 최적화된다. 그러나 너무 오래 학습하면 훈련 데이터에만 맞게 되어(과적합), 새로운 데이터에 대한 성능이 떨어진다.
+
+### 4.2 Seed 영향 — Figure 07 ← Weight 랜덤 초기화
+
+> **Figure**: `figures/07_multi_seed_metric_distribution.png`
+
+![Multi-seed 분포](figures/07_multi_seed_metric_distribution.png)
+
+- `CNN_정리.md` §1.2: "weight는 **랜덤**이지만, 학습을 통해 조절"
+- 이 랜덤 초기값(seed)에 따라 CNN 성능이 변동한다
+- 5개 seed (42, 123, 456, 789, 1024)로 실험한 결과, CNN은 seed마다 성능 차이가 크다
+- Logistic Regression은 seed에 무관하게 안정적
+
+**이 그림에서 배울 수 있는 CNN 개념**: Weight의 랜덤 초기화가 최종 성능에 영향을 미친다. 한 번의 실험만으로 모델 성능을 판단하면 안 된다.
+
+---
+
+## 5. 평가 결과
+
+### 5.1 Fold별 비교 — Figure 04
+
+> **Figure**: `figures/04_fold_metric_comparison.png`
+
+![Fold 비교](figures/04_fold_metric_comparison.png)
+
+Subject-wise `GroupKFold` 교차검증: 같은 피험자가 train과 test에 동시 등장하지 않는다.
+
+**이 그림에서 배울 수 있는 CNN 개념**: 교차검증은 모델의 일반화 성능을 측정하는 표준 방법이다. 의료/생체 데이터에서는 피험자 단위로 분리해야 데이터 누수를 방지할 수 있다.
+
+### 5.2 Confusion Matrix — Figure 05
+
+> **Figure**: `figures/05_confusion_matrices.png`
+
+![Confusion Matrix](figures/05_confusion_matrices.png)
+
+Sigmoid 출력을 threshold=0.5로 판정하여 step/nonstep을 분류한 결과이다.
+
+### 5.3 ROC Curve — Figure 06
+
+> **Figure**: `figures/06_pooled_roc_curves.png`
+
+![ROC Curve](figures/06_pooled_roc_curves.png)
+
+ROC AUC는 threshold를 변화시키면서 모델의 전반적 판별 성능을 측정한다. 대각선(Chance) 위에 있으면 학습 효과가 있다는 의미이다.
+
+### 5.4 최종 결과 (Leakage-free, 5 seeds)
 
 | Model | Accuracy | Balanced Accuracy | F1 | ROC AUC |
 |------|----------|-------------------|----|---------|
 | Logistic regression | 0.720 ± 0.000 | 0.742 ± 0.000 | 0.689 ± 0.000 | 0.847 ± 0.000 |
 | Small 1D CNN | 0.594 ± 0.053 | 0.633 ± 0.039 | 0.558 ± 0.069 | 0.762 ± 0.027 |
 
-### Reading the updated result
+현재 설정에서 Logistic Regression이 CNN보다 안정적이고 성능이 높다. 이는 데이터 크기(125 trials)가 작아서 CNN의 복잡한 파라미터를 충분히 학습시키기 어렵기 때문일 수 있다.
 
-Both models remain above chance, so the filtered `step` vs `nonstep` question is still learnable from the current normalized EMG tensor. What changes after the enhancement is the comparative story. Once the outer test fold is kept clean and the CNN is repeated across multiple seeds, the previous small CNN advantage does not hold up. In this leakage-free setting, logistic regression is more stable and better on all four tracked metrics.
+---
 
-This does not prove that "CNN is bad" in general. It means that **this specific small 1D CNN setup is not yet robustly better than the logistic baseline under the current data size, current input contract, and current early-stopping rule**. That is a meaningful research result because it is safer than relying on one favorable run.
+## 6. CNN이 학습한 것
 
-## Figures
+### 6.1 Grad-CAM: 시간축 주목 구간 — Figure 08
 
-The figures are arranged in a beginner-friendly order. The easiest reading path is: first confirm which trials entered the analysis, then look at what the resampled EMG tensor looks like, then compare model performance, and finally check the pooled held-out classification behavior.
+> **Figure**: `figures/08_gradcam_time_saliency.png`
 
-### 1. `01_dataset_label_counts.png`
+![Grad-CAM](figures/08_gradcam_time_saliency.png)
 
-This figure shows how many `step` and `nonstep` trials survive the current filtering logic. It is the quickest way to confirm that the classifier is learning from the intended comparison set rather than from a heavily imbalanced subset.
+Grad-CAM은 마지막 Conv 층의 gradient를 이용하여 **CNN이 시간축에서 어디에 집중했는지** 시각화한다.
 
-When reading this figure, the first question is simple: are both classes meaningfully represented? In the current run, the answer is yes, although `nonstep` still has more trials than `step`.
+**이 그림에서 배울 수 있는 CNN 개념**: Convolution 커널은 학습을 통해 특정 시간 패턴에 반응하게 된다. Grad-CAM은 이 학습된 특징을 사후적으로 해석하는 도구이다.
 
-### 2. `02_emg_class_average_heatmaps.png`
+### 6.2 Channel Importance — Figure 09
 
-This figure shows the class-average EMG tensor after every trial has been resampled to `100` time steps. Each row is one muscle channel, and each column is normalized time from the start to the end of the analysis window.
+> **Figure**: `figures/09_channel_importance.png`
 
-This is the most important beginner figure because it turns the abstract phrase "CNN input" into something visible. The CNN is not reading synergy weights here. It is reading a `16 x 100` pattern, and the two panels show how that average pattern differs between `nonstep` and `step`.
+![Channel Importance](figures/09_channel_importance.png)
 
-### 3. `03_trial_length_by_class.png`
+Input×Gradient 방법으로 각 EMG 채널(=입력 채널)이 분류에 얼마나 기여했는지 보여준다.
 
-This figure shows the original frame-length distribution before resampling. The point is not that one class is always longer. The point is that trial durations vary enough that a fixed-length representation has to be created before the CNN can use the data consistently.
+**이 그림에서 배울 수 있는 CNN 개념**: CNN의 첫 번째 Conv 층은 각 입력 채널에서 특징을 추출한다. 모든 채널이 동등하게 중요한 것은 아니며, 모델이 특정 채널에 더 많이 의존할 수 있다.
 
-If this distribution were already very tight, the resampling step would be less important. In the current dataset, the spread is wide enough that resampling is a practical requirement.
+---
 
-### 4. `04_fold_metric_comparison.png`
+## 7. CNN_정리.md 보완 사항
 
-This figure compares logistic regression and the small 1D CNN on each held-out fold for `accuracy`, `balanced accuracy`, `F1`, and `ROC AUC`. The dashed horizontal lines mark each model's mean value for that metric.
+이 분석을 통해 발견된 `CNN_정리.md`의 보완 포인트:
 
-This figure is now best read as a **representative single-seed view** rather than as the final conclusion. In the enhanced workflow it still helps show fold-level behavior, but the stronger comparison now comes from the new multi-seed figure.
+### 7.1 Softmax vs Sigmoid
 
-### 5. `05_confusion_matrices.png`
+- 정리.md: "classification 모델의 가장 마지막에 붙는 함수 = Softmax"
+- **보완**: Softmax는 다중 클래스(3개 이상)용이다. **이진 분류에서는 Sigmoid를 사용**하고 출력은 1개이다.
 
-This figure pools all held-out predictions and shows where each model tends to be correct or wrong. The cell text includes both raw counts and row-wise percentages, so it is easier to compare `step` and `nonstep` performance even though the class counts differ.
+### 7.2 1D vs 2D Convolution
 
-For a beginner, this figure is more concrete than accuracy alone. It answers questions like "Is the model missing many step trials?" or "Is it overcalling one class?" in one glance.
+- 정리.md: "input data(e.g., image)는 3D Tensor(width × height × 3)"
+- **보완**: 이것은 이미지(2D Conv) 기준이다. **시계열 데이터는 1D Conv**를 사용하며, 입력은 `(channels × time)` 형태의 2D 텐서이다.
 
-### 6. `06_pooled_roc_curves.png`
+### 7.3 Normalization의 두 가지 의미
 
-This figure compares the pooled held-out ROC curves for logistic regression and the small 1D CNN. The ROC AUC values in the legend summarize how well each model ranks `step` above `nonstep` across many possible thresholds, not just at the default `0.5` cutoff.
+- 정리.md: "ReLU apply 전/후 데이터 정규화"
+- **보완**: Normalization에는 두 가지 의미가 있다:
+  1. **데이터 정규화** (이 모델: 입력 EMG에 min-max 적용) — 전처리 단계
+  2. **층 정규화** (BatchNorm, LayerNorm 등) — 모델 내부에서 학습 안정화. 이 모델에서는 미사용
 
-This figure remains useful as a representative held-out view, but it should now be interpreted together with the multi-seed robustness summary instead of on its own.
+---
 
-### 7. `07_multi_seed_metric_distribution.png`
-
-This figure shows the distribution of **seed-level mean metrics** for logistic regression and the CNN. Each point is one seed after averaging across the five outer folds.
-
-This is the most important new comparison figure because it answers the question that the first prototype could not answer: does the CNN stay competitive when the random seed changes? In the current enhancement run, the answer is no. Logistic regression stays above the CNN across all tracked seed-level means.
-
-### 8. `08_gradcam_time_saliency.png`
-
-This figure shows class-wise **time attribution** from Grad-CAM at the last convolution layer. The values are averaged within each class and then upsampled back to the `100`-step timeline used elsewhere in the report.
-
-This figure is intentionally limited to the time axis. It does not claim that the model has identified a causal biomechanical event. It only shows which parts of the resampled trial timeline most affected the classifier output for `step` and `nonstep`.
-
-### 9. `09_channel_importance.png`
-
-This figure shows class-wise **channel attribution** from `input x gradient`, averaged across time. Each bar corresponds to one EMG channel.
-
-This figure should be read as a rough ranking of which input channels the current model reacted to most strongly. It is an explanation tool, not proof that those muscles are the true biomechanical drivers of stepping.
-
-### 10. `10_training_curves.png`
-
-This figure shows the CNN training curves from a representative seed. Each panel is one outer fold, with train loss and inner-validation loss plotted across epochs and the stopping point marked.
-
-This figure matters because it makes the optimization behavior visible. In the representative seed shown here, all five folds found usable inner validation splits. Across the full five-seed enhancement run, the average best epoch was about `11.3` and the average stopping epoch was about `16.3`.
-
-## Interpretation
-
-The filtered trial count still matters more than any one score. If the selected trial count drifts far from `125`, the model is no longer answering the intended research question because the experimental population has changed.
-
-With that population fixed, the enhancement run changes the scientific reading of the prototype. The safer conclusion is now: **the current logistic baseline is more robust than the current small CNN under leakage-free subject-wise evaluation**. The earlier CNN advantage looks more like a favorable prototype snapshot than a stable modeling result.
-
-That is still a useful outcome. It means the current repository now has better evaluation instrumentation, a robustness view across seeds, and first-pass attribution figures, even though the CNN itself is not yet the better classifier. The next useful steps would be architecture changes, raw-EMG comparisons, or feature designs that preserve the same evaluation discipline.
-
-## Reproduction
+## 재현 방법
 
 ```bash
-conda run --no-capture-output -n cuda python analysis/260312-0026-cnn_step_vs_nonstep/analyze_cnn_step_nonstep.py --dry-run
-conda run --no-capture-output -n cuda python analysis/260312-0026-cnn_step_vs_nonstep/analyze_cnn_step_nonstep.py --seed 42 --patience 5 --cnn-epochs 50
-conda run --no-capture-output -n cuda python analysis/260312-0026-cnn_step_vs_nonstep/analyze_cnn_step_nonstep.py --seeds 42,123,456,789,1024 --patience 5 --cnn-epochs 50
+# 1. 건조 실행 (데이터 확인만)
+conda run --no-capture-output -n cuda python \
+  analysis/260312-0026-cnn_step_vs_nonstep/analyze_cnn_step_nonstep.py --dry-run
+
+# 2. 단일 seed 실행
+conda run --no-capture-output -n cuda python \
+  analysis/260312-0026-cnn_step_vs_nonstep/analyze_cnn_step_nonstep.py \
+  --seed 42 --patience 5 --cnn-epochs 50
+
+# 3. 다중 seed 실행 (보고서 결과 재현)
+conda run --no-capture-output -n cuda python \
+  analysis/260312-0026-cnn_step_vs_nonstep/analyze_cnn_step_nonstep.py \
+  --seeds 42,123,456,789,1024 --patience 5 --cnn-epochs 50
+
+# 4. Figure 주석 추가
+conda run -n module python \
+  analysis/260312-0026-cnn_step_vs_nonstep/enhance_figures.py
 ```
 
-**Input**
+**입력**: `configs/global_config.yaml`에 설정된 normalized EMG parquet + event workbook
 
-- normalized EMG parquet configured in `configs/global_config.yaml`
-- event workbook configured in `configs/global_config.yaml`
-
-**Output**
-
-- stdout summary for dry-run and full-run metrics
-- ten PNG figures under `analysis/260312-0026-cnn_step_vs_nonstep/figures/`
-- no Excel or CSV files
+**출력**:
+- 11개 PNG (`figures/00_model_architecture.png` ~ `figures/10_training_curves.png`)
+- stdout 메트릭 요약
