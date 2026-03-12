@@ -19,6 +19,8 @@
 
 기본 경로는 [configs/global_config.yaml](configs/global_config.yaml)에 정의되어 있으며, 전역 출력 위치와 재현성 관련 seed 역시 같은 파일에서 관리한다.
 
+현재 기본 EMG parquet 경로는 `min-max_norm_only.parquet`이며, min-max 정규화가 완료된 데이터다. 또한 trial별 길이를 고정하기 위한 resampling이 이미 적용되어 있어 `resampled_frame` 컬럼을 포함한다. 기본 입력 기준으로 각 trial은 동일한 resampled 길이를 가지며, 현재 파이프라인은 이 resampled parquet를 입력으로 사용한다.
+
 EMG parquet는 최소한 아래 컬럼을 포함해야 한다.
 
 - `subject`
