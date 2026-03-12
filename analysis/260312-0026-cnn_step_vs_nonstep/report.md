@@ -226,7 +226,7 @@ Sigmoid 출력을 threshold=0.5로 판정하여 step/nonstep을 분류한 결과
 
 ROC AUC는 threshold를 변화시키면서 모델의 전반적 판별 성능을 측정한다. 대각선(Chance) 위에 있으면 학습 효과가 있다는 의미이다.
 
-> **참고**: Figure 06의 AUC는 `--seeds` 중 대표 seed(현재 결과는 seed=42)의 held-out trial 예측을 풀링(pooled)하여 계산한 값이다. §5.4 표의 ROC AUC는 5개 seed 결과를 seed 단위로 요약(mean ± std)한 값이라 수치가 다를 수 있다.
+> **참고**: Figure 06의 AUC는 `--seeds` 중 대표 seed(첫 번째 seed; 예: 42)의 held-out trial 예측을 풀링(pooled)하여 계산한 값이다. §5.4 표의 ROC AUC는 5개 seed 결과를 seed 단위로 요약(mean ± std)한 값이라 수치가 다를 수 있다.
 
 ### 5.4 최종 결과 (Leakage-free, 5 seeds)
 
