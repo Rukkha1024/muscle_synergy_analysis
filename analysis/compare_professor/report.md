@@ -62,13 +62,18 @@ baseline 파이프라인 결과(`outputs/runs/default_run`)와 비교한다.
 
 교수님 코드의 핵심 제약은 “한 trial 안에서 여러 시너지가 같은 클러스터로 중복 배정되면 안 됨”이다.
 
-이번 구현에서는 비교 가능성을 위해 cluster 수를 **각 그룹의 최대 시너지 수**로 고정했다.
+이번 구현에서는 비교를 위해 cluster 수의 시작값을 **각 그룹의 최대 시너지 수(k_min)**로 둔다.
 
 - step: K=7 (최대 시너지 수=7)
 - nonstep: K=5 (최대 시너지 수=5)
 
-단, raw KMeans 라벨은 중복이 자주 발생하여(예: step 24 trial, nonstep 27 trial에서 중복),
-각 trial 내부에서 centroid에 대한 거리(cost) 기반으로 **고유 배정(unique assignment) 보정**을 적용해 중복을 0으로 만들었다.
+이번 스크립트(`compare_step_nonstep_professor_logic.py`)의 실제 동작은 아래와 같다.
+
+1. `k_min = (그룹 내 최대 시너지 수)`로 둔다. (step 7, nonstep 5)
+2. `k_min..k_max` 범위에서 KMeans를 반복 실행해, 모든 trial에서 “중복 배정이 0”이 되는 **최소 K**를 찾는다.
+3. 만약 `k_max`까지도 해가 없으면, `k_min`에서 KMeans를 실행한 뒤 SciPy Hungarian assignment 기반의 **고유 배정(unique assignment) 보정**으로 trial 내부 중복을 제거한다. (fallback)
+
+이번 데이터에서는 (2)에서 해를 찾지 못해 (3) fallback이 적용되었고, 결과적으로 K는 step=7, nonstep=5로 유지되었다.
 
 ## 재현성 / MD5 체크
 

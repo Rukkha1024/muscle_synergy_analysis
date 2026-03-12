@@ -102,6 +102,62 @@ def _normalize_trial_key(key: tuple[str, Any, Any]) -> tuple[str, float, int]:
     return (str(subject).strip(), float(velocity), int(trial_num))
 
 
+def _coerce_step_class(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, float) and np.isnan(value):
+        return None
+    if pd.isna(value):
+        return None
+    text = str(value).strip().lower()
+    if text == "step":
+        return "step"
+    if text in {"nonstep", "non-step", "non_step", "non step"}:
+        return "nonstep"
+    return None
+
+
+def _truthy(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, float) and np.isnan(value):
+        return False
+    if pd.isna(value):
+        return False
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    if isinstance(value, (int, np.integer)):
+        return int(value) != 0
+    if isinstance(value, (float, np.floating)):
+        return float(value) != 0.0
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "y"}
+    return bool(value)
+
+
+def _step_class_from_metadata(meta: dict[str, Any]) -> str | None:
+    if not isinstance(meta, dict):
+        return None
+    direct = _coerce_step_class(meta.get("analysis_step_class"))
+    if direct is not None:
+        return direct
+    is_step = _truthy(meta.get("analysis_is_step"))
+    is_nonstep = _truthy(meta.get("analysis_is_nonstep"))
+    if is_step and not is_nonstep:
+        return "step"
+    if is_nonstep and not is_step:
+        return "nonstep"
+    return None
+
+
+def _group_id_for_step_class(step_class: str) -> str:
+    if step_class == "step":
+        return "global_step"
+    if step_class == "nonstep":
+        return "global_nonstep"
+    return "unknown"
+
+
 @dataclass(frozen=True)
 class ProfessorNmfResult:
     status: str
@@ -186,7 +242,10 @@ def _repair_within_trial_unique_labels(
     labels: np.ndarray,
     centroids: np.ndarray,
 ) -> np.ndarray:
-    from scipy.optimize import linear_sum_assignment
+    try:
+        from scipy.optimize import linear_sum_assignment
+    except Exception as exc:  # pragma: no cover - depends on environment
+        raise ImportError("scipy is required for within-trial unique-assignment repair.") from exc
 
     repaired = np.asarray(labels, dtype=int).copy()
     by_trial: dict[str, list[int]] = {}
@@ -409,6 +468,53 @@ def main() -> int:
             f"missing(example)={missing} extra(example)={extra}"
         )
 
+    label_mismatch_rows: list[dict[str, Any]] = []
+    for trial in trial_records:
+        meta = trial.metadata
+        trial_key = _normalize_trial_key(trial.key)
+        baseline_info = baseline_lookup.get(trial_key)
+        if baseline_info is None:
+            raise KeyError(f"Baseline metadata missing trial key: {trial_key}")
+
+        baseline_start = int(baseline_info["analysis_window_start_device"])
+        baseline_end = int(baseline_info["analysis_window_end_device"])
+        meta_start = int(meta.get("analysis_window_start_device", -1))
+        meta_end = int(meta.get("analysis_window_end_device", -1))
+        if (meta_start, meta_end) != (baseline_start, baseline_end):
+            raise ValueError(
+                "Trial window mismatch vs baseline metadata: "
+                f"key={trial_key} current=({meta_start},{meta_end}) baseline=({baseline_start},{baseline_end})"
+            )
+
+        baseline_step_class = _coerce_step_class(baseline_info.get("analysis_step_class"))
+        event_step_class = _step_class_from_metadata(meta)
+        if baseline_step_class is None:
+            raise ValueError(f"Baseline analysis_step_class is invalid: key={trial_key} value={baseline_info.get('analysis_step_class')}")
+        if event_step_class is None:
+            raise ValueError(
+                "Event-derived analysis_step_class is missing/invalid for trial: "
+                f"key={trial_key} meta.analysis_step_class={meta.get('analysis_step_class')} "
+                f"meta.analysis_is_step={meta.get('analysis_is_step')} meta.analysis_is_nonstep={meta.get('analysis_is_nonstep')}"
+            )
+        if baseline_step_class != event_step_class:
+            label_mismatch_rows.append(
+                {
+                    "subject": trial_key[0],
+                    "velocity": float(trial_key[1]),
+                    "trial_num": int(trial_key[2]),
+                    "baseline_step_class": baseline_step_class,
+                    "event_step_class": event_step_class,
+                }
+            )
+
+    if label_mismatch_rows:
+        mismatch_path = args.outdir / "step_label_mismatches.csv"
+        pd.DataFrame(label_mismatch_rows).to_csv(mismatch_path, index=False, encoding="utf-8-sig")
+        raise ValueError(
+            "Step/nonstep labels differ between baseline metadata and event-derived metadata "
+            f"for {len(label_mismatch_rows)} trials. See: {mismatch_path}"
+        )
+
     trial_rows: list[dict[str, Any]] = []
     synergy_vectors: list[np.ndarray] = []
     synergy_rows: list[dict[str, Any]] = []
@@ -420,18 +526,12 @@ def main() -> int:
         if baseline_info is None:
             raise KeyError(f"Baseline metadata missing trial key: {trial_key}")
 
-        step_class = baseline_info["analysis_step_class"]
-        group_id = "global_step" if step_class == "step" else "global_nonstep" if step_class == "nonstep" else "unknown"
-
-        baseline_start = int(baseline_info["analysis_window_start_device"])
-        baseline_end = int(baseline_info["analysis_window_end_device"])
-        meta_start = int(meta.get("analysis_window_start_device", -1))
-        meta_end = int(meta.get("analysis_window_end_device", -1))
-        if (meta_start, meta_end) != (baseline_start, baseline_end):
-            raise ValueError(
-                "Trial window mismatch vs baseline metadata: "
-                f"key={trial_key} current=({meta_start},{meta_end}) baseline=({baseline_start},{baseline_end})"
-            )
+        baseline_step_class = _coerce_step_class(baseline_info.get("analysis_step_class"))
+        event_step_class = _step_class_from_metadata(meta)
+        if baseline_step_class is None or event_step_class is None:
+            raise RuntimeError("Step label validation should have been enforced before NMF execution.")
+        step_class = event_step_class
+        group_id = _group_id_for_step_class(step_class)
 
         trial_id = f"{trial.key[0]}_v{trial.key[1]}_T{trial.key[2]}"
         X_trial = trial.frame[muscle_names].to_numpy(dtype=np.float64)
@@ -444,6 +544,7 @@ def main() -> int:
                 "trial_num": int(trial.key[2]),
                 "trial_id": trial_id,
                 "analysis_step_class": step_class,
+                "baseline_step_class": baseline_step_class,
                 "analysis_group_id": group_id,
                 "n_frames": int(X_trial.shape[0]),
                 "n_muscles": int(X_trial.shape[1]),
@@ -456,7 +557,7 @@ def main() -> int:
             }
         )
 
-        if result.status not in {"ok", "below_threshold_best_effort"}:
+        if result.status != "ok":
             continue
         H = np.asarray(result.H_structure, dtype=np.float64)
         for component_index in range(H.shape[0]):
@@ -465,6 +566,7 @@ def main() -> int:
                 {
                     "group_id": group_id,
                     "analysis_step_class": step_class,
+                    "baseline_step_class": baseline_step_class,
                     "trial_id": trial_id,
                     "subject": str(trial.key[0]),
                     "velocity": float(trial.key[1]),
@@ -541,6 +643,11 @@ def main() -> int:
             "k_max": int(args.k_max),
             "nmf_init": "random",
             "nmf_random_state": int(args.seed),
+        },
+        "assumptions": {
+            "step_label_source": "event_metadata",
+            "step_label_matches_baseline": True,
+            "nmf_vectors_included": ["ok"],
         },
         "counts": {
             "n_trials": int(trial_summary.shape[0]),
