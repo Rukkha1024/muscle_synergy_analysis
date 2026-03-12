@@ -1,0 +1,2 @@
+﻿group_id,status,n_trials,n_components,n_clusters,inertia,duplicate_trials,algorithm_used
+global_step,success,53,229,7,73.1188875068,[],cuml_kmeans

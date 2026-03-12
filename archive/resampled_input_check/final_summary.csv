@@ -1,0 +1,3 @@
+﻿group_id,n_trials,n_components,n_clusters,status,duplicate_trials,algorithm_used,group_figure_path
+global_step,53,229,7,success,[],cuml_kmeans,figures/global_step_clusters.png
+global_nonstep,72,263,5,success,[],cuml_kmeans,figures/global_nonstep_clusters.png

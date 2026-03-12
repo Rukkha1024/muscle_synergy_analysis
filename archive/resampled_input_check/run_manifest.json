@@ -1,0 +1,8 @@
+﻿{
+  "created_at_utc": "2026-03-12T14:05:31.156573+00:00",
+  "python_executable": "/home/alice/miniconda3/envs/cuda/bin/python",
+  "python_version": "3.11.13 (main, Jun  5 2025, 13:12:00) [GCC 11.2.0]",
+  "config_sha256": "5e16c8253c170eca821d772c033ec5bd4a0feab8e39a6470651597f33e22b2ff",
+  "runtime_seed": 42,
+  "run_id": "resampled_input_check"
+}
