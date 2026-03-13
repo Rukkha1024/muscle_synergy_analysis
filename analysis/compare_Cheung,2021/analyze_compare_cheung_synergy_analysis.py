@@ -8,11 +8,10 @@ NMF rule, compares step and nonstep structure, and writes figures plus
 from __future__ import annotations
 
 import argparse
-import copy
 import hashlib
 import math
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -33,6 +32,9 @@ from src.emg_pipeline import build_trial_records, load_emg_table, load_event_met
 from src.synergy_stats.figures import save_group_cluster_figure
 
 _PIPELINE_CFG: dict[str, Any] | None = None
+DEFAULT_PAPER_KMEANS_RESTARTS = 1000
+DEFAULT_PAPER_GAP_REF_N = 500
+DEFAULT_PAPER_GAP_REF_RESTARTS = 100
 
 
 @dataclass
@@ -47,21 +49,15 @@ class PaperMethodConfig:
     nmf_max_iter: int
     nmf_tol: float
     nmf_patience: int
-    cluster_k_min: int
     cluster_k_max: int
     kmeans_restarts: int
     gap_ref_n: int
     gap_ref_restarts: int
-    repair_max_iter: int
     common_subject_fraction: float
     sp_match_threshold: float
     merge_min_sources: int
     merge_min_coef: float
     merge_sp_threshold: float
-    prototype_trials_per_group: int
-    prototype_gap_ref_n: int
-    prototype_gap_ref_restarts: int
-    prototype_kmeans_restarts: int
 
 
 @dataclass
@@ -160,33 +156,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--figure-dir", type=Path, default=SCRIPT_DIR / "figures")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--dry-run", action="store_true", help="Load inputs and validate selected trials only.")
-    parser.add_argument("--prototype", action="store_true", help="Run only the prototype clustering stage.")
-    parser.add_argument("--skip-prototype", action="store_true", help="Skip the prototype clustering gate.")
-    parser.add_argument("--paper-full", action="store_true", help="Use paper-aligned gap-statistic and restart counts.")
     parser.add_argument("--nmf-restarts", type=int, default=20)
     parser.add_argument("--nmf-max-rank", type=int, default=16)
     parser.add_argument("--nmf-max-iter", type=int, default=500)
     parser.add_argument("--r2-threshold", type=float, default=0.80)
     parser.add_argument("--cluster-k-max", type=int, default=20)
-    parser.add_argument("--kmeans-restarts", type=int, default=60)
-    parser.add_argument("--gap-ref-n", type=int, default=40)
-    parser.add_argument("--gap-ref-restarts", type=int, default=20)
-    parser.add_argument("--prototype-trials-per-group", type=int, default=4)
-    parser.add_argument("--prototype-gap-ref-n", type=int, default=20)
-    parser.add_argument("--prototype-gap-ref-restarts", type=int, default=10)
-    parser.add_argument("--prototype-kmeans-restarts", type=int, default=25)
+    parser.add_argument("--kmeans-restarts", type=int, default=DEFAULT_PAPER_KMEANS_RESTARTS)
+    parser.add_argument("--gap-ref-n", type=int, default=DEFAULT_PAPER_GAP_REF_N)
+    parser.add_argument("--gap-ref-restarts", type=int, default=DEFAULT_PAPER_GAP_REF_RESTARTS)
     return parser.parse_args()
 
 
 def _build_method_config(args: argparse.Namespace, cfg: dict[str, Any]) -> PaperMethodConfig:
-    if args.paper_full:
-        kmeans_restarts = 1000
-        gap_ref_n = 500
-        gap_ref_restarts = 100
-    else:
-        kmeans_restarts = int(args.kmeans_restarts)
-        gap_ref_n = int(args.gap_ref_n)
-        gap_ref_restarts = int(args.gap_ref_restarts)
     return PaperMethodConfig(
         muscle_names=list(cfg["muscles"]["names"]),
         random_seed=int(args.seed),
@@ -196,21 +177,15 @@ def _build_method_config(args: argparse.Namespace, cfg: dict[str, Any]) -> Paper
         nmf_max_iter=int(args.nmf_max_iter),
         nmf_tol=1e-5,
         nmf_patience=20,
-        cluster_k_min=2,
         cluster_k_max=int(args.cluster_k_max),
-        kmeans_restarts=int(kmeans_restarts),
-        gap_ref_n=int(gap_ref_n),
-        gap_ref_restarts=int(gap_ref_restarts),
-        repair_max_iter=30,
+        kmeans_restarts=int(args.kmeans_restarts),
+        gap_ref_n=int(args.gap_ref_n),
+        gap_ref_restarts=int(args.gap_ref_restarts),
         common_subject_fraction=1.0 / 3.0,
         sp_match_threshold=0.8,
         merge_min_sources=2,
         merge_min_coef=0.2,
         merge_sp_threshold=0.8,
-        prototype_trials_per_group=int(args.prototype_trials_per_group),
-        prototype_gap_ref_n=int(args.prototype_gap_ref_n),
-        prototype_gap_ref_restarts=int(args.prototype_gap_ref_restarts),
-        prototype_kmeans_restarts=int(args.prototype_kmeans_restarts),
     )
 
 
@@ -329,7 +304,8 @@ def build_trial_matrix_dict(final_df: pd.DataFrame, manifest_df: pl.DataFrame, c
 
 
 def _r2_score(X: np.ndarray, recon: np.ndarray) -> float:
-    sst = float(np.sum(X * X))
+    centered = np.asarray(X, dtype=np.float64) - np.asarray(X, dtype=np.float64).mean(axis=0, keepdims=True)
+    sst = float(np.sum(centered**2))
     if sst <= 0:
         return 0.0
     sse = float(np.sum((X - recon) ** 2))
@@ -442,70 +418,43 @@ def summarize_trial_synergies(trial_results: list[TrialSynergyResult], config: P
     }
 
 
-def _trial_duplicate_labels(trial_keys: list[str], labels: np.ndarray) -> list[str]:
-    grouped: dict[str, list[int]] = defaultdict(list)
-    for trial_key, label in zip(trial_keys, labels.tolist()):
-        grouped[trial_key].append(int(label))
-    return [trial_key for trial_key, values in grouped.items() if len(values) != len(set(values))]
-
-
 def _objective(data: np.ndarray, labels: np.ndarray, centroids: np.ndarray) -> float:
     return float(np.sum((data - centroids[labels]) ** 2))
 
 
-def _reseed_empty_centroid(data: np.ndarray, labels: np.ndarray, centroids: np.ndarray, empty_idx: int) -> np.ndarray:
-    if centroids.shape[0] == 1:
-        return data[0].copy()
-    current = np.delete(centroids, empty_idx, axis=0)
-    distances = ((data[:, None, :] - current[None, :, :]) ** 2).sum(axis=2)
-    farthest = int(np.argmax(np.min(distances, axis=1)))
-    return data[farthest].copy()
+def _sample_initial_centroids(data: np.ndarray, k: int, rng: np.random.Generator) -> np.ndarray:
+    indices = rng.choice(data.shape[0], size=k, replace=False)
+    return np.asarray(data[indices], dtype=np.float64).copy()
 
 
-def duplicate_free_kmeans(vectors: np.ndarray, trial_keys: list[str], k: int, config: PaperMethodConfig, seed: int) -> tuple[np.ndarray, np.ndarray, float]:
+def _plain_kmeans_once(vectors: np.ndarray, k: int, seed: int) -> tuple[np.ndarray, np.ndarray, float]:
     data = np.asarray(vectors, dtype=np.float64)
     if data.shape[0] < k:
         raise ValueError(f"Cannot cluster {data.shape[0]} vectors into k={k}.")
-    model = KMeans(n_clusters=k, n_init=1, random_state=int(seed))
+    rng = np.random.default_rng(int(seed))
+    init_centroids = _sample_initial_centroids(data, k, rng)
+    model = KMeans(n_clusters=k, init=init_centroids, n_init=1, random_state=int(seed), algorithm="lloyd")
     labels = model.fit_predict(data).astype(int)
     centroids = np.asarray(model.cluster_centers_, dtype=np.float64)
-    grouped_indices: dict[str, np.ndarray] = {}
-    for idx, trial_key in enumerate(trial_keys):
-        grouped_indices.setdefault(trial_key, []).append(idx)
-    grouped_indices = {key: np.asarray(value, dtype=int) for key, value in grouped_indices.items()}
-
-    for _ in range(config.repair_max_iter):
-        updated = labels.copy()
-        for indices in grouped_indices.values():
-            costs = ((data[indices][:, None, :] - centroids[None, :, :]) ** 2).sum(axis=2)
-            for row_idx, current_label in enumerate(labels[indices].tolist()):
-                costs[row_idx, :] += 1e-6
-                costs[row_idx, int(current_label)] -= 1e-6
-            row_ind, col_ind = linear_sum_assignment(costs)
-            updated[indices[row_ind]] = col_ind.astype(int)
-        if np.array_equal(labels, updated) and not _trial_duplicate_labels(trial_keys, updated):
-            labels = updated
-            break
-        labels = updated
-        new_centroids = centroids.copy()
-        for centroid_idx in range(k):
-            mask = labels == centroid_idx
-            if np.any(mask):
-                new_centroids[centroid_idx] = data[mask].mean(axis=0)
-            else:
-                new_centroids[centroid_idx] = _reseed_empty_centroid(data, labels, centroids, centroid_idx)
-        centroids = new_centroids
-    duplicates = _trial_duplicate_labels(trial_keys, labels)
-    if duplicates:
-        raise RuntimeError(f"Duplicate-free clustering failed for k={k}. Example trials: {duplicates[:5]}")
-    for centroid_idx in range(k):
-        mask = labels == centroid_idx
-        if np.any(mask):
-            centroids[centroid_idx] = data[mask].mean(axis=0)
     return labels, centroids, _objective(data, labels, centroids)
 
 
-def compute_gap_statistic(vectors: np.ndarray, trial_keys: list[str], k_values: list[int], config: PaperMethodConfig, seed: int) -> dict[str, Any]:
+def _best_plain_kmeans_solution(vectors: np.ndarray, k: int, repeats: int, seed: int) -> tuple[np.ndarray, np.ndarray, float]:
+    best_labels: np.ndarray | None = None
+    best_centroids: np.ndarray | None = None
+    best_obj = math.inf
+    for restart in range(repeats):
+        labels, centroids, obj = _plain_kmeans_once(vectors, k, seed + restart)
+        if obj < best_obj:
+            best_obj = obj
+            best_labels = labels.copy()
+            best_centroids = centroids.copy()
+    if best_labels is None or best_centroids is None:
+        raise RuntimeError(f"Could not find a plain k-means solution for k={k}")
+    return best_labels, best_centroids, float(best_obj)
+
+
+def compute_gap_statistic(vectors: np.ndarray, k_values: list[int], config: PaperMethodConfig, seed: int) -> dict[str, Any]:
     vectors = np.asarray(vectors, dtype=np.float64)
     mins = np.min(vectors, axis=0)
     maxs = np.max(vectors, axis=0)
@@ -515,27 +464,24 @@ def compute_gap_statistic(vectors: np.ndarray, trial_keys: list[str], k_values: 
     best_result_by_k: dict[int, tuple[np.ndarray, np.ndarray, float]] = {}
 
     for k in k_values:
-        best_labels: np.ndarray | None = None
-        best_centroids: np.ndarray | None = None
-        best_obj = math.inf
-        for restart in range(config.kmeans_restarts):
-            labels, centroids, obj = duplicate_free_kmeans(vectors, trial_keys, k, config, seed + (k * 1000) + restart)
-            if obj < best_obj:
-                best_obj = obj
-                best_labels = labels.copy()
-                best_centroids = centroids.copy()
-        if best_labels is None or best_centroids is None:
-            raise RuntimeError(f"Could not find a clustering solution for k={k}")
+        best_labels, best_centroids, best_obj = _best_plain_kmeans_solution(
+            vectors,
+            k,
+            config.kmeans_restarts,
+            seed + (k * 1000),
+        )
         observed_objective[k] = float(best_obj)
         best_result_by_k[k] = (best_labels, best_centroids, float(best_obj))
 
         reference_logs: list[float] = []
         for ref_idx in range(config.gap_ref_n):
             ref = np.random.default_rng(seed + (k * 10000) + ref_idx).uniform(mins, maxs, size=vectors.shape)
-            ref_best_obj = math.inf
-            for ref_restart in range(config.gap_ref_restarts):
-                _, _, ref_obj = duplicate_free_kmeans(ref, trial_keys, k, config, seed + (k * 20000) + ref_idx * 100 + ref_restart)
-                ref_best_obj = min(ref_best_obj, ref_obj)
+            _, _, ref_best_obj = _best_plain_kmeans_solution(
+                ref,
+                k,
+                config.gap_ref_restarts,
+                seed + (k * 20000) + ref_idx * 1000,
+            )
             reference_logs.append(float(np.log(ref_best_obj + 1e-12)))
         gap_by_k[k] = float(np.mean(reference_logs) - np.log(best_obj + 1e-12))
         gap_sd_by_k[k] = float(np.std(reference_logs, ddof=1) * math.sqrt(1.0 + 1.0 / max(1, config.gap_ref_n)))
@@ -989,7 +935,7 @@ def render_report(results: dict[str, Any], config: PaperMethodConfig, report_pat
         )
     comparison_rows = [
         ["Rank rule", "~6 vs. ~7 synergies at R²≈0.80", f"Step median={trial_summary.loc[trial_summary['step_class']=='step','paper_rank'].median():.1f}; Nonstep median={trial_summary.loc[trial_summary['step_class']=='nonstep','paper_rank'].median():.1f}", "Partially consistent"],
-        ["Common-cluster rule", ">1/3 subject contribution", f"Step common={len(step_common.cluster_ids)}, Nonstep common={len(nonstep_common.cluster_ids)}", "Consistent"],
+        ["Common-cluster rule", ">=1/3 subject contribution", f"Step common={len(step_common.cluster_ids)}, Nonstep common={len(nonstep_common.cluster_ids)}", "Consistent"],
         ["Centroid matching", "Use scalar product with SP<0.8 unmatched", f"Matched={len(match_summary['matched_pairs'])}, unmatched step={len(match_summary['unmatched_step'])}, unmatched nonstep={len(match_summary['unmatched_nonstep'])}", "Consistent"],
         ["Cross-fit", "Across-group fit compared with within-group benchmark", f"Across-group deltas: {', '.join(f'{item.direction}={_format_float(item.delta_mean_r2)}' for item in results['crossfit_summaries'])}", "Consistent"],
         ["Developmental/training conclusion", "Fractionation in development, merging in training", "Current analysis compares perturbation step vs nonstep rather than age/training groups.", "Not tested"],
@@ -1018,10 +964,35 @@ def render_report(results: dict[str, Any], config: PaperMethodConfig, report_pat
         ["Raw EMG preprocessing", "Filter, rectify, and normalize raw running EMG", "Reuse repository normalized parquet and do not replay raw preprocessing", "The current repository only exposes the post-processed perturbation EMG input."],
         ["Muscle set", "15 right-sided running muscles", "16-channel perturbation EMG muscle list from the repository config", "The project has a fixed 16-channel input and the user asked to keep it."],
         ["Comparison design", "Cross-sectional and longitudinal running groups", "Pooled step vs nonstep perturbation trials", "The scientific question in this repository is strategy difference under the same perturbation condition."],
-        ["Duplicate-free rule", "Not stated in the paper's clustering description", "Enforce within-trial duplicate-free cluster assignment", "The user explicitly requested the current project constraint."],
+        ["Clustering assignment", "Plain pooled k-means over candidate K values", "Plain pooled k-means over candidate K values", "This revision removes the earlier project-specific duplicate-free reassignment path."],
         ["Activation analysis", "The paper also analyzes temporal activation coefficients", "Focus on structure-level comparison plus cross-fit and structural merging", "Temporal activation replication would not be comparable after the project-specific adaptation."],
-        ["Gap-statistic runtime", "500 reference sets and 100 restarts per reference", "The script exposes `--paper-full`; local validation used the script defaults for tractable runtime", "The local environment needs reproducible run times while still preserving the same algorithmic structure."],
+        [
+            "Gap-statistic runtime",
+            "500 reference sets and 100 restarts per reference",
+            (
+                f"Script defaults are {DEFAULT_PAPER_GAP_REF_N} reference sets and "
+                f"{DEFAULT_PAPER_GAP_REF_RESTARTS} restarts per reference; "
+                f"this run used {config.gap_ref_n} and {config.gap_ref_restarts}"
+            ),
+            "The checked-in script defaults are paper-aligned, but local validation may still use explicit CLI overrides for tractable runtime.",
+        ],
     ]
+    runtime_override_note = ""
+    if (
+        config.kmeans_restarts,
+        config.gap_ref_n,
+        config.gap_ref_restarts,
+    ) != (
+        DEFAULT_PAPER_KMEANS_RESTARTS,
+        DEFAULT_PAPER_GAP_REF_N,
+        DEFAULT_PAPER_GAP_REF_RESTARTS,
+    ):
+        runtime_override_note = (
+            "This checked-in report was generated with explicit runtime overrides for tractable local validation: "
+            f"`--kmeans-restarts {config.kmeans_restarts} --gap-ref-n {config.gap_ref_n} "
+            f"--gap-ref-restarts {config.gap_ref_restarts}`. "
+            "Running the default command uses the paper-aligned counts and may therefore regenerate different artifacts.\n\n"
+        )
     report = f"""# Cheung 2021 Step vs Nonstep Synergy Comparison
 
 ## Research Question
@@ -1032,7 +1003,7 @@ This analysis asks whether the repository's perturbation `step` and `nonstep` tr
 
 ### Cheung et al. (2020) — Plasticity of muscle synergies through fractionation and merging during development and training of human runners
 
-**Methodology:** The paper used non-negative matrix factorization on running EMG and selected the smallest rank that reached an EMG reconstruction `R²` of about `0.80`. It clustered subject synergies with k-means, used the gap statistic to choose the number of clusters, defined relatively subject-invariant clusters as those contributed by more than one-third of the subjects, matched cluster centroids with scalar products, and treated pairs with `SP < 0.8` as unmatched. The paper also used cross-fit, sparseness, and NNLS-based merging or fractionation logic.
+**Methodology:** The paper used non-negative matrix factorization on running EMG and selected the smallest rank that reached an EMG reconstruction `R²` of about `0.80`. It clustered subject synergies with k-means, used the gap statistic to choose the number of clusters, defined relatively subject-invariant clusters as those contributed by at least one-third of the subjects, matched cluster centroids with scalar products, and treated pairs with `SP < 0.8` as unmatched. The paper also used cross-fit, sparseness, and NNLS-based merging or fractionation logic.
 
 **Experimental design:** The study analyzed `63` subjects over `100` sessions across preschoolers, sedentary adults, novice runners, experienced runners, and elite runners. It used `15` right-sided lower-limb running muscles.
 
@@ -1054,9 +1025,9 @@ Baseline run `{run_label}` metadata provided the canonical trial list and analys
 
 ## Analysis Methodology
 
-The script rebuilt each selected trial from the normalized EMG input, validated that the rebuilt windows matched baseline run `{run_label}`, and then ran a multiplicative-update NMF search over ranks `1..{config.nmf_max_rank}` with `{config.nmf_restarts}` restarts per rank. The selected rank was the smallest rank whose reconstruction reached `R² >= {config.r2_threshold:.2f}`; if a trial never reached the threshold, the script kept the best-`R²` rank and marked the trial as a threshold miss.
+The script rebuilt each selected trial from the normalized EMG input, validated that the rebuilt windows matched baseline run `{run_label}`, and then ran a multiplicative-update NMF search over ranks `1..{config.nmf_max_rank}` with `{config.nmf_restarts}` random restarts per rank. The selected rank was the smallest rank whose centered-variance reconstruction reached `R² >= {config.r2_threshold:.2f}`; if a trial never reached the threshold, the script kept the best-`R²` rank and marked the trial as a threshold miss.
 
-The step and nonstep synergy vectors were clustered separately with a duplicate-free k-means procedure. For each candidate `k`, the algorithm initialized centroids with k-means, enforced within-trial unique labels by Hungarian assignment, updated centroids, and repeated until the labels stabilized. The gap statistic selected `k` from the tested range and used the same duplicate-free objective in the reference data. Common clusters were defined as clusters contributed by at least `ceil(N/3)` subjects in the corresponding step class.
+The step and nonstep synergy vectors were clustered separately with plain pooled k-means. For each candidate `k` in `2..{config.cluster_k_max}`, the algorithm ran k-means with random data-point centroid initialization `{config.kmeans_restarts}` times in this run and kept the smallest squared-Euclidean objective. The script defaults remain paper-aligned at `{DEFAULT_PAPER_KMEANS_RESTARTS}` observed repeats, `{DEFAULT_PAPER_GAP_REF_N}` reference datasets, and `{DEFAULT_PAPER_GAP_REF_RESTARTS}` repeats per reference dataset, even though local validation can still override those counts explicitly. Common clusters were defined as clusters contributed by at least `ceil(N/3)` subjects in the corresponding step class.
 
 The analysis then computed centroid matching, Hoyer sparseness, pooled all-by-all cross-fit, centroid-level merging or fractionation, individual-level merging indices, and within-group comparisons against the baseline representative synergies. All centroid matching used scalar products, and any match with `SP < {config.sp_match_threshold:.1f}` remained unmatched.
 
@@ -1064,7 +1035,7 @@ The analysis then computed centroid matching, Hoyer sparseness, pooled all-by-al
 
 The paper-style rank distributions differed only modestly from the baseline rank distribution. The current rank distribution was `{results['trial_summary']['paper_rank_distribution']}`, while the baseline distribution was `{results['trial_summary']['baseline_rank_distribution']}`. The rank-delta summary relative to baseline was `{results['trial_summary']['rank_delta_distribution']}`.
 
-The duplicate-free gap-statistic search produced `step` common clusters `{step_common.cluster_ids}` and `nonstep` common clusters `{nonstep_common.cluster_ids}`. Step-to-nonstep centroid matching found `{len(match_summary['matched_pairs'])}` valid pair(s), with unmatched step centroids `{match_summary['unmatched_step']}` and unmatched nonstep centroids `{match_summary['unmatched_nonstep']}`.
+The plain-k-means gap-statistic search produced `step` common clusters `{step_common.cluster_ids}` and `nonstep` common clusters `{nonstep_common.cluster_ids}`. Step-to-nonstep centroid matching found `{len(match_summary['matched_pairs'])}` valid pair(s), with unmatched step centroids `{match_summary['unmatched_step']}` and unmatched nonstep centroids `{match_summary['unmatched_nonstep']}`.
 
 Cross-fit showed the following mean differences between across-group and within-group benchmark fits:
 
@@ -1092,33 +1063,31 @@ Baseline representative correspondence stayed group-specific:
 
 The current perturbation dataset supports a meaningful paper-style re-analysis, but it does not replicate the paper's developmental and training claims directly. Instead, the workflow shows how the repository's `step` and `nonstep` strategies organize their 16-channel perturbation EMG into paper-style synergy structures while preserving the repository's trial windows and selection rules.
 
-The most important take-away is the separation between preserved logic and adapted logic. The preserved logic includes the `R²`-based rank rule, subject-invariant cluster definition, scalar-product matching, cross-fit framing, and NNLS-based merging criteria. The adapted logic includes the perturbation-specific trial pool, the duplicate-free within-trial assignment rule, and the practical runtime defaults for clustering. Users should therefore read the current figures as a structural comparison tool for this repository, not as a literal reproduction of the running-expertise paper.
+The most important take-away is the separation between preserved logic and adapted logic. The preserved logic now includes the `R²`-based rank rule, the paper-aligned plain-k-means gap-statistic search, the subject-invariant cluster definition, scalar-product matching, cross-fit framing, and NNLS-based merging criteria. The adapted logic includes the perturbation-specific trial pool, the 16-channel muscle set, and the fact that the repository starts from post-processed EMG rather than the paper's raw running signals. Users should therefore read the current figures as a structural comparison tool for this repository, not as a literal reproduction of the running-expertise paper.
 
 ## Limitations
 
-This analysis does not replay the paper's raw EMG preprocessing and does not compare developmental or training groups. The repository uses a 16-channel perturbation EMG set rather than the paper's 15-muscle running set. The local validation also used practical default restart counts unless `--paper-full` is passed, so the exact clustering stability can still be stress-tested further with the paper-aligned runtime settings.
+This analysis does not replay the paper's raw EMG preprocessing and does not compare developmental or training groups. The repository uses a 16-channel perturbation EMG set rather than the paper's 15-muscle running set. The clustering and NMF defaults are paper-aligned within that 16-channel adaptation, but the scientific context remains a perturbation step-vs-nonstep comparison rather than a running-expertise study.
 
 ## Reproduction
 
-Run the dry-run first:
+{runtime_override_note}Run the dry-run first:
 
 ```bash
 conda run --no-capture-output -n module python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py --dry-run
 ```
 
-Run the full analysis:
+Run the full analysis with the paper-aligned defaults:
 
 ```bash
 conda run --no-capture-output -n module python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py
 ```
 
-To switch to the paper-aligned clustering runtime, add `--paper-full`.
-
 ## Figures
 
 {_table_from_rows(["File", "Description"], figure_rows)}
 """
-    report_path.write_text(report, encoding="utf-8")
+    report_path.write_text(report, encoding="utf-8-sig")
 
 
 def _build_merged_input(cfg: dict[str, Any], config: PaperMethodConfig) -> pd.DataFrame:
@@ -1179,24 +1148,15 @@ def _build_vector_rows(trial_results: list[TrialSynergyResult]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _prototype_subset(trial_results: list[TrialSynergyResult], config: PaperMethodConfig) -> list[TrialSynergyResult]:
-    by_group: dict[str, list[TrialSynergyResult]] = {"step": [], "nonstep": []}
-    for result in trial_results:
-        by_group[result.step_class].append(result)
-    subset: list[TrialSynergyResult] = []
-    for step_class in ["step", "nonstep"]:
-        subset.extend(by_group[step_class][: config.prototype_trials_per_group])
-    return subset
-
-
 def _run_group_clustering(group_id: str, vector_df: pd.DataFrame, manifest_df: pl.DataFrame, config: PaperMethodConfig, seed: int) -> tuple[ClusterSearchResult, CommonClusterSummary]:
     group_vectors = vector_df.loc[vector_df["group_id"] == group_id].reset_index(drop=True)
     vectors = np.stack(group_vectors["vector"].to_list(), axis=0)
-    trial_keys = [f"{row.subject}|{row.velocity}|{row.trial_num}" for row in group_vectors.itertuples(index=False)]
-    k_min = int(max(config.cluster_k_min, group_vectors["trial_rank"].max()))
+    if vectors.shape[0] < 2:
+        raise ValueError(f"Need at least two pooled vectors for clustering in {group_id}.")
+    k_min = 2
     k_max = int(min(config.cluster_k_max, vectors.shape[0]))
     k_values = list(range(k_min, k_max + 1))
-    gap_result = compute_gap_statistic(vectors, trial_keys, k_values, config, seed)
+    gap_result = compute_gap_statistic(vectors, k_values, config, seed)
     member_rows = []
     for row, label in zip(group_vectors.itertuples(index=False), gap_result["labels"].tolist()):
         member_rows.append(
@@ -1408,20 +1368,6 @@ def main() -> int:
     trial_results = _collect_trial_results(trial_lookup, manifest_lookup, method_config, int(args.seed))
     trial_summary = summarize_trial_synergies(trial_results, method_config)
     print(f"[M2] Trial-level paper NMF complete: trials={len(trial_results)}")
-
-    if not args.skip_prototype:
-        prototype_config = copy.deepcopy(method_config)
-        prototype_config.gap_ref_n = method_config.prototype_gap_ref_n
-        prototype_config.gap_ref_restarts = method_config.prototype_gap_ref_restarts
-        prototype_config.kmeans_restarts = method_config.prototype_kmeans_restarts
-        prototype_results = _prototype_subset(trial_results, prototype_config)
-        prototype_vector_df = _build_vector_rows(prototype_results)
-        for idx, group_id in enumerate(["global_step", "global_nonstep"]):
-            prototype_cluster, _ = _run_group_clustering(group_id, prototype_vector_df, baseline["manifest_df"], prototype_config, method_config.random_seed + idx)
-            print(f"[M3] Prototype {group_id} clustering feasible: optimal_k={prototype_cluster.selected_k}")
-        if args.prototype:
-            print("[M3] Prototype run complete. Full analysis was not executed.")
-            return 0
 
     vector_df = _build_vector_rows(trial_results)
     full_cluster_results: dict[str, ClusterSearchResult] = {}
