@@ -17,9 +17,14 @@ feature_extractor:
       
 synergy_clustering:
   algorithm: "cuml_kmeans"
+  selection_method: "gap_statistic"
   disallow_within_trial_duplicate_assignment: true
-  max_clusters: 12
-  repeats: 25
+  require_zero_duplicate_solution: true
+  duplicate_resolution: "none"
+  max_clusters: 20
+  repeats: 1000
+  gap_ref_n: 500
+  gap_ref_restarts: 100
   random_state: 42
   max_iter: 300
   representative:

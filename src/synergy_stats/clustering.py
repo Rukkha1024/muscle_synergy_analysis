@@ -1,19 +1,22 @@
-﻿"""Cluster synergy vectors and build group-level exports.
+﻿"""Cluster pooled synergy vectors into global step and nonstep groups.
 
-This module pools selected trial-level synergies into global groups,
-fits KMeans with the existing within-trial duplicate safeguard,
-and exports representative W/H tables plus membership metadata.
+This module estimates a structure-first K with the gap statistic,
+accepts the first observed zero-duplicate solution at or above it,
+and exports representative W/H tables plus clustering diagnostics.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+import json
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+from .gap import compute_gap_statistic
 
 
 @dataclass
@@ -194,13 +197,68 @@ def _inertia_from_labels(data: np.ndarray, labels: np.ndarray) -> float:
     return inertia
 
 
+def _selection_method(cfg: dict[str, Any]) -> str:
+    return str(cfg.get("selection_method", "gap_statistic")).strip().lower() or "gap_statistic"
+
+
+def _require_zero_duplicate_solution(cfg: dict[str, Any]) -> bool:
+    if "require_zero_duplicate_solution" in cfg:
+        return bool(cfg.get("require_zero_duplicate_solution"))
+    return bool(cfg.get("disallow_within_trial_duplicate_assignment", True))
+
+
+def _duplicate_resolution(cfg: dict[str, Any]) -> str:
+    return str(cfg.get("duplicate_resolution", "none")).strip().lower() or "none"
+
+
+def _fit_best_kmeans_result(
+    data: np.ndarray,
+    n_clusters: int,
+    repeats: int,
+    seed: int,
+    cfg: dict[str, Any],
+) -> dict[str, Any]:
+    fit_cfg = dict(cfg)
+    fit_cfg["repeats"] = int(repeats)
+    fit_cfg["random_state"] = int(seed)
+    labels, inertia, algorithm_used = _fit_kmeans(data, n_clusters, fit_cfg)
+    return {
+        "labels": np.asarray(labels, dtype=np.int32),
+        "objective": float(inertia),
+        "algorithm_used": algorithm_used,
+    }
+
+
+def _json_metric_dict(values: dict[Any, Any]) -> str:
+    normalized = {str(key): value for key, value in values.items()}
+    return json.dumps(normalized, ensure_ascii=False, sort_keys=True)
+
+
 def cluster_feature_group(
     feature_rows: list[SubjectFeatureResult],
     cfg: dict[str, Any],
     group_id: str,
 ) -> dict[str, Any]:
+    selection_method = _selection_method(cfg)
+    require_zero_duplicate = _require_zero_duplicate_solution(cfg)
+    duplicate_resolution = _duplicate_resolution(cfg)
+    repeats = int(cfg.get("repeats", 25))
+    gap_ref_n = int(cfg.get("gap_ref_n", 500))
+    gap_ref_restarts = int(cfg.get("gap_ref_restarts", 100))
+
     if not feature_rows:
-        return {"status": "failed", "group_id": group_id, "reason": "No feature rows supplied."}
+        return {
+            "status": "failed",
+            "group_id": group_id,
+            "reason": "No feature rows supplied.",
+            "selection_method": selection_method,
+            "selection_status": "failed_no_feature_rows",
+            "duplicate_resolution": duplicate_resolution,
+            "require_zero_duplicate_solution": require_zero_duplicate,
+            "gap_ref_n": gap_ref_n,
+            "gap_ref_restarts": gap_ref_restarts,
+            "repeats": repeats,
+        }
 
     data, sample_map = _stack_weight_vectors(feature_rows, group_id)
     subject_hmax = _subject_hmax(feature_rows)
@@ -216,51 +274,141 @@ def cluster_feature_group(
             ),
             "n_trials": len(feature_rows),
             "n_components": int(data.shape[0]),
+            "selection_method": selection_method,
+            "selection_status": "failed_invalid_k_range",
+            "duplicate_resolution": duplicate_resolution,
+            "require_zero_duplicate_solution": require_zero_duplicate,
+            "k_lb": k_min,
+            "k_gap_raw": np.nan,
+            "k_selected": np.nan,
+            "k_min_unique": np.nan,
+            "gap_ref_n": gap_ref_n,
+            "gap_ref_restarts": gap_ref_restarts,
+            "repeats": repeats,
         }
 
-    best = None
-    for n_clusters in range(k_min, k_max + 1):
-        raw_labels, raw_inertia, algorithm_used = _fit_kmeans(data, n_clusters, cfg)
-        labels = np.asarray(raw_labels).astype(np.int32, copy=False)
-        inertia = float(raw_inertia)
-        if cfg.get("disallow_within_trial_duplicate_assignment", True):
-            labels = _enforce_unique_trial_labels(data, sample_map, labels, n_clusters)
-            if not np.array_equal(labels, raw_labels):
-                inertia = _inertia_from_labels(data, labels)
-        duplicates = _duplicate_trials(sample_map, labels)
-        candidate = {
-            "status": "success",
-            "group_id": group_id,
-            "n_trials": len(feature_rows),
-            "n_components": int(data.shape[0]),
-            "n_clusters": n_clusters,
-            "labels": labels,
-            "inertia": inertia,
-            "duplicate_trials": duplicates,
-            "algorithm_used": algorithm_used,
-            "sample_map": sample_map,
-        }
-        if cfg.get("disallow_within_trial_duplicate_assignment", True):
-            if not duplicates:
-                return candidate
-            if best is None or len(duplicates) < len(best.get("duplicate_trials", [])):
-                best = candidate
-        elif best is None or len(duplicates) < len(best.get("duplicate_trials", [])):
-            best = candidate
+    k_values = list(range(k_min, k_max + 1))
+    gap_result = compute_gap_statistic(
+        data=data,
+        k_values=k_values,
+        fit_best_fn=lambda fit_data, n_clusters, fit_repeats, fit_seed: _fit_best_kmeans_result(
+            fit_data,
+            n_clusters,
+            fit_repeats,
+            fit_seed,
+            cfg,
+        ),
+        observed_restarts=repeats,
+        gap_ref_n=gap_ref_n,
+        gap_ref_restarts=gap_ref_restarts,
+        seed=int(cfg.get("random_state", 42)),
+    )
 
-    if best is None:
-        return {"status": "failed", "group_id": group_id, "reason": "No valid clustering solution."}
-    if cfg.get("disallow_within_trial_duplicate_assignment", True):
+    results_by_k = gap_result["results_by_k"]
+    duplicate_trials_by_k: dict[int, list[tuple[Any, Any, Any]]] = {}
+    duplicate_trial_count_by_k: dict[int, int] = {}
+    k_min_unique: int | None = None
+    for n_clusters in k_values:
+        candidate_labels = np.asarray(results_by_k[n_clusters]["labels"], dtype=np.int32)
+        duplicates = _duplicate_trials(sample_map, candidate_labels)
+        duplicate_trials_by_k[n_clusters] = duplicates
+        duplicate_trial_count_by_k[n_clusters] = len(duplicates)
+        if k_min_unique is None and not duplicates:
+            k_min_unique = int(n_clusters)
+
+    k_gap_raw = int(gap_result["selected_k"])
+    selected_k = k_gap_raw
+    selection_status = "success_gap_without_uniqueness_requirement"
+    if require_zero_duplicate:
+        selected_k = -1
+        for n_clusters in k_values:
+            if n_clusters < k_gap_raw:
+                continue
+            if duplicate_trial_count_by_k[n_clusters] == 0:
+                selected_k = int(n_clusters)
+                break
+        if selected_k < 0:
+            return {
+                "status": "failed",
+                "group_id": group_id,
+                "reason": f"No zero-duplicate clustering solution found in K=[{k_gap_raw},{k_max}]",
+                "duplicate_trials": duplicate_trials_by_k.get(k_gap_raw, []),
+                "sample_map": sample_map,
+                "n_trials": len(feature_rows),
+                "n_components": int(data.shape[0]),
+                "selection_method": selection_method,
+                "selection_status": "failed_no_zero_duplicate_at_or_above_gap_k",
+                "duplicate_resolution": duplicate_resolution,
+                "require_zero_duplicate_solution": require_zero_duplicate,
+                "k_lb": k_min,
+                "k_gap_raw": k_gap_raw,
+                "k_selected": np.nan,
+                "k_min_unique": float(k_min_unique) if k_min_unique is not None else np.nan,
+                "gap_ref_n": gap_ref_n,
+                "gap_ref_restarts": gap_ref_restarts,
+                "repeats": repeats,
+                "gap_by_k": gap_result["gap_by_k"],
+                "gap_sd_by_k": gap_result["gap_sd_by_k"],
+                "observed_objective_by_k": gap_result["observed_objective_by_k"],
+                "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
+            }
+        selection_status = "success_gap_unique" if selected_k == k_gap_raw else "success_gap_escalated_unique"
+
+    selected_result = results_by_k[selected_k]
+    labels = np.asarray(selected_result["labels"], dtype=np.int32)
+    duplicate_trials = duplicate_trials_by_k[selected_k]
+    if require_zero_duplicate and duplicate_trials:
         return {
             "status": "failed",
             "group_id": group_id,
-            "reason": f"No zero-duplicate clustering solution found in K=[{k_min},{k_max}]",
-            "duplicate_trials": best.get("duplicate_trials", []),
+            "reason": "Selected clustering result still contains duplicate trial assignments.",
+            "duplicate_trials": duplicate_trials,
             "sample_map": sample_map,
             "n_trials": len(feature_rows),
             "n_components": int(data.shape[0]),
+            "selection_method": selection_method,
+            "selection_status": "failed_selected_result_contains_duplicates",
+            "duplicate_resolution": duplicate_resolution,
+            "require_zero_duplicate_solution": require_zero_duplicate,
+            "k_lb": k_min,
+            "k_gap_raw": k_gap_raw,
+            "k_selected": selected_k,
+            "k_min_unique": float(k_min_unique) if k_min_unique is not None else np.nan,
+            "gap_ref_n": gap_ref_n,
+            "gap_ref_restarts": gap_ref_restarts,
+            "repeats": repeats,
+            "gap_by_k": gap_result["gap_by_k"],
+            "gap_sd_by_k": gap_result["gap_sd_by_k"],
+            "observed_objective_by_k": gap_result["observed_objective_by_k"],
+            "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
         }
-    return best
+    return {
+        "status": "success",
+        "group_id": group_id,
+        "n_trials": len(feature_rows),
+        "n_components": int(data.shape[0]),
+        "n_clusters": selected_k,
+        "labels": labels,
+        "inertia": float(selected_result["objective"]),
+        "duplicate_trials": duplicate_trials,
+        "algorithm_used": selected_result.get("algorithm_used", ""),
+        "sample_map": sample_map,
+        "selection_method": selection_method,
+        "selection_status": selection_status,
+        "duplicate_resolution": duplicate_resolution,
+        "require_zero_duplicate_solution": require_zero_duplicate,
+        "k_lb": k_min,
+        "k_gap_raw": k_gap_raw,
+        "k_selected": selected_k,
+        "k_min_unique": float(k_min_unique) if k_min_unique is not None else np.nan,
+        "gap_ref_n": gap_ref_n,
+        "gap_ref_restarts": gap_ref_restarts,
+        "repeats": repeats,
+        "gap_by_k": gap_result["gap_by_k"],
+        "gap_sd_by_k": gap_result["gap_sd_by_k"],
+        "observed_objective_by_k": gap_result["observed_objective_by_k"],
+        "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
+    }
 
 
 def cluster_intra_subject(
@@ -314,12 +462,28 @@ def build_group_exports(
             {
                 "group_id": group_id,
                 "status": cluster_result.get("status", "unknown"),
+                "reason": cluster_result.get("reason", ""),
                 "n_trials": len(feature_rows),
                 "n_components": int(sum(item.bundle.W_muscle.shape[1] for item in feature_rows)),
                 "n_clusters": cluster_result.get("n_clusters", 0),
                 "inertia": cluster_result.get("inertia", np.nan),
                 "duplicate_trials": str(cluster_result.get("duplicate_trials", [])),
                 "algorithm_used": cluster_result.get("algorithm_used", ""),
+                "selection_method": cluster_result.get("selection_method", ""),
+                "selection_status": cluster_result.get("selection_status", ""),
+                "duplicate_resolution": cluster_result.get("duplicate_resolution", ""),
+                "require_zero_duplicate_solution": cluster_result.get("require_zero_duplicate_solution", np.nan),
+                "k_lb": cluster_result.get("k_lb", np.nan),
+                "k_gap_raw": cluster_result.get("k_gap_raw", np.nan),
+                "k_selected": cluster_result.get("k_selected", np.nan),
+                "k_min_unique": cluster_result.get("k_min_unique", np.nan),
+                "repeats": cluster_result.get("repeats", np.nan),
+                "gap_ref_n": cluster_result.get("gap_ref_n", np.nan),
+                "gap_ref_restarts": cluster_result.get("gap_ref_restarts", np.nan),
+                "gap_by_k_json": _json_metric_dict(cluster_result.get("gap_by_k", {})),
+                "gap_sd_by_k_json": _json_metric_dict(cluster_result.get("gap_sd_by_k", {})),
+                "observed_objective_by_k_json": _json_metric_dict(cluster_result.get("observed_objective_by_k", {})),
+                "duplicate_trial_count_by_k_json": _json_metric_dict(cluster_result.get("duplicate_trial_count_by_k", {})),
             }
         ]
     )

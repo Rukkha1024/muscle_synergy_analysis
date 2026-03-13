@@ -1,0 +1,9 @@
+﻿group_id,cluster_id,muscle,W_value
+global_step,0,TA,0.5388096571
+global_step,0,MG,0.4905265570
+global_step,0,SOL,0.4788431823
+global_step,0,RF,0.4896703660
+global_step,1,TA,0.5783653855
+global_step,1,MG,0.4801637530
+global_step,1,SOL,0.4550058544
+global_step,1,RF,0.4773949683

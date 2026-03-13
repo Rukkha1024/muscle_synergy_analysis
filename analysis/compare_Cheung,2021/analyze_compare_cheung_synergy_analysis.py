@@ -30,6 +30,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from src.emg_pipeline import build_trial_records, load_emg_table, load_event_metadata, load_pipeline_config, merge_event_metadata
 from src.synergy_stats.figures import save_group_cluster_figure
+from src.synergy_stats.gap import compute_gap_statistic as compute_shared_gap_statistic
 
 _PIPELINE_CFG: dict[str, Any] | None = None
 DEFAULT_PAPER_KMEANS_RESTARTS = 1000
@@ -455,52 +456,33 @@ def _best_plain_kmeans_solution(vectors: np.ndarray, k: int, repeats: int, seed:
 
 
 def compute_gap_statistic(vectors: np.ndarray, k_values: list[int], config: PaperMethodConfig, seed: int) -> dict[str, Any]:
-    vectors = np.asarray(vectors, dtype=np.float64)
-    mins = np.min(vectors, axis=0)
-    maxs = np.max(vectors, axis=0)
-    observed_objective: dict[int, float] = {}
-    gap_by_k: dict[int, float] = {}
-    gap_sd_by_k: dict[int, float] = {}
-    best_result_by_k: dict[int, tuple[np.ndarray, np.ndarray, float]] = {}
+    def _fit_gap_solution(data: np.ndarray, k: int, repeats: int, fit_seed: int) -> dict[str, Any]:
+        labels, centroids, objective = _best_plain_kmeans_solution(data, k, repeats, fit_seed)
+        return {
+            "labels": np.asarray(labels, dtype=int),
+            "centroids": np.asarray(centroids, dtype=np.float64),
+            "objective": float(objective),
+        }
 
-    for k in k_values:
-        best_labels, best_centroids, best_obj = _best_plain_kmeans_solution(
-            vectors,
-            k,
-            config.kmeans_restarts,
-            seed + (k * 1000),
-        )
-        observed_objective[k] = float(best_obj)
-        best_result_by_k[k] = (best_labels, best_centroids, float(best_obj))
-
-        reference_logs: list[float] = []
-        for ref_idx in range(config.gap_ref_n):
-            ref = np.random.default_rng(seed + (k * 10000) + ref_idx).uniform(mins, maxs, size=vectors.shape)
-            _, _, ref_best_obj = _best_plain_kmeans_solution(
-                ref,
-                k,
-                config.gap_ref_restarts,
-                seed + (k * 20000) + ref_idx * 1000,
-            )
-            reference_logs.append(float(np.log(ref_best_obj + 1e-12)))
-        gap_by_k[k] = float(np.mean(reference_logs) - np.log(best_obj + 1e-12))
-        gap_sd_by_k[k] = float(np.std(reference_logs, ddof=1) * math.sqrt(1.0 + 1.0 / max(1, config.gap_ref_n)))
-
-    selected_k = k_values[-1]
-    for index, k in enumerate(k_values[:-1]):
-        k_next = k_values[index + 1]
-        if gap_by_k[k] >= gap_by_k[k_next] - gap_sd_by_k[k_next]:
-            selected_k = k
-            break
-    labels, centroids, objective = best_result_by_k[selected_k]
+    gap_result = compute_shared_gap_statistic(
+        data=np.asarray(vectors, dtype=np.float64),
+        k_values=k_values,
+        fit_best_fn=_fit_gap_solution,
+        observed_restarts=config.kmeans_restarts,
+        gap_ref_n=config.gap_ref_n,
+        gap_ref_restarts=config.gap_ref_restarts,
+        seed=seed,
+    )
+    selected_k = int(gap_result["selected_k"])
+    selected_result = gap_result["results_by_k"][selected_k]
     return {
         "selected_k": int(selected_k),
-        "labels": labels,
-        "centroids": centroids,
-        "objective": float(objective),
-        "gap_by_k": gap_by_k,
-        "gap_sd_by_k": gap_sd_by_k,
-        "observed_objective": observed_objective,
+        "labels": np.asarray(selected_result["labels"], dtype=int),
+        "centroids": np.asarray(selected_result["centroids"], dtype=np.float64),
+        "objective": float(selected_result["objective"]),
+        "gap_by_k": gap_result["gap_by_k"],
+        "gap_sd_by_k": gap_result["gap_sd_by_k"],
+        "observed_objective": gap_result["observed_objective_by_k"],
     }
 
 

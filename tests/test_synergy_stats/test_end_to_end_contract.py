@@ -49,6 +49,8 @@ def test_fixture_run_writes_global_group_artifacts(
     trial_figure_dir = run_dir / "figures" / "nmf_trials"
     step_labels = run_dir / "global_step" / "cluster_labels.csv"
     nonstep_labels = run_dir / "global_nonstep" / "cluster_labels.csv"
+    step_metadata = run_dir / "global_step" / "clustering_metadata.csv"
+    nonstep_metadata = run_dir / "global_nonstep" / "clustering_metadata.csv"
 
     assert manifest_path.exists()
     assert summary_path.exists()
@@ -58,6 +60,8 @@ def test_fixture_run_writes_global_group_artifacts(
     assert trial_figure_dir.exists()
     assert step_labels.exists()
     assert nonstep_labels.exists()
+    assert step_metadata.exists()
+    assert nonstep_metadata.exists()
     assert not (run_dir / "figures" / "overview_all_subject_clusters.png").exists()
     assert not list(run_dir.glob("subject_*"))
 
@@ -73,6 +77,15 @@ def test_fixture_run_writes_global_group_artifacts(
     labels_df = pl.read_csv(run_dir / "all_cluster_labels.csv", encoding="utf8-lossy")
     assert set(labels_df.get_column("group_id").unique().to_list()) == {"global_step", "global_nonstep"}
     assert labels_df.get_column("analysis_selected_group").cast(pl.Boolean).all()
+
+    metadata_df = pl.read_csv(run_dir / "all_clustering_metadata.csv", encoding="utf8-lossy")
+    assert set(metadata_df.get_column("selection_method").unique().to_list()) == {"gap_statistic"}
+    assert metadata_df.get_column("selection_status").is_in(
+        ["success_gap_unique", "success_gap_escalated_unique"]
+    ).all()
+    assert metadata_df.get_column("k_gap_raw").cast(pl.Int64).min() >= 2
+    assert metadata_df.filter(pl.col("k_selected").cast(pl.Int64) < pl.col("k_gap_raw").cast(pl.Int64)).is_empty()
+    assert metadata_df.get_column("duplicate_trial_count_by_k_json").str.len_chars().min() > 0
 
     step_df = labels_df.filter(pl.col("group_id") == "global_step")
     nonstep_df = labels_df.filter(pl.col("group_id") == "global_nonstep")

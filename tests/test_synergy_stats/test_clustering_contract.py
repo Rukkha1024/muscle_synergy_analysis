@@ -46,6 +46,24 @@ def _load_group_helpers():
     return cluster_func, export_func, result_cls
 
 
+def _cluster_cfg(**overrides):
+    cfg = {
+        "algorithm": "sklearn_kmeans",
+        "selection_method": "gap_statistic",
+        "max_clusters": 4,
+        "max_iter": 50,
+        "repeats": 5,
+        "gap_ref_n": 3,
+        "gap_ref_restarts": 2,
+        "random_state": 7,
+        "disallow_within_trial_duplicate_assignment": True,
+        "require_zero_duplicate_solution": True,
+        "duplicate_resolution": "none",
+    }
+    cfg.update(overrides)
+    return cfg
+
+
 def _load_cluster_stage_run(repo_root):
     module_path = repo_root / "scripts" / "emg" / "04_cluster_synergies.py"
     spec = importlib.util.spec_from_file_location("cluster_synergies_stage", module_path)
@@ -85,19 +103,14 @@ def _make_feature_rows(group_kind: str):
 def test_global_step_group_returns_zero_duplicate_solution() -> None:
     """Global step clustering should preserve zero duplicate assignments."""
     cluster_func, export_func, feature_rows = _make_feature_rows("step")
-    cfg = {
-        "algorithm": "sklearn_kmeans",
-        "max_clusters": 4,
-        "max_iter": 50,
-        "repeats": 5,
-        "random_state": 7,
-        "disallow_within_trial_duplicate_assignment": True,
-    }
+    cfg = _cluster_cfg()
     result = cluster_func(feature_rows, cfg, "global_step")
     exports = export_func("global_step", feature_rows, result, ["M1", "M2", "M3"], 10)
     assert result.get("status") == "success"
     assert result.get("group_id") == "global_step"
     assert len(result.get("duplicate_trials", [])) == 0
+    assert result.get("selection_method") == "gap_statistic"
+    assert result.get("selection_status") in {"success_gap_unique", "success_gap_escalated_unique"}
     assert exports["labels"]["group_id"].eq("global_step").all()
     assert exports["labels"]["analysis_is_step"].astype(bool).all()
     assert not exports["labels"]["analysis_is_nonstep"].astype(bool).any()
@@ -106,14 +119,7 @@ def test_global_step_group_returns_zero_duplicate_solution() -> None:
 def test_global_nonstep_group_returns_zero_duplicate_solution() -> None:
     """Global nonstep clustering should preserve zero duplicate assignments."""
     cluster_func, export_func, feature_rows = _make_feature_rows("nonstep")
-    cfg = {
-        "algorithm": "sklearn_kmeans",
-        "max_clusters": 4,
-        "max_iter": 50,
-        "repeats": 5,
-        "random_state": 7,
-        "disallow_within_trial_duplicate_assignment": True,
-    }
+    cfg = _cluster_cfg()
     result = cluster_func(feature_rows, cfg, "global_nonstep")
     exports = export_func("global_nonstep", feature_rows, result, ["M1", "M2", "M3"], 10)
     assert result.get("status") == "success"
@@ -127,19 +133,29 @@ def test_global_nonstep_group_returns_zero_duplicate_solution() -> None:
 def test_group_exports_include_group_summary_schema() -> None:
     """Group exports should expose group_id-driven summary and label schema."""
     cluster_func, export_func, feature_rows = _make_feature_rows("step")
-    cfg = {
-        "algorithm": "sklearn_kmeans",
-        "max_clusters": 4,
-        "max_iter": 50,
-        "repeats": 5,
-        "random_state": 7,
-        "disallow_within_trial_duplicate_assignment": True,
-    }
+    cfg = _cluster_cfg()
     result = cluster_func(feature_rows, cfg, "global_step")
     exports = export_func("global_step", feature_rows, result, ["M1", "M2", "M3"], 10)
     metadata_columns = set(exports["metadata"].columns)
     label_columns = set(exports["labels"].columns)
-    assert {"group_id", "status", "n_trials", "n_components", "n_clusters", "algorithm_used"}.issubset(metadata_columns)
+    assert {
+        "group_id",
+        "status",
+        "n_trials",
+        "n_components",
+        "n_clusters",
+        "algorithm_used",
+        "selection_method",
+        "selection_status",
+        "k_lb",
+        "k_gap_raw",
+        "k_selected",
+        "k_min_unique",
+        "gap_by_k_json",
+        "gap_sd_by_k_json",
+        "observed_objective_by_k_json",
+        "duplicate_trial_count_by_k_json",
+    }.issubset(metadata_columns)
     assert {"group_id", "subject", "velocity", "trial_num", "component_index", "cluster_id"}.issubset(label_columns)
 
 
@@ -177,12 +193,7 @@ def test_cluster_stage_rejects_selected_trials_without_exactly_one_group(
     context = {
         "config": {
             "synergy_clustering": {
-                "algorithm": "sklearn_kmeans",
-                "max_clusters": 2,
-                "max_iter": 10,
-                "repeats": 1,
-                "random_state": 7,
-                "disallow_within_trial_duplicate_assignment": True,
+                **_cluster_cfg(max_clusters=2, max_iter=10, repeats=1, gap_ref_n=2, gap_ref_restarts=1),
             }
         },
         "feature_rows": feature_rows,
@@ -198,12 +209,7 @@ def test_cluster_stage_rejects_legacy_grouping_key(repo_root) -> None:
         "config": {
             "synergy_clustering": {
                 "grouping": {"mode": "global_step_nonstep"},
-                "algorithm": "sklearn_kmeans",
-                "max_clusters": 2,
-                "max_iter": 10,
-                "repeats": 1,
-                "random_state": 7,
-                "disallow_within_trial_duplicate_assignment": True,
+                **_cluster_cfg(max_clusters=2, max_iter=10, repeats=1, gap_ref_n=2, gap_ref_restarts=1),
             }
         },
         "feature_rows": [],
@@ -222,14 +228,7 @@ def test_cluster_intra_subject_compatibility_wrapper_still_returns_success() -> 
     except LookupError as exc:
         pytest.xfail(f"Compatibility clustering wrapper is not implemented yet: {exc}")
     w_list, trial_keys = _sample_w_list()
-    cfg = {
-        "algorithm": "sklearn_kmeans",
-        "max_clusters": 4,
-        "max_iter": 50,
-        "repeats": 5,
-        "random_state": 7,
-        "disallow_within_trial_duplicate_assignment": True,
-    }
+    cfg = _cluster_cfg()
     result = cluster_func(w_list, trial_keys, cfg)
     assert result.get("status") == "success"
     assert result.get("group_id") == "compatibility_group"
@@ -273,50 +272,65 @@ def test_k_min_starts_from_subject_hmax(monkeypatch: pytest.MonkeyPatch) -> None
             ),
         ),
     ]
-    seen_k = []
+    captured = {}
 
-    def _fake_fit(data: np.ndarray, n_clusters: int, cfg: dict):
-        seen_k.append(n_clusters)
-        labels = np.arange(data.shape[0], dtype=np.int32) % n_clusters
-        return labels, 0.0, "mock_kmeans"
+    def _fake_gap_statistic(*, data, k_values, fit_best_fn, observed_restarts, gap_ref_n, gap_ref_restarts, seed):
+        captured["k_values"] = list(k_values)
+        labels = np.arange(data.shape[0], dtype=np.int32)
+        return {
+            "selected_k": int(k_values[0]),
+            "gap_by_k": {int(k): float(len(k_values) - idx) for idx, k in enumerate(k_values)},
+            "gap_sd_by_k": {int(k): 0.0 for k in k_values},
+            "observed_objective_by_k": {int(k): float(k) for k in k_values},
+            "results_by_k": {
+                int(k): {
+                    "labels": labels % int(k),
+                    "objective": float(k),
+                    "algorithm_used": "mock_kmeans",
+                }
+                for k in k_values
+            },
+        }
 
-    monkeypatch.setattr(clustering_module, "_fit_kmeans", _fake_fit)
-    cfg = {
-        "algorithm": "sklearn_kmeans",
-        "max_clusters": 6,
-        "max_iter": 10,
-        "repeats": 1,
-        "random_state": 7,
-        "disallow_within_trial_duplicate_assignment": False,
-    }
+    monkeypatch.setattr(clustering_module, "compute_gap_statistic", _fake_gap_statistic)
+    cfg = _cluster_cfg(max_clusters=6, max_iter=10, repeats=1, require_zero_duplicate_solution=False)
     clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
-    assert seen_k[0] == 5
+    assert captured["k_values"][0] == 5
 
 
-def test_duplicate_assignments_are_repaired_when_disallow_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Within-trial duplicate labels should be repaired to satisfy zero-duplicate rule."""
+def test_gap_selection_escalates_to_first_zero_duplicate_solution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Gap raw K should be preserved separately from the first feasible zero-duplicate K."""
     import src.synergy_stats.clustering as clustering_module
 
     _, _, feature_rows = _make_feature_rows("step")
 
-    def _fake_fit(data: np.ndarray, n_clusters: int, cfg: dict):
-        labels = np.zeros(data.shape[0], dtype=np.int32)
-        return labels, 0.0, "mock_kmeans"
+    def _fake_gap_statistic(*, data, k_values, fit_best_fn, observed_restarts, gap_ref_n, gap_ref_restarts, seed):
+        labels_k2 = np.array([0, 0, 1, 1, 0, 0], dtype=np.int32)
+        labels_k3 = np.array([0, 1, 1, 2, 0, 2], dtype=np.int32)
+        return {
+            "selected_k": 2,
+            "gap_by_k": {2: 1.5, 3: 1.0},
+            "gap_sd_by_k": {2: 0.1, 3: 0.1},
+            "observed_objective_by_k": {2: 2.0, 3: 3.0},
+            "results_by_k": {
+                2: {"labels": labels_k2, "objective": 2.0, "algorithm_used": "mock_kmeans"},
+                3: {"labels": labels_k3, "objective": 3.0, "algorithm_used": "mock_kmeans"},
+            },
+        }
 
-    monkeypatch.setattr(clustering_module, "_fit_kmeans", _fake_fit)
-    cfg = {
-        "algorithm": "sklearn_kmeans",
-        "max_clusters": 2,
-        "max_iter": 10,
-        "repeats": 1,
-        "random_state": 7,
-        "disallow_within_trial_duplicate_assignment": True,
-    }
+    monkeypatch.setattr(clustering_module, "compute_gap_statistic", _fake_gap_statistic)
+    cfg = _cluster_cfg(max_clusters=3, max_iter=10, repeats=1, gap_ref_n=2, gap_ref_restarts=1)
     result = clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
 
     assert result.get("status") == "success"
+    assert result.get("k_gap_raw") == 2
+    assert result.get("k_selected") == 3
+    assert result.get("n_clusters") == 3
+    assert result.get("k_min_unique") == 3
+    assert result.get("selection_status") == "success_gap_escalated_unique"
     assert len(result.get("duplicate_trials", [])) == 0
-    assert float(result.get("inertia", 0.0)) > 0.0
+    assert float(result.get("inertia", 0.0)) == pytest.approx(3.0)
+    assert result.get("duplicate_trial_count_by_k") == {2: 3, 3: 0}
 
     trial_clusters = defaultdict(list)
     for sample, label in zip(result.get("sample_map", []), np.asarray(result.get("labels"))):
@@ -352,14 +366,7 @@ def test_cluster_fails_when_max_clusters_is_lower_than_subject_hmax() -> None:
             ),
         ),
     ]
-    cfg = {
-        "algorithm": "sklearn_kmeans",
-        "max_clusters": 4,
-        "max_iter": 10,
-        "repeats": 1,
-        "random_state": 7,
-        "disallow_within_trial_duplicate_assignment": True,
-    }
+    cfg = _cluster_cfg(max_clusters=4, max_iter=10, repeats=1)
     result = clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
     assert result.get("status") == "failed"
     assert "Invalid K range" in str(result.get("reason"))
