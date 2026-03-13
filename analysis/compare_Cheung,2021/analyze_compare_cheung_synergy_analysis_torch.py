@@ -28,6 +28,7 @@ except ModuleNotFoundError as exc:  # pragma: no cover - exercised only when tor
     _TORCH_IMPORT_ERROR = exc
 else:
     _TORCH_IMPORT_ERROR = None
+    import torch.nn.functional as F
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -42,6 +43,7 @@ _PIPELINE_CFG: dict[str, Any] | None = None
 DEFAULT_PAPER_KMEANS_RESTARTS = 1000
 DEFAULT_PAPER_GAP_REF_N = 500
 DEFAULT_PAPER_GAP_REF_RESTARTS = 100
+DEFAULT_KMEANS_RESTART_BATCH_SIZE = 128
 
 
 @dataclass
@@ -358,6 +360,14 @@ def _to_torch(array: np.ndarray, config: PaperMethodConfig) -> Any:
     return torch.as_tensor(array, dtype=dtype, device=device)
 
 
+def _ensure_torch_tensor(data: Any, config: PaperMethodConfig) -> Any:
+    device = _resolve_torch_device(config.torch_device)
+    dtype = _resolve_torch_dtype(config.torch_dtype)
+    if torch is not None and torch.is_tensor(data):
+        return data.to(device=device, dtype=dtype)
+    return torch.as_tensor(np.asarray(data, dtype=np.float64), dtype=dtype, device=device)
+
+
 def _tensor_to_numpy(tensor: Any) -> np.ndarray:
     return tensor.detach().cpu().numpy()
 
@@ -506,47 +516,59 @@ def _reseed_empty_centroid(data: Any, centroids: Any, empty_idx: int) -> Any:
     return data[int(farthest.item())].clone()
 
 
-def _plain_kmeans_once(vectors: np.ndarray, k: int, seed: int, config: PaperMethodConfig) -> tuple[np.ndarray, np.ndarray, float]:
-    data = _to_torch(np.asarray(vectors, dtype=np.float64), config)
+def _plain_kmeans_batch(vectors: Any, k: int, seeds: list[int], config: PaperMethodConfig) -> tuple[Any, Any, Any]:
+    data = _ensure_torch_tensor(vectors, config)
+    if data.ndim != 2:
+        raise ValueError(f"Expected 2D vectors for k-means, got shape={tuple(data.shape)}")
     if data.shape[0] < k:
         raise ValueError(f"Cannot cluster {data.shape[0]} vectors into k={k}.")
-    centroids = _sample_initial_centroids(data, k, seed)
+    if not seeds:
+        raise ValueError("Expected at least one restart seed for batched k-means.")
+
+    batch_size = len(seeds)
+    centroids = torch.stack([_sample_initial_centroids(data, k, seed) for seed in seeds], dim=0)
+    data_batch = data.unsqueeze(0).expand(batch_size, -1, -1)
     labels = None
     for _ in range(300):
-        distances = _torch_squared_distance_matrix(data, centroids)
-        next_labels = torch.argmin(distances, dim=1)
-        updated_centroids = []
-        for centroid_idx in range(k):
-            mask = next_labels == centroid_idx
-            if bool(mask.any().item()):
-                updated_centroids.append(data[mask].mean(dim=0))
-            else:
-                updated_centroids.append(_reseed_empty_centroid(data, centroids, centroid_idx))
-        next_centroids = torch.stack(updated_centroids, dim=0)
+        distances = torch.sum((data_batch[:, :, None, :] - centroids[:, None, :, :]) ** 2, dim=3)
+        next_labels = torch.argmin(distances, dim=2)
+        one_hot = F.one_hot(next_labels, num_classes=k).to(dtype=data.dtype)
+        counts = one_hot.sum(dim=1)
+        summed = torch.einsum("bnk,bnd->bkd", one_hot, data_batch)
+        next_centroids = summed / counts.clamp_min(1).unsqueeze(-1)
+        empty_pairs = torch.nonzero(counts == 0, as_tuple=False)
+        for batch_idx, centroid_idx in empty_pairs.tolist():
+            next_centroids[batch_idx, centroid_idx] = _reseed_empty_centroid(data, centroids[batch_idx], centroid_idx)
         if labels is not None and torch.equal(next_labels, labels):
             labels = next_labels
             centroids = next_centroids
             break
         labels = next_labels
         centroids = next_centroids
+
     if labels is None:
-        raise RuntimeError(f"Could not find a plain k-means solution for k={k}")
-    final_distances = _torch_squared_distance_matrix(data, centroids)
-    row_indices = torch.arange(data.shape[0], device=data.device)
-    objective = float(final_distances[row_indices, labels].sum().item())
-    return _tensor_to_numpy(labels).astype(int), _tensor_to_numpy(centroids), objective
+        raise RuntimeError(f"Could not find a plain k-means solution batch for k={k}")
+    final_distances = torch.sum((data_batch[:, :, None, :] - centroids[:, None, :, :]) ** 2, dim=3)
+    objectives = final_distances.gather(2, labels.unsqueeze(-1)).squeeze(-1).sum(dim=1)
+    return labels, centroids, objectives
 
 
-def _best_plain_kmeans_solution(vectors: np.ndarray, k: int, repeats: int, seed: int, config: PaperMethodConfig) -> tuple[np.ndarray, np.ndarray, float]:
+def _best_plain_kmeans_solution(vectors: Any, k: int, repeats: int, seed: int, config: PaperMethodConfig) -> tuple[np.ndarray, np.ndarray, float]:
     best_labels: np.ndarray | None = None
     best_centroids: np.ndarray | None = None
     best_obj = math.inf
-    for restart in range(repeats):
-        labels, centroids, obj = _plain_kmeans_once(vectors, k, seed + restart, config)
+    if repeats <= 0:
+        raise ValueError("Expected repeats to be positive for plain k-means.")
+    for batch_start in range(0, repeats, DEFAULT_KMEANS_RESTART_BATCH_SIZE):
+        batch_seeds = list(range(seed + batch_start, seed + min(repeats, batch_start + DEFAULT_KMEANS_RESTART_BATCH_SIZE)))
+        labels_batch, centroids_batch, objective_batch = _plain_kmeans_batch(vectors, k, batch_seeds, config)
+        objective_values = _tensor_to_numpy(objective_batch).astype(np.float64)
+        batch_best_idx = int(np.argmin(objective_values))
+        obj = float(objective_values[batch_best_idx])
         if obj < best_obj:
             best_obj = obj
-            best_labels = labels.copy()
-            best_centroids = centroids.copy()
+            best_labels = _tensor_to_numpy(labels_batch[batch_best_idx]).astype(int)
+            best_centroids = _tensor_to_numpy(centroids_batch[batch_best_idx])
     if best_labels is None or best_centroids is None:
         raise RuntimeError(f"Could not find a plain k-means solution for k={k}")
     return best_labels, best_centroids, float(best_obj)
@@ -564,7 +586,7 @@ def compute_gap_statistic(vectors: np.ndarray, k_values: list[int], config: Pape
 
     for k in k_values:
         best_labels, best_centroids, best_obj = _best_plain_kmeans_solution(
-            vectors,
+            vectors_t,
             k,
             config.kmeans_restarts,
             seed + (k * 1000),
@@ -582,9 +604,8 @@ def compute_gap_statistic(vectors: np.ndarray, k_values: list[int], config: Pape
                 dtype=vectors_t.dtype,
                 device=vectors_t.device,
             )
-            ref = _tensor_to_numpy(ref_t)
             _, _, ref_best_obj = _best_plain_kmeans_solution(
-                ref,
+                ref_t,
                 k,
                 config.gap_ref_restarts,
                 seed + (k * 20000) + ref_idx * 1000,
