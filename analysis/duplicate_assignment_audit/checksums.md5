@@ -1,0 +1,14 @@
+﻿cc5fbf3f37b45d03a808fcbd557bd7a3  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/README.md
+ef997a3eae88d87a1dedaff2782aeb8b  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/report.md
+7ffcf70dff9d19e17b7cd7f19be808f3  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py
+69555f48b422f130a563ac686b8b1995  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/verify_duplicate_assignment_audit.py
+e1d147676ba1fe3915419cf6c2993bea  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/duplicate_pairs.csv
+22643653c8588256e79f78a9e1077948  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/k_sensitivity.csv
+3451825492604fe55fcf3d10b79fc096  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/overall_metrics.csv
+ba83e4a6cff35b3156aac0c5d846ba3e  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/per_cluster_stats.csv
+fdc900943964aa8a58c4b925e0fc1169  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/per_unit_metrics.csv
+6481390c4eca616859d45903ec2eaf11  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/plots/duplicate_vs_nonduplicate_similarity.png
+dd0824be09b63b1a799d2810a818e27a  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/plots/group_duplicate_unit_rate.png
+8905817d1da46cd257b26af2cfdcd603  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/plots/k_vs_duplicate_unit_rate.png
+ac471bc2f540085bbf3f2ee6f951cd26  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/plots/k_vs_excess_duplicate_ratio.png
+173f63847ebae55f580604a291ba6c1a  /home/alice/workspace/26-03-synergy-analysis/analysis/duplicate_assignment_audit/results/plots/k_vs_gap_statistic.png
