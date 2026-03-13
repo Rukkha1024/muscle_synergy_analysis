@@ -44,6 +44,8 @@ DEFAULT_PAPER_KMEANS_RESTARTS = 1000
 DEFAULT_PAPER_GAP_REF_N = 500
 DEFAULT_PAPER_GAP_REF_RESTARTS = 100
 DEFAULT_KMEANS_RESTART_BATCH_SIZE = 128
+DEFAULT_GAP_REF_BATCH_SIZE = 16
+DEFAULT_NMF_RESTART_BATCH_SIZE = 16
 
 
 @dataclass
@@ -176,7 +178,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gap-ref-n", type=int, default=DEFAULT_PAPER_GAP_REF_N)
     parser.add_argument("--gap-ref-restarts", type=int, default=DEFAULT_PAPER_GAP_REF_RESTARTS)
     parser.add_argument("--torch-device", default="auto", help="Torch device to use: auto, cpu, cuda, or cuda:0.")
-    parser.add_argument("--torch-dtype", choices=["float32", "float64"], default="float64")
+    parser.add_argument("--torch-dtype", choices=["float32", "float64"], default="float32")
     return parser.parse_args()
 
 
@@ -332,6 +334,8 @@ def _require_torch() -> None:
         raise ModuleNotFoundError(
             "PyTorch is required for this script. Run it from the `cuda` conda environment."
         ) from _TORCH_IMPORT_ERROR
+    if hasattr(torch, "set_float32_matmul_precision"):
+        torch.set_float32_matmul_precision("high")
 
 
 def _resolve_torch_device(requested: str) -> Any:
@@ -382,37 +386,68 @@ def _torch_r2_score(X: Any, recon: Any) -> float:
     return 1.0 - (sse / sst)
 
 
-def _nmf_multiplicative_update(X: np.ndarray, rank: int, seed: int, config: PaperMethodConfig) -> tuple[np.ndarray, np.ndarray, float]:
+def _torch_r2_score_batch(X: Any, recon: Any) -> Any:
+    centered = X - X.mean(dim=0, keepdim=True)
+    sst = torch.sum(centered * centered)
+    if float(sst.item()) <= 0:
+        return torch.zeros(recon.shape[0], dtype=recon.dtype, device=recon.device)
+    residual = recon - X.unsqueeze(0)
+    sse = torch.sum(residual * residual, dim=(1, 2))
+    return 1.0 - (sse / sst)
+
+
+def _nmf_multiplicative_update_batch(X: np.ndarray, rank: int, seeds: list[int], config: PaperMethodConfig) -> tuple[Any, Any, Any]:
     X_t = _to_torch(np.asarray(X, dtype=np.float64), config)
-    generator = _torch_generator(seed, X_t.device)
+    batch_size = len(seeds)
     eps = torch.as_tensor(1e-10, dtype=X_t.dtype, device=X_t.device)
     scale = torch.clamp(X_t.max(), min=eps)
-    W = torch.rand((X_t.shape[0], rank), generator=generator, dtype=X_t.dtype, device=X_t.device) * scale
-    H = torch.rand((rank, X_t.shape[1]), generator=generator, dtype=X_t.dtype, device=X_t.device) * scale
+    W = torch.stack(
+        [
+            torch.rand((X_t.shape[0], rank), generator=_torch_generator(seed, X_t.device), dtype=X_t.dtype, device=X_t.device)
+            for seed in seeds
+        ],
+        dim=0,
+    ) * scale
+    H = torch.stack(
+        [
+            torch.rand((rank, X_t.shape[1]), generator=_torch_generator(seed + 1_000_000, X_t.device), dtype=X_t.dtype, device=X_t.device)
+            for seed in seeds
+        ],
+        dim=0,
+    ) * scale
     W = torch.clamp(W, min=eps)
     H = torch.clamp(H, min=eps)
-    last_r2 = -np.inf
-    stable_steps = 0
-    best_r2 = -np.inf
+    last_r2 = torch.full((batch_size,), -float("inf"), dtype=X_t.dtype, device=X_t.device)
+    stable_steps = torch.zeros((batch_size,), dtype=torch.int64, device=X_t.device)
+    best_r2 = torch.full((batch_size,), -float("inf"), dtype=X_t.dtype, device=X_t.device)
     best_pair = (W.clone(), H.clone())
     for _ in range(config.nmf_max_iter):
-        H = H * ((W.transpose(0, 1) @ X_t) / torch.clamp(W.transpose(0, 1) @ W @ H, min=eps))
-        W = W * ((X_t @ H.transpose(0, 1)) / torch.clamp(W @ H @ H.transpose(0, 1), min=eps))
+        wt_x = torch.einsum("btr,tm->brm", W, X_t)
+        wt_w = torch.einsum("btr,bts->brs", W, W)
+        h_denom = torch.einsum("brs,bsm->brm", wt_w, H)
+        H = H * (wt_x / torch.clamp(h_denom, min=eps))
+        x_ht = torch.einsum("tm,brm->btr", X_t, H)
+        hh_t = torch.einsum("brm,bsm->brs", H, H)
+        w_denom = torch.einsum("bts,bsr->btr", W, hh_t.transpose(1, 2))
+        W = W * (x_ht / torch.clamp(w_denom, min=eps))
         W = torch.clamp(W, min=eps)
         H = torch.clamp(H, min=eps)
         recon = W @ H
-        current_r2 = _torch_r2_score(X_t, recon)
-        if current_r2 > best_r2:
-            best_r2 = current_r2
-            best_pair = (W.clone(), H.clone())
-        if abs(current_r2 - last_r2) < config.nmf_tol:
-            stable_steps += 1
-        else:
-            stable_steps = 0
+        current_r2 = _torch_r2_score_batch(X_t, recon)
+        improved = current_r2 > best_r2
+        if bool(improved.any().item()):
+            best_r2 = torch.where(improved, current_r2, best_r2)
+            improve_mask = improved[:, None, None]
+            best_pair = (
+                torch.where(improve_mask, W, best_pair[0]),
+                torch.where(improve_mask, H, best_pair[1]),
+            )
+        close_mask = torch.abs(current_r2 - last_r2) < config.nmf_tol
+        stable_steps = torch.where(close_mask, stable_steps + 1, torch.zeros_like(stable_steps))
         last_r2 = current_r2
-        if stable_steps >= config.nmf_patience:
+        if bool(torch.all(stable_steps >= config.nmf_patience).item()):
             break
-    return _tensor_to_numpy(best_pair[0]), _tensor_to_numpy(best_pair[1]), float(best_r2)
+    return best_pair[0], best_pair[1], best_r2
 
 
 def run_paper_nmf_for_trial(X: np.ndarray, config: PaperMethodConfig, seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, float, bool]:
@@ -426,13 +461,16 @@ def run_paper_nmf_for_trial(X: np.ndarray, config: PaperMethodConfig, seed: int)
     max_rank = min(config.nmf_max_rank, X.shape[1])
     for rank in range(1, max_rank + 1):
         best_rank_result: dict[str, Any] | None = None
-        for restart in range(config.nmf_restarts):
-            activations, structures, score = _nmf_multiplicative_update(X, rank, seed + (rank * 1000) + restart, config)
+        for batch_start in range(0, config.nmf_restarts, DEFAULT_NMF_RESTART_BATCH_SIZE):
+            batch_end = min(config.nmf_restarts, batch_start + DEFAULT_NMF_RESTART_BATCH_SIZE)
+            seeds = [seed + (rank * 1000) + restart for restart in range(batch_start, batch_end)]
+            activations_batch, structures_batch, scores_batch = _nmf_multiplicative_update_batch(X, rank, seeds, config)
+            best_idx = int(torch.argmax(scores_batch).item())
             candidate = {
                 "rank": rank,
-                "r2": score,
-                "activations": activations,
-                "structures": structures,
+                "r2": float(scores_batch[best_idx].item()),
+                "activations": _tensor_to_numpy(activations_batch[best_idx]),
+                "structures": _tensor_to_numpy(structures_batch[best_idx]),
             }
             if best_rank_result is None or candidate["r2"] > best_rank_result["r2"]:
                 best_rank_result = candidate
@@ -516,18 +554,37 @@ def _reseed_empty_centroid(data: Any, centroids: Any, empty_idx: int) -> Any:
     return data[int(farthest.item())].clone()
 
 
+def _sample_initial_centroids_for_batch(data_batch: Any, k: int, seeds: list[int]) -> Any:
+    if data_batch.ndim != 3 or data_batch.shape[0] != len(seeds):
+        raise ValueError("Expected batched 3D data with one seed per dataset for k-means initialization.")
+    centroids = []
+    for batch_idx, seed in enumerate(seeds):
+        generator = _torch_generator(seed, data_batch.device)
+        indices = torch.randperm(data_batch.shape[1], generator=generator, device=data_batch.device)[:k]
+        centroids.append(data_batch[batch_idx, indices].clone())
+    return torch.stack(centroids, dim=0)
+
+
+def _reseed_empty_centroid_for_batch(data_batch: Any, centroids: Any, batch_idx: int, empty_idx: int) -> Any:
+    return _reseed_empty_centroid(data_batch[batch_idx], centroids[batch_idx], empty_idx)
+
+
 def _plain_kmeans_batch(vectors: Any, k: int, seeds: list[int], config: PaperMethodConfig) -> tuple[Any, Any, Any]:
     data = _ensure_torch_tensor(vectors, config)
-    if data.ndim != 2:
-        raise ValueError(f"Expected 2D vectors for k-means, got shape={tuple(data.shape)}")
-    if data.shape[0] < k:
-        raise ValueError(f"Cannot cluster {data.shape[0]} vectors into k={k}.")
+    if data.ndim == 2:
+        data_batch = data.unsqueeze(0).expand(len(seeds), -1, -1)
+    elif data.ndim == 3:
+        if data.shape[0] != len(seeds):
+            raise ValueError("For batched datasets, the first dimension must match the number of seeds.")
+        data_batch = data
+    else:
+        raise ValueError(f"Expected 2D or 3D vectors for k-means, got shape={tuple(data.shape)}")
+    if data_batch.shape[1] < k:
+        raise ValueError(f"Cannot cluster {data_batch.shape[1]} vectors into k={k}.")
     if not seeds:
         raise ValueError("Expected at least one restart seed for batched k-means.")
 
-    batch_size = len(seeds)
-    centroids = torch.stack([_sample_initial_centroids(data, k, seed) for seed in seeds], dim=0)
-    data_batch = data.unsqueeze(0).expand(batch_size, -1, -1)
+    centroids = _sample_initial_centroids_for_batch(data_batch, k, seeds)
     labels = None
     for _ in range(300):
         distances = torch.sum((data_batch[:, :, None, :] - centroids[:, None, :, :]) ** 2, dim=3)
@@ -538,7 +595,7 @@ def _plain_kmeans_batch(vectors: Any, k: int, seeds: list[int], config: PaperMet
         next_centroids = summed / counts.clamp_min(1).unsqueeze(-1)
         empty_pairs = torch.nonzero(counts == 0, as_tuple=False)
         for batch_idx, centroid_idx in empty_pairs.tolist():
-            next_centroids[batch_idx, centroid_idx] = _reseed_empty_centroid(data, centroids[batch_idx], centroid_idx)
+            next_centroids[batch_idx, centroid_idx] = _reseed_empty_centroid_for_batch(data_batch, centroids, batch_idx, centroid_idx)
         if labels is not None and torch.equal(next_labels, labels):
             labels = next_labels
             centroids = next_centroids
@@ -574,6 +631,28 @@ def _best_plain_kmeans_solution(vectors: Any, k: int, repeats: int, seed: int, c
     return best_labels, best_centroids, float(best_obj)
 
 
+def _best_plain_kmeans_objectives_for_reference_batch(ref_batch: Any, k: int, repeats: int, seed: int, config: PaperMethodConfig) -> np.ndarray:
+    ref_batch_t = _ensure_torch_tensor(ref_batch, config)
+    if ref_batch_t.ndim != 3:
+        raise ValueError("Expected a 3D reference batch tensor for batched gap-statistic evaluation.")
+    n_refs = ref_batch_t.shape[0]
+    best_obj = np.full(n_refs, math.inf, dtype=np.float64)
+    if repeats <= 0:
+        raise ValueError("Expected repeats to be positive for reference batch k-means.")
+    for batch_start in range(0, repeats, DEFAULT_KMEANS_RESTART_BATCH_SIZE):
+        batch_end = min(repeats, batch_start + DEFAULT_KMEANS_RESTART_BATCH_SIZE)
+        per_ref_restarts = batch_end - batch_start
+        repeated_refs = ref_batch_t.repeat_interleave(per_ref_restarts, dim=0)
+        seeds = []
+        for ref_offset in range(n_refs):
+            ref_seed_base = seed + (ref_offset * 100_000)
+            seeds.extend(range(ref_seed_base + batch_start, ref_seed_base + batch_end))
+        _, _, objective_batch = _plain_kmeans_batch(repeated_refs, k, seeds, config)
+        objective_values = _tensor_to_numpy(objective_batch).astype(np.float64).reshape(n_refs, per_ref_restarts)
+        best_obj = np.minimum(best_obj, objective_values.min(axis=1))
+    return best_obj
+
+
 def compute_gap_statistic(vectors: np.ndarray, k_values: list[int], config: PaperMethodConfig, seed: int) -> dict[str, Any]:
     vectors = np.asarray(vectors, dtype=np.float64)
     vectors_t = _to_torch(vectors, config)
@@ -596,22 +675,30 @@ def compute_gap_statistic(vectors: np.ndarray, k_values: list[int], config: Pape
         best_result_by_k[k] = (best_labels, best_centroids, float(best_obj))
 
         reference_logs: list[float] = []
-        for ref_idx in range(config.gap_ref_n):
-            ref_generator = _torch_generator(seed + (k * 10000) + ref_idx, vectors_t.device)
-            ref_t = mins_t + (maxs_t - mins_t) * torch.rand(
-                vectors_t.shape,
-                generator=ref_generator,
-                dtype=vectors_t.dtype,
-                device=vectors_t.device,
-            )
-            _, _, ref_best_obj = _best_plain_kmeans_solution(
-                ref_t,
+        for ref_batch_start in range(0, config.gap_ref_n, DEFAULT_GAP_REF_BATCH_SIZE):
+            ref_batch_end = min(config.gap_ref_n, ref_batch_start + DEFAULT_GAP_REF_BATCH_SIZE)
+            ref_items = []
+            for ref_idx in range(ref_batch_start, ref_batch_end):
+                ref_generator = _torch_generator(seed + (k * 10000) + ref_idx, vectors_t.device)
+                ref_items.append(
+                    mins_t
+                    + (maxs_t - mins_t)
+                    * torch.rand(
+                        vectors_t.shape,
+                        generator=ref_generator,
+                        dtype=vectors_t.dtype,
+                        device=vectors_t.device,
+                    )
+                )
+            ref_batch_t = torch.stack(ref_items, dim=0)
+            ref_best_obj_batch = _best_plain_kmeans_objectives_for_reference_batch(
+                ref_batch_t,
                 k,
                 config.gap_ref_restarts,
-                seed + (k * 20000) + ref_idx * 1000,
+                seed + (k * 20000) + ref_batch_start * 1000,
                 config,
             )
-            reference_logs.append(float(np.log(ref_best_obj + 1e-12)))
+            reference_logs.extend(float(np.log(value + 1e-12)) for value in ref_best_obj_batch)
         gap_by_k[k] = float(np.mean(reference_logs) - np.log(best_obj + 1e-12))
         gap_sd_by_k[k] = float(np.std(reference_logs, ddof=1) * math.sqrt(1.0 + 1.0 / max(1, config.gap_ref_n)))
 
@@ -1619,7 +1706,7 @@ def main() -> int:
     print(f"[M5] report updated: {args.report_path}")
 
     generated_files = sorted([path for path in args.figure_dir.glob("*.png")] + [args.report_path])
-    checksum_lines = [f"{_checksum(path)}  {_display_output_path(path, SCRIPT_DIR)}" for path in generated_files if path.exists()]
+    checksum_lines = [f"{_checksum(path)}  {_display_output_path(path, REPO_ROOT)}" for path in generated_files if path.exists()]
     (SCRIPT_DIR / "checksums_torch.md5").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
     return 0
 
