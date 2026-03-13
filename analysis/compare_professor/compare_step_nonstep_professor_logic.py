@@ -1,4 +1,4 @@
-﻿"""Professor-style step/nonstep synergy comparison.
+﻿﻿"""Professor-style step/nonstep synergy comparison.
 
 Re-extracts trial synergies with NMF(init='random', random_state=0) and the
 minimum-rank VAF>0.9 rule, clusters synergy structures per group while
@@ -32,6 +32,7 @@ from sklearn.decomposition import NMF
 from sklearn.exceptions import ConvergenceWarning
 
 from src.emg_pipeline import build_trial_records, load_emg_table, load_event_metadata, load_pipeline_config, merge_event_metadata
+from src.synergy_stats.figures import save_group_cluster_figure
 
 
 def parse_args() -> argparse.Namespace:
@@ -164,6 +165,7 @@ class ProfessorNmfResult:
     n_components: int
     vaf: float
     H_structure: np.ndarray  # (k, muscles)
+    W_activation: np.ndarray  # (frames, k)
 
 
 def _compute_vaf(X: np.ndarray, recon: np.ndarray) -> float:
@@ -182,9 +184,21 @@ def professor_nmf_min_rank(
 ) -> ProfessorNmfResult:
     X = np.asarray(X_trial, dtype=np.float64)
     if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
-        return ProfessorNmfResult(status="invalid_shape", n_components=0, vaf=float("nan"), H_structure=np.empty((0, 0)))
+        return ProfessorNmfResult(
+            status="invalid_shape",
+            n_components=0,
+            vaf=float("nan"),
+            H_structure=np.empty((0, 0)),
+            W_activation=np.empty((0, 0)),
+        )
     if np.isnan(X).any():
-        return ProfessorNmfResult(status="nan_in_input", n_components=0, vaf=float("nan"), H_structure=np.empty((0, 0)))
+        return ProfessorNmfResult(
+            status="nan_in_input",
+            n_components=0,
+            vaf=float("nan"),
+            H_structure=np.empty((0, 0)),
+            W_activation=np.empty((0, 0)),
+        )
 
     X = np.where(X < 0, 0.0, X)
     n_muscles = int(X.shape[1])
@@ -200,19 +214,37 @@ def professor_nmf_min_rank(
                 continue
         recon = model.inverse_transform(W)
         vaf = _compute_vaf(X, recon)
-        candidate = {"rank": rank, "vaf": vaf, "H": np.asarray(model.components_, dtype=np.float64)}
+        candidate = {
+            "rank": rank,
+            "vaf": vaf,
+            "H": np.asarray(model.components_, dtype=np.float64),
+            "W": np.asarray(W, dtype=np.float64),
+        }
         if best is None or vaf > best["vaf"]:
             best = candidate
         if vaf > vaf_threshold:
-            return ProfessorNmfResult(status="ok", n_components=rank, vaf=float(vaf), H_structure=candidate["H"])
+            return ProfessorNmfResult(
+                status="ok",
+                n_components=rank,
+                vaf=float(vaf),
+                H_structure=candidate["H"],
+                W_activation=candidate["W"],
+            )
 
     if best is None:
-        return ProfessorNmfResult(status="nmf_failed", n_components=0, vaf=float("nan"), H_structure=np.empty((0, 0)))
+        return ProfessorNmfResult(
+            status="nmf_failed",
+            n_components=0,
+            vaf=float("nan"),
+            H_structure=np.empty((0, 0)),
+            W_activation=np.empty((0, 0)),
+        )
     return ProfessorNmfResult(
         status="below_threshold_best_effort",
         n_components=int(best["rank"]),
         vaf=float(best["vaf"]),
         H_structure=np.asarray(best["H"], dtype=np.float64),
+        W_activation=np.asarray(best["W"], dtype=np.float64),
     )
 
 
@@ -363,36 +395,76 @@ def _write_long_centroids(path: Path, group_id: str, centroids: np.ndarray, musc
     pd.DataFrame(rows).to_csv(path, index=False, encoding="utf-8-sig")
 
 
-def _plot_centroids(path: Path, title: str, centroids: np.ndarray, muscle_names: list[str]) -> None:
-    import matplotlib
+def _resample_series(values: np.ndarray, target_len: int = 100) -> np.ndarray:
+    series = np.asarray(values, dtype=np.float64).reshape(-1)
+    if series.size == 0:
+        return np.zeros(target_len, dtype=np.float64)
+    if series.size == 1:
+        return np.repeat(series, target_len)
+    original = np.linspace(0.0, 1.0, num=series.size)
+    target = np.linspace(0.0, 1.0, num=target_len)
+    return np.interp(target, original, series)
 
-    try:
-        matplotlib.use("Agg", force=True)
-    except Exception:
-        pass
-    import matplotlib.pyplot as plt
 
-    centroids = np.asarray(centroids, dtype=np.float64)
-    if centroids.size == 0:
-        return
+def _save_pipeline_style_centroids_figure(
+    path: Path,
+    group_id: str,
+    centroids: np.ndarray,
+    muscle_names: list[str],
+    cluster_members: pd.DataFrame,
+    trial_summary: pd.DataFrame,
+    activation_map: dict[tuple[str, int], np.ndarray],
+    cfg: dict[str, Any],
+) -> None:
+    rep_w_rows: list[dict[str, Any]] = []
+    rep_h_rows: list[dict[str, Any]] = []
 
-    n_clusters = centroids.shape[0]
-    fig, axes = plt.subplots(n_clusters, 1, figsize=(12, max(2.0, 1.6 * n_clusters)), squeeze=False)
-    fig.suptitle(title)
-    for cluster_id in range(n_clusters):
-        ax = axes[cluster_id][0]
-        vec = centroids[cluster_id]
-        denom = float(np.max(vec)) if float(np.max(vec)) > 0 else 1.0
-        scaled = vec / denom
-        ax.bar(range(len(muscle_names)), scaled)
-        ax.set_ylim(0, 1.05)
-        ax.set_ylabel(f"C{cluster_id}")
-        ax.set_xticks(range(len(muscle_names)))
-        ax.set_xticklabels(muscle_names, rotation=45, ha="right")
-        ax.grid(False)
-    plt.tight_layout(rect=(0, 0, 1, 0.98))
-    fig.savefig(path, dpi=200)
-    plt.close(fig)
+    for cluster_id, centroid in enumerate(np.asarray(centroids, dtype=np.float64)):
+        for muscle, value in zip(muscle_names, centroid.tolist()):
+            rep_w_rows.append(
+                {
+                    "group_id": group_id,
+                    "cluster_id": int(cluster_id),
+                    "muscle": muscle,
+                    "W_value": float(value),
+                }
+            )
+        member_subset = cluster_members.loc[cluster_members["cluster_id"] == int(cluster_id)]
+        activation_members = [
+            activation_map[(str(row["trial_id"]), int(row["component_index"]))]
+            for row in member_subset.to_dict("records")
+            if (str(row["trial_id"]), int(row["component_index"])) in activation_map
+        ]
+        mean_activation = (
+            np.mean(np.stack(activation_members, axis=0), axis=0)
+            if activation_members
+            else np.zeros(100, dtype=np.float64)
+        )
+        for frame_idx, value in enumerate(mean_activation.tolist()):
+            rep_h_rows.append(
+                {
+                    "group_id": group_id,
+                    "cluster_id": int(cluster_id),
+                    "frame_idx": int(frame_idx),
+                    "h_value": float(value),
+                }
+            )
+
+    step_class = "step" if group_id == "global_step" else "nonstep"
+    trial_metadata = trial_summary.loc[
+        trial_summary["analysis_step_class"] == step_class,
+        ["trial_id", "subject"],
+    ].copy()
+    save_group_cluster_figure(
+        group_id=group_id,
+        rep_w=pd.DataFrame(rep_w_rows),
+        rep_h=pd.DataFrame(rep_h_rows),
+        muscle_names=muscle_names,
+        cfg=cfg,
+        output_path=path,
+        cluster_labels=cluster_members.loc[:, ["cluster_id", "trial_id", "subject"]].copy(),
+        trial_metadata=trial_metadata,
+    )
 
 
 def _plot_similarity_heatmap(
@@ -518,6 +590,7 @@ def main() -> int:
     trial_rows: list[dict[str, Any]] = []
     synergy_vectors: list[np.ndarray] = []
     synergy_rows: list[dict[str, Any]] = []
+    activation_map: dict[tuple[str, int], np.ndarray] = {}
 
     for trial in trial_records:
         meta = trial.metadata
@@ -560,8 +633,16 @@ def main() -> int:
         if result.status != "ok":
             continue
         H = np.asarray(result.H_structure, dtype=np.float64)
+        activations = np.asarray(result.W_activation, dtype=np.float64)
         for component_index in range(H.shape[0]):
             synergy_vectors.append(H[component_index].astype(np.float64, copy=False))
+            component_scale = float(np.max(H[component_index])) if H.shape[1] else 1.0
+            if component_scale <= 0.0:
+                component_scale = 1.0
+            activation_map[(trial_id, int(component_index))] = _resample_series(
+                activations[:, component_index] * component_scale,
+                100,
+            )
             synergy_rows.append(
                 {
                     "group_id": group_id,
@@ -616,7 +697,16 @@ def main() -> int:
         members.to_csv(args.outdir / f"{group_id}_cluster_members.csv", index=False, encoding="utf-8-sig")
 
         _write_long_centroids(args.outdir / f"{group_id}_centroids_professor.csv", group_id, centroids, muscle_names)
-        _plot_centroids(args.outdir / f"{group_id}_centroids_professor.png", f"{group_id} professor centroids", centroids, muscle_names)
+        _save_pipeline_style_centroids_figure(
+            args.outdir / f"{group_id}_centroids_professor.png",
+            group_id,
+            centroids,
+            muscle_names,
+            members,
+            trial_summary,
+            activation_map,
+            cfg,
+        )
 
         pipeline_path = args.baseline_run / group_id / "representative_W_posthoc.csv"
         pipeline_centroids = _load_pipeline_representative_W(pipeline_path, muscle_names)
