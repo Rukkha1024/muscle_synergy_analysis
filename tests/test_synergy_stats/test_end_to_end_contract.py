@@ -1,4 +1,4 @@
-﻿"""End-to-end contract tests for global step/nonstep artifacts."""
+﻿"""End-to-end contract tests for global and trial-level synergy artifacts."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def test_fixture_run_writes_global_group_artifacts(
     fixture_bundle: dict[str, object],
     tmp_path: Path,
 ) -> None:
-    """The fixture pipeline should emit only global step/nonstep cluster outputs."""
+    """The fixture pipeline should emit global clusters plus trial-level NMF figures."""
 
     main_path = repo_root / "main.py"
     if not main_path.exists():
@@ -46,6 +46,7 @@ def test_fixture_run_writes_global_group_artifacts(
     summary_path = run_dir / "final_summary.csv"
     step_figure = run_dir / "figures" / "global_step_clusters.png"
     nonstep_figure = run_dir / "figures" / "global_nonstep_clusters.png"
+    trial_figure_dir = run_dir / "figures" / "nmf_trials"
     step_labels = run_dir / "global_step" / "cluster_labels.csv"
     nonstep_labels = run_dir / "global_nonstep" / "cluster_labels.csv"
 
@@ -54,6 +55,7 @@ def test_fixture_run_writes_global_group_artifacts(
     assert trial_window_metadata.exists()
     assert step_figure.exists()
     assert nonstep_figure.exists()
+    assert trial_figure_dir.exists()
     assert step_labels.exists()
     assert nonstep_labels.exists()
     assert not (run_dir / "figures" / "overview_all_subject_clusters.png").exists()
@@ -84,3 +86,8 @@ def test_fixture_run_writes_global_group_artifacts(
     window_df = pd.read_csv(trial_window_metadata, encoding="utf-8-sig")
     assert set(window_df["analysis_window_source"].unique()) == {"actual_step_onset", "subject_mean_step_onset"}
     assert window_df["analysis_window_is_surrogate"].astype(str).str.lower().eq("true").any()
+
+    trial_figures = sorted(trial_figure_dir.glob("*.png"))
+    assert len(trial_figures) == window_df["trial_id"].nunique()
+    assert all("_v" in path.name and "_T" in path.name for path in trial_figures)
+    assert all(path.stem.endswith(("_step_nmf", "_nonstep_nmf")) for path in trial_figures)

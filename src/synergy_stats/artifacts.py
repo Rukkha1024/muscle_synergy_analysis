@@ -1,4 +1,4 @@
-﻿"""Export group-level EMG synergy artifacts.
+﻿"""Export group-level and trial-level EMG synergy artifacts.
 
 This module writes one directory per global clustering group,
 merges those group exports into run-level CSVs,
@@ -13,7 +13,7 @@ from typing import Any
 import pandas as pd
 
 from .clustering import build_group_exports, save_group_outputs
-from .figures import figure_suffix, save_group_cluster_figure
+from .figures import figure_suffix, save_group_cluster_figure, save_trial_nmf_figure
 
 
 def summarize_group_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -27,6 +27,21 @@ def summarize_subject_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
 
 def _write_csv(frame: pd.DataFrame, path: Path) -> None:
     frame.to_csv(path, index=False, encoding="utf-8-sig", float_format="%.10f")
+
+
+def _format_filename_value(value: Any) -> str:
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    text = str(value).strip()
+    return text.replace("/", "-").replace("\\", "-").replace(" ", "_")
+
+
+def _trial_figure_name(feature_row: Any, figure_ext: str) -> str:
+    step_class = str(feature_row.bundle.meta.get("analysis_step_class", "unknown")).strip().lower() or "unknown"
+    subject = _format_filename_value(feature_row.subject)
+    velocity = _format_filename_value(feature_row.velocity)
+    trial_num = _format_filename_value(feature_row.trial_num)
+    return f"{subject}_v{velocity}_T{trial_num}_{step_class}_nmf{figure_ext}"
 
 
 def export_results(context: dict[str, Any]) -> dict[str, Any]:
@@ -54,6 +69,7 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     }
     group_summaries = []
     group_figure_paths: list[Path] = []
+    trial_figure_paths: list[Path] = []
     figure_dir = output_dir / "figures"
     figure_ext = figure_suffix(cfg)
     for group_id in ("global_step", "global_nonstep"):
@@ -96,6 +112,45 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
+    trial_figure_dir = figure_dir / "nmf_trials"
+    for feature_row in context["feature_rows"]:
+        step_class = str(feature_row.bundle.meta.get("analysis_step_class", "unknown")).strip().lower() or "unknown"
+        trial_figure_path = trial_figure_dir / _trial_figure_name(feature_row, figure_ext)
+        trial_w = pd.DataFrame(
+            [
+                {
+                    "cluster_id": component_index,
+                    "muscle": muscle_names[muscle_index],
+                    "W_value": float(value),
+                }
+                for component_index in range(feature_row.bundle.W_muscle.shape[1])
+                for muscle_index, value in enumerate(feature_row.bundle.W_muscle[:, component_index])
+            ]
+        )
+        trial_h = pd.DataFrame(
+            [
+                {
+                    "cluster_id": component_index,
+                    "frame_idx": frame_idx,
+                    "h_value": float(value),
+                }
+                for component_index in range(feature_row.bundle.H_time.shape[1])
+                for frame_idx, value in enumerate(feature_row.bundle.H_time[:, component_index])
+            ]
+        )
+        save_trial_nmf_figure(
+            subject=str(feature_row.subject),
+            velocity=feature_row.velocity,
+            trial_num=feature_row.trial_num,
+            step_class=step_class,
+            trial_w=trial_w,
+            trial_h=trial_h,
+            muscle_names=muscle_names,
+            cfg=cfg,
+            output_path=trial_figure_path,
+        )
+        trial_figure_paths.append(trial_figure_path)
+
     summary_df = summarize_group_results(group_summaries)
     _write_csv(summary_df, output_dir / "final_summary.csv")
 
@@ -124,4 +179,5 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     context["artifacts"]["summary_path"] = str(output_dir / "final_summary.csv")
     context["artifacts"]["final_parquet_path"] = str(final_parquet_path)
     context["artifacts"]["group_figure_paths"] = [str(path) for path in group_figure_paths]
+    context["artifacts"]["trial_figure_paths"] = [str(path) for path in trial_figure_paths]
     return context

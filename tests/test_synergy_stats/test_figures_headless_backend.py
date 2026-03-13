@@ -1,8 +1,8 @@
-﻿"""Ensure synergy cluster figures render without GUI/Qt backends.
+﻿"""Ensure synergy figures render without GUI/Qt backends.
 
 This regression test protects WSL/headless runs from Qt platform plugin
 warnings by asserting the figures module forces a non-interactive backend
-and can save a representative cluster figure in a fresh Python process.
+and can save both group-level and trial-level figures in a fresh process.
 """
 
 from __future__ import annotations
@@ -13,15 +13,15 @@ from pathlib import Path
 
 
 def test_figures_module_forces_agg_backend_and_saves(tmp_path: Path) -> None:
-    output_path = tmp_path / "cluster.png"
-    output_path_str = str(output_path)
+    group_output_path = tmp_path / "cluster.png"
+    trial_output_path = tmp_path / "trial_김철수_v30_T2_step_nmf.png"
     code = f"""
 import json
 from pathlib import Path
 
 import pandas as pd
 
-from src.synergy_stats.figures import save_group_cluster_figure
+from src.synergy_stats.figures import save_group_cluster_figure, save_trial_nmf_figure
 
 rep_w = pd.DataFrame({{
     "cluster_id": [0, 0],
@@ -35,18 +35,34 @@ rep_h = pd.DataFrame({{
 }})
 
 cfg = {{"figures": {{"format": "png", "dpi": 72}}}}
-output_path = Path({output_path_str!r})
+group_output_path = Path({str(group_output_path)!r})
+trial_output_path = Path({str(trial_output_path)!r})
 save_group_cluster_figure(
     group_id="global_step",
     rep_w=rep_w,
     rep_h=rep_h,
     muscle_names=["TA", "MG"],
     cfg=cfg,
-    output_path=output_path,
+    output_path=group_output_path,
+)
+save_trial_nmf_figure(
+    subject="김철수",
+    velocity=30,
+    trial_num=2,
+    step_class="step",
+    trial_w=rep_w,
+    trial_h=rep_h,
+    muscle_names=["TA", "MG"],
+    cfg=cfg,
+    output_path=trial_output_path,
 )
 
 import matplotlib
-print(json.dumps({{"backend": matplotlib.get_backend(), "exists": output_path.exists()}}))
+print(json.dumps({{
+    "backend": matplotlib.get_backend(),
+    "group_exists": group_output_path.exists(),
+    "trial_exists": trial_output_path.exists(),
+}}))
 """
     result = subprocess.run(
         [sys.executable, "-c", code],
@@ -56,6 +72,9 @@ print(json.dumps({{"backend": matplotlib.get_backend(), "exists": output_path.ex
     )
     assert result.returncode == 0, result.stderr
     assert "qt.qpa.plugin" not in (result.stdout + result.stderr).lower()
-    assert output_path.exists()
-    assert output_path.stat().st_size > 0
+    assert "glyph" not in (result.stdout + result.stderr).lower()
+    assert group_output_path.exists()
+    assert group_output_path.stat().st_size > 0
+    assert trial_output_path.exists()
+    assert trial_output_path.stat().st_size > 0
     assert "\"backend\": \"Agg\"" in result.stdout or "\"backend\": \"agg\"" in result.stdout
