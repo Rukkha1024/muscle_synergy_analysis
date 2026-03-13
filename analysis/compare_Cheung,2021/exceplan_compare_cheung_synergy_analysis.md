@@ -2,7 +2,7 @@
 
 This ExecPlan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-This plan follows `.agents/PLANS.md` supplied with the task context. The implementation must also respect the repository rules from `.agents/AGENTS.md`: do the work under `analysis/`, use conda env `module`, keep pipeline code untouched, and treat the baseline pipeline output as the source of truth for trial selection and analysis windows.
+This plan follows `.agents/PLANS.md` supplied with the task context. The implementation must also respect the repository rules from `.agents/AGENTS.md`: do the work under `analysis/`, use conda env `cuda`, keep pipeline code untouched, and treat the baseline pipeline output as the source of truth for trial selection and analysis windows.
 
 
 ## Purpose / Big Picture / 목적 / 큰 그림
@@ -284,9 +284,9 @@ English: At the end of this milestone, the user’s verification is simple. `rep
 
 ## Concrete Steps / 구체적 실행 단계
 
-한국어: 아래 단계는 저장소 루트에서 실행한다. 모든 Python 실행은 conda env `module`을 사용한다.
+한국어: 아래 단계는 저장소 루트에서 실행한다. 모든 Python 실행은 conda env `cuda`을 사용한다.
 
-English: Run the following steps from the repository root. Use conda env `module` for every Python command.
+English: Run the following steps from the repository root. Use conda env `cuda` for every Python command.
 
 1. 한국어: analysis 작업공간을 만든다. English: Create the analysis workspace.
 
@@ -306,7 +306,7 @@ English: Run the following steps from the repository root. Use conda env `module
 
 4. 한국어: dry-run을 먼저 구현하고 실행한다. English: Implement and run the dry-run first.
 
-    conda run --no-capture-output -n module python analysis/paper_step_nonstep_synergy/analyze_paper_step_nonstep_synergy.py \
+    conda run --no-capture-output -n cuda python analysis/paper_step_nonstep_synergy/analyze_paper_step_nonstep_synergy.py \
       --run-dir outputs/runs/default_run \
       --dry-run
 
@@ -323,7 +323,7 @@ English: Run the following steps from the repository root. Use conda env `module
 
 5. 한국어: prototype NMF + prototype clustering을 실행한다. English: Run prototype NMF plus prototype clustering.
 
-    conda run --no-capture-output -n module python analysis/paper_step_nonstep_synergy/analyze_paper_step_nonstep_synergy.py \
+    conda run --no-capture-output -n cuda python analysis/paper_step_nonstep_synergy/analyze_paper_step_nonstep_synergy.py \
       --run-dir outputs/runs/default_run \
       --prototype \
       --prototype-trials-per-group 4 \
@@ -336,7 +336,7 @@ English: Run the following steps from the repository root. Use conda env `module
 
 6. 한국어: full analysis를 실행한다. English: Run the full analysis.
 
-    conda run --no-capture-output -n module python analysis/paper_step_nonstep_synergy/analyze_paper_step_nonstep_synergy.py \
+    conda run --no-capture-output -n cuda python analysis/paper_step_nonstep_synergy/analyze_paper_step_nonstep_synergy.py \
       --run-dir outputs/runs/default_run \
       --seed 42
 

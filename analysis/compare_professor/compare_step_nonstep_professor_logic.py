@@ -1,4 +1,4 @@
-﻿﻿"""Professor-style step/nonstep synergy comparison.
+﻿"""Professor-style step/nonstep synergy comparison.
 
 Re-extracts trial synergies with NMF(init='random', random_state=0) and the
 minimum-rank VAF>0.9 rule, clusters synergy structures per group while
@@ -13,6 +13,7 @@ import hashlib
 import json
 import shutil
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--vaf-threshold", type=float, default=0.90)
     parser.add_argument("--seed", type=int, default=0, help="Random seed (used for NMF and KMeans).")
     parser.add_argument("--k-max", type=int, default=26, help="Max clusters to try when enforcing within-trial uniqueness.")
+    parser.add_argument(
+        "--kmeans-retries",
+        type=int,
+        default=100,
+        help="Professor-style retry count for repeated KMeans candidate search.",
+    )
     return parser.parse_args()
 
 
@@ -307,6 +314,7 @@ def professor_kmeans_within_trial_unique(
     k_min: int,
     k_max: int,
     seed: int,
+    kmeans_retries: int,
     allow_repair: bool = True,
 ) -> dict[str, Any]:
     if data.ndim != 2 or data.shape[0] == 0:
@@ -314,23 +322,55 @@ def professor_kmeans_within_trial_unique(
     k_max = min(int(k_max), int(data.shape[0]))
     if k_max < k_min:
         return {"status": "failed", "reason": f"invalid_k_range(k_min={k_min}, k_max={k_max})"}
+    retry_count = max(1, int(kmeans_retries))
+    candidate_solutions: list[dict[str, Any]] = []
 
-    for k in range(int(k_min), int(k_max) + 1):
-        model = KMeans(n_clusters=int(k), n_init="auto", random_state=int(seed))
-        labels = model.fit_predict(data).astype(int)
-        duplicates = _trial_duplicate_labels(trial_ids, labels)
-        if not duplicates:
-            return {
-                "status": "success_no_repair",
-                "n_clusters": int(k),
-                "labels": labels,
-                "duplicates": [],
-                "inertia": float(model.inertia_),
-                "repair_applied": False,
-            }
+    for retry in range(retry_count):
+        retry_seed = int(seed) + int(retry)
+        for k in range(int(k_min), int(k_max) + 1):
+            model = KMeans(n_clusters=int(k), n_init=1, random_state=retry_seed)
+            labels = model.fit_predict(data).astype(int)
+            duplicates = _trial_duplicate_labels(trial_ids, labels)
+            if duplicates:
+                continue
+            candidate_solutions.append(
+                {
+                    "n_clusters": int(k),
+                    "labels": labels,
+                    "duplicates": [],
+                    "inertia": float(model.inertia_),
+                    "repair_applied": False,
+                    "retry": int(retry),
+                    "random_state": int(retry_seed),
+                }
+            )
+            break
+
+    if candidate_solutions:
+        cluster_counts = Counter(int(candidate["n_clusters"]) for candidate in candidate_solutions)
+        max_frequency = max(cluster_counts.values())
+        selected_k = min(k for k, frequency in cluster_counts.items() if frequency == max_frequency)
+        selected_candidate = min(
+            (candidate for candidate in candidate_solutions if int(candidate["n_clusters"]) == selected_k),
+            key=lambda candidate: (float(candidate["inertia"]), int(candidate["retry"])),
+        )
+        return {
+            "status": "success_retry_selected",
+            "n_clusters": int(selected_candidate["n_clusters"]),
+            "labels": np.asarray(selected_candidate["labels"], dtype=int),
+            "duplicates": [],
+            "inertia": float(selected_candidate["inertia"]),
+            "repair_applied": False,
+            "retry": int(selected_candidate["retry"]),
+            "random_state": int(selected_candidate["random_state"]),
+            "selection_mode": "mode_k_then_lowest_inertia",
+            "candidate_count": int(len(candidate_solutions)),
+            "candidate_k_counts": {str(k): int(cluster_counts[k]) for k in sorted(cluster_counts)},
+            "retry_attempts": int(retry_count),
+        }
 
     if allow_repair:
-        model = KMeans(n_clusters=int(k_min), n_init="auto", random_state=int(seed))
+        model = KMeans(n_clusters=int(k_min), n_init=1, random_state=int(seed))
         labels = model.fit_predict(data).astype(int)
         centroids = np.asarray(model.cluster_centers_, dtype=np.float64)
         duplicates = _trial_duplicate_labels(trial_ids, labels)
@@ -351,9 +391,17 @@ def professor_kmeans_within_trial_unique(
             "repair_applied": True,
             "original_duplicates_count": int(len(duplicates)),
             "original_duplicates_preview": duplicates[:10],
+            "retry_attempts": int(retry_count),
+            "selection_mode": "hungarian_fallback_after_retry_exhaustion",
+            "random_state": int(seed),
         }
 
-    return {"status": "failed", "reason": f"no_zero_duplicate_solution_in_k[{k_min},{k_max}]", "n_clusters": int(k_max)}
+    return {
+        "status": "failed",
+        "reason": f"no_zero_duplicate_solution_in_k[{k_min},{k_max}]",
+        "n_clusters": int(k_max),
+        "retry_attempts": int(retry_count),
+    }
 
 
 def _centroids_from_labels(data: np.ndarray, labels: np.ndarray, n_clusters: int) -> np.ndarray:
@@ -683,6 +731,7 @@ def main() -> int:
             k_min=k_min,
             k_max=int(args.k_max),
             seed=int(args.seed),
+            kmeans_retries=int(args.kmeans_retries),
         )
         group_results[group_id] = cluster_result
         if not str(cluster_result.get("status", "")).startswith("success"):
@@ -731,8 +780,10 @@ def main() -> int:
             "vaf_threshold": float(args.vaf_threshold),
             "seed": int(args.seed),
             "k_max": int(args.k_max),
+            "kmeans_retries": int(args.kmeans_retries),
             "nmf_init": "random",
             "nmf_random_state": int(args.seed),
+            "kmeans_n_init": 1,
         },
         "assumptions": {
             "step_label_source": "event_metadata",
