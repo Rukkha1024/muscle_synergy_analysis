@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from src.synergy_stats import cluster_feature_group
+from src.synergy_stats.clustering import describe_clustering_runtime
 
 
 def _meta_flag(meta: dict, key: str) -> bool:
@@ -23,6 +24,15 @@ def _meta_flag(meta: dict, key: str) -> bool:
 
 def run(context: dict) -> dict:
     cfg = context["config"]
+    runtime = describe_clustering_runtime(cfg["synergy_clustering"])
+    logging.info(
+        "Clustering runtime algorithm=%s torch_device=%s torch_dtype=%s restart_batch_size=%s gap_reference_batch_size=%s",
+        runtime["algorithm"],
+        runtime["torch_device"] or "n/a",
+        runtime["torch_dtype"] or "n/a",
+        runtime["torch_restart_batch_size"],
+        runtime["gap_reference_batch_size"],
+    )
     # Grouping is intentionally fixed to global step vs nonstep.
     if "grouping" in cfg.get("synergy_clustering", {}):
         raise ValueError(
@@ -60,6 +70,14 @@ def run(context: dict) -> dict:
         if cluster_result.get("status") != "success":
             reason = cluster_result.get("reason", "Unknown clustering failure.")
             raise RuntimeError(f"Clustering failed for {group_id}: {reason}")
+        logging.info(
+            "Clustering result group=%s algorithm_used=%s torch_device=%s torch_dtype=%s selection_status=%s",
+            group_id,
+            cluster_result.get("algorithm_used", ""),
+            cluster_result.get("torch_device", "") or "n/a",
+            cluster_result.get("torch_dtype", "") or "n/a",
+            cluster_result.get("selection_status", ""),
+        )
         cluster_group_results[group_id] = {
             "group_id": group_id,
             "feature_rows": feature_rows,

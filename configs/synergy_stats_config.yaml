@@ -5,7 +5,9 @@
 feature_extractor:
   type: "nmf"
   nmf:
-    backend: "auto"
+    backend: "torchnmf"
+    torch_device: "auto"
+    torch_dtype: "float32"
     vaf_threshold: 0.90
     max_components_to_try: 8
     random_state: 42
@@ -16,7 +18,11 @@ feature_extractor:
 
       
 synergy_clustering:
-  algorithm: "cuml_kmeans"
+  algorithm: "torch_kmeans"
+  torch_device: "auto"
+  torch_dtype: "float32"
+  torch_restart_batch_size: 128
+  gap_reference_batch_size: 16
   selection_method: "gap_statistic"
   disallow_within_trial_duplicate_assignment: true
   require_zero_duplicate_solution: true

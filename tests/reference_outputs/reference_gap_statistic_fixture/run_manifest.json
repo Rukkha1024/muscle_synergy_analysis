@@ -1,8 +1,8 @@
 ﻿{
-  "created_at_utc": "2026-03-13T16:22:38.497117+00:00",
-  "python_executable": "/home/alice/miniconda3/envs/module/bin/python",
-  "python_version": "3.11.11 | packaged by conda-forge | (main, Mar  3 2025, 20:43:55) [GCC 13.3.0]",
-  "config_sha256": "697963351e99a1f3a9e745a8d258c2ec607a6e0dabc95768272df06316b2e0ad",
+  "created_at_utc": "2026-03-14T15:01:05.090197+00:00",
+  "python_executable": "/home/alice/miniconda3/envs/cuda/bin/python",
+  "python_version": "3.11.13 (main, Jun  5 2025, 13:12:00) [GCC 11.2.0]",
+  "config_sha256": "6f786b8e82e767ea3149ab78c71a7d98ebbdab7833e43a0f1281130f813d53f6",
   "runtime_seed": 7,
-  "run_id": "reference_gap_statistic_fixture"
+  "run_id": "reference_gap_statistic_fixture_refresh"
 }

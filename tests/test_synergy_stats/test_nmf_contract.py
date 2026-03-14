@@ -67,6 +67,9 @@ def test_nmf_returns_normalized_weights_and_vaf() -> None:
     norms = np.linalg.norm(np.asarray(w_muscle), axis=0)
     assert np.allclose(norms, np.ones_like(norms), atol=1e-3)
     assert float(meta["vaf"]) >= 0.9
+    assert meta["extractor_backend"] in {"sklearn_nmf", "torchnmf"}
+    assert "extractor_torch_device" in meta
+    assert "extractor_torch_dtype" in meta
 
 
 def test_nmf_rejects_nonpositive_max_iter_for_sklearn_backend() -> None:
@@ -130,3 +133,42 @@ def test_nmf_rejects_nonpositive_max_iter_for_torchnmf_backend() -> None:
     }
     with pytest.raises(ValueError, match="max_iter must be >= 1"):
         nmf_func(x_trial.copy(), cfg)
+
+
+def test_torchnmf_reports_resolved_runtime_metadata() -> None:
+    """The explicit Torch backend should report device and dtype metadata."""
+    try:
+        import torchnmf  # noqa: F401
+    except Exception:
+        pytest.skip("torchnmf is not available in this environment.")
+
+    try:
+        nmf_func, _, _ = resolve_callable(
+            [
+                "src.synergy_stats",
+                "src.synergy_stats.nmf",
+                "src.synergy_stats.pipeline",
+            ],
+            [
+                "run_trial_nmf",
+                "trial_nmf",
+                "_trial_nmf",
+            ],
+        )
+    except LookupError as exc:
+        pytest.xfail(f"NMF callable is not implemented yet: {exc}")
+
+    x_trial = _synthetic_trial_matrix()
+    cfg = {
+        "backend": "torchnmf",
+        "torch_device": "cpu",
+        "torch_dtype": "float32",
+        "vaf_threshold": 0.9,
+        "max_components_to_try": 4,
+        "fit_params": {"max_iter": 1000, "tol": 1e-4},
+    }
+    _, _, meta = nmf_func(x_trial.copy(), cfg)
+
+    assert meta["extractor_backend"] == "torchnmf"
+    assert meta["extractor_torch_device"] == "cpu"
+    assert meta["extractor_torch_dtype"] == "float32"

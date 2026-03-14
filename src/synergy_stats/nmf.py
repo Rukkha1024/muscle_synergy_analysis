@@ -19,6 +19,59 @@ class FeatureBundle:
     meta: dict[str, Any]
 
 
+def _require_torch():
+    try:
+        import torch
+    except ModuleNotFoundError as exc:  # pragma: no cover - depends on environment.
+        raise ModuleNotFoundError(
+            "PyTorch is required for the Torch NMF backend. Run from the `cuda` conda environment."
+        ) from exc
+    if hasattr(torch, "set_float32_matmul_precision"):
+        torch.set_float32_matmul_precision("high")
+    return torch
+
+
+def _resolve_torch_device(requested: str):
+    torch = _require_torch()
+    if requested == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(requested)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(f"Requested torch device `{requested}` but CUDA is not available.")
+    return device
+
+
+def _resolve_torch_dtype(name: str):
+    torch = _require_torch()
+    try:
+        return {"float32": torch.float32, "float64": torch.float64}[name]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported torch dtype: {name}") from exc
+
+
+def _describe_torch_runtime(cfg: dict[str, Any]) -> dict[str, str]:
+    device = _resolve_torch_device(str(cfg.get("torch_device", "auto")).strip().lower() or "auto")
+    dtype_name = str(cfg.get("torch_dtype", "float32")).strip().lower() or "float32"
+    _resolve_torch_dtype(dtype_name)
+    return {
+        "torch_device": str(device),
+        "torch_dtype": dtype_name,
+    }
+
+
+def describe_nmf_runtime(nmf_cfg: dict[str, Any]) -> dict[str, str]:
+    """Return the requested NMF backend and resolved Torch runtime settings."""
+    backend = str(nmf_cfg.get("backend", "auto")).strip().lower() or "auto"
+    runtime = {"backend": backend, "torch_device": "", "torch_dtype": ""}
+    if backend in {"auto", "torchnmf"}:
+        try:
+            runtime.update(_describe_torch_runtime(nmf_cfg))
+        except Exception:
+            if backend == "torchnmf":
+                raise
+    return runtime
+
+
 def _fit_rank_sklearn(X_trial: np.ndarray, rank: int, cfg: dict[str, Any]):
     from sklearn.decomposition import NMF
     from sklearn.exceptions import ConvergenceWarning
@@ -42,11 +95,14 @@ def _fit_rank_sklearn(X_trial: np.ndarray, rank: int, cfg: dict[str, Any]):
 
 
 def _fit_rank_torchnmf(X_trial: np.ndarray, rank: int, cfg: dict[str, Any]):
-    import torch
+    torch = _require_torch()
     import torchnmf
 
-    X = torch.from_numpy(X_trial.astype(np.float32))
-    model = torchnmf.nmf.NMF(X.shape, rank=rank)
+    runtime = _describe_torch_runtime(cfg)
+    device = _resolve_torch_device(runtime["torch_device"])
+    dtype = _resolve_torch_dtype(runtime["torch_dtype"])
+    X = torch.as_tensor(np.asarray(X_trial, dtype=np.float32), dtype=dtype, device=device)
+    model = torchnmf.nmf.NMF(X.shape, rank=rank).to(device=device, dtype=dtype)
     max_iter = int(cfg.get("fit_params", {}).get("max_iter", 1000))
     if max_iter < 1:
         raise ValueError(f"fit_params.max_iter must be >= 1 (got {max_iter}).")
@@ -64,7 +120,11 @@ def _fit_rank_torchnmf(X_trial: np.ndarray, rank: int, cfg: dict[str, Any]):
         H_time, W_muscle = left, right
     else:
         H_time, W_muscle = right, left
-    return W_muscle.detach().cpu().numpy(), H_time.detach().cpu().numpy()
+    return (
+        W_muscle.detach().cpu().numpy().astype(np.float32),
+        H_time.detach().cpu().numpy().astype(np.float32),
+        runtime,
+    )
 
 
 def _fit_rank(X_trial: np.ndarray, rank: int, cfg: dict[str, Any]):
@@ -73,11 +133,12 @@ def _fit_rank(X_trial: np.ndarray, rank: int, cfg: dict[str, Any]):
         raise ValueError(f"Unsupported feature_extractor backend: {backend}")
     if backend in {"auto", "torchnmf"}:
         try:
-            return _fit_rank_torchnmf(X_trial, rank, cfg), "torchnmf"
+            (W_muscle, H_time, runtime), resolved_backend = _fit_rank_torchnmf(X_trial, rank, cfg), "torchnmf"
+            return (W_muscle, H_time), resolved_backend, runtime
         except Exception:
             if backend == "torchnmf":
                 raise
-    return _fit_rank_sklearn(X_trial, rank, cfg), "sklearn_nmf"
+    return _fit_rank_sklearn(X_trial, rank, cfg), "sklearn_nmf", {"torch_device": "", "torch_dtype": ""}
 
 
 def _normalize_components(W_muscle: np.ndarray, H_time: np.ndarray):
@@ -106,13 +167,15 @@ def extract_trial_features(X_trial: np.ndarray, cfg: dict[str, Any]) -> FeatureB
     start = time.perf_counter()
     best = None
     best_backend = None
+    best_runtime: dict[str, str] = {"torch_device": "", "torch_dtype": ""}
     for rank in range(1, max_components + 1):
-        (W_muscle, H_time), backend = _fit_rank(trial, rank, nmf_cfg)
+        (W_muscle, H_time), backend, runtime = _fit_rank(trial, rank, nmf_cfg)
         W_norm, H_scaled = _normalize_components(W_muscle, H_time)
         vaf = _compute_vaf(trial, W_norm, H_scaled)
         if best is None or vaf > best["vaf"]:
             best = {"rank": rank, "W": W_norm, "H": H_scaled, "vaf": vaf}
             best_backend = backend
+            best_runtime = runtime
         if vaf >= vaf_threshold:
             break
     elapsed = time.perf_counter() - start
@@ -127,6 +190,8 @@ def extract_trial_features(X_trial: np.ndarray, cfg: dict[str, Any]) -> FeatureB
             "vaf": float(best["vaf"]),
             "extractor_type": "nmf",
             "extractor_backend": best_backend,
+            "extractor_torch_device": best_runtime["torch_device"],
+            "extractor_torch_dtype": best_runtime["torch_dtype"],
             "extractor_metric_elapsed_sec": elapsed,
         },
     )

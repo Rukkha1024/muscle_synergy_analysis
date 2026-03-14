@@ -38,6 +38,8 @@ def test_event_fixture_schema(fixture_bundle: dict[str, object]) -> None:
 def test_synergy_fixture_config_explicitly_writes_gap_overrides(fixture_bundle: dict[str, object]) -> None:
     """Fixture synergy config should pin explicit gap and uniqueness search overrides."""
     config_text = fixture_bundle["synergy_config"].read_text(encoding="utf-8-sig")
+    assert "backend: torchnmf" in config_text
+    assert "algorithm: torch_kmeans" in config_text
     assert "selection_method: gap_statistic" in config_text
     assert "require_zero_duplicate_solution: true" in config_text
     assert "duplicate_resolution: none" in config_text

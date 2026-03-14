@@ -60,6 +60,8 @@ def compute_gap_statistic(
     gap_by_k: dict[int, float] = {}
     gap_sd_by_k: dict[int, float] = {}
     results_by_k: dict[int, dict[str, Any]] = {}
+    fit_reference_batch = getattr(fit_best_fn, "fit_reference_batch", None)
+    reference_batch_size = max(1, int(getattr(fit_best_fn, "reference_batch_size", 1)))
 
     for k in [int(value) for value in k_values]:
         observed_result = fit_best_fn(data, k, int(observed_restarts), int(seed) + (k * 1000))
@@ -68,16 +70,32 @@ def compute_gap_statistic(
         observed_objective_by_k[k] = observed_objective
 
         reference_logs: list[float] = []
-        for ref_idx in range(int(gap_ref_n)):
-            ref_rng = np.random.default_rng(int(seed) + (k * 10000) + ref_idx)
-            ref_data = sample_uniform_reference_within_bounds(data, ref_rng)
-            ref_result = fit_best_fn(
-                ref_data,
-                k,
-                int(gap_ref_restarts),
-                int(seed) + (k * 20000) + (ref_idx * 1000),
-            )
-            reference_logs.append(float(np.log(float(ref_result["objective"]) + 1e-12)))
+        if callable(fit_reference_batch):
+            for ref_batch_start in range(0, int(gap_ref_n), reference_batch_size):
+                ref_batch_count = min(int(gap_ref_n) - ref_batch_start, reference_batch_size)
+                ref_objectives = np.asarray(
+                    fit_reference_batch(
+                        data,
+                        k,
+                        ref_batch_count,
+                        int(gap_ref_restarts),
+                        int(seed) + (k * 10000) + ref_batch_start,
+                        int(seed) + (k * 20000) + (ref_batch_start * 1000),
+                    ),
+                    dtype=np.float64,
+                )
+                reference_logs.extend(np.log(ref_objectives + 1e-12).tolist())
+        else:
+            for ref_idx in range(int(gap_ref_n)):
+                ref_rng = np.random.default_rng(int(seed) + (k * 10000) + ref_idx)
+                ref_data = sample_uniform_reference_within_bounds(data, ref_rng)
+                ref_result = fit_best_fn(
+                    ref_data,
+                    k,
+                    int(gap_ref_restarts),
+                    int(seed) + (k * 20000) + (ref_idx * 1000),
+                )
+                reference_logs.append(float(np.log(float(ref_result["objective"]) + 1e-12)))
 
         gap_by_k[k] = float(np.mean(reference_logs) - np.log(observed_objective + 1e-12))
         reference_sd = float(np.std(reference_logs, ddof=1)) if len(reference_logs) > 1 else 0.0

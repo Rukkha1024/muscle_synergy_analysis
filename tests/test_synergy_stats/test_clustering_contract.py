@@ -146,6 +146,8 @@ def test_group_exports_include_group_summary_schema() -> None:
         "n_components",
         "n_clusters",
         "algorithm_used",
+        "torch_device",
+        "torch_dtype",
         "selection_method",
         "selection_status",
         "k_lb",
@@ -160,6 +162,37 @@ def test_group_exports_include_group_summary_schema() -> None:
         "uniqueness_candidate_restarts",
     }.issubset(metadata_columns)
     assert {"group_id", "subject", "velocity", "trial_num", "component_index", "cluster_id"}.issubset(label_columns)
+
+
+def test_torch_kmeans_reports_runtime_metadata() -> None:
+    """Torch clustering should surface the selected algorithm and runtime info."""
+    try:
+        import torch  # noqa: F401
+    except Exception:
+        pytest.skip("torch is not available in this environment.")
+
+    cluster_func, export_func, feature_rows = _make_feature_rows("step")
+    cfg = _cluster_cfg(
+        algorithm="torch_kmeans",
+        torch_device="cpu",
+        torch_dtype="float32",
+        torch_restart_batch_size=4,
+        gap_reference_batch_size=2,
+        repeats=4,
+        gap_ref_n=2,
+        gap_ref_restarts=2,
+        uniqueness_candidate_restarts=4,
+    )
+    result = cluster_func(feature_rows, cfg, "global_step")
+    exports = export_func("global_step", feature_rows, result, ["M1", "M2", "M3"], 10)
+
+    assert result["status"] == "success"
+    assert result["algorithm_used"] == "torch_kmeans"
+    assert result["torch_device"] == "cpu"
+    assert result["torch_dtype"] == "float32"
+    assert exports["metadata"]["algorithm_used"].iloc[0] == "torch_kmeans"
+    assert exports["metadata"]["torch_device"].iloc[0] == "cpu"
+    assert exports["metadata"]["torch_dtype"].iloc[0] == "float32"
 
 
 @pytest.mark.parametrize(

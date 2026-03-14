@@ -78,9 +78,14 @@ def test_fixture_run_writes_global_group_artifacts(
     labels_df = pl.read_csv(run_dir / "all_cluster_labels.csv", encoding="utf8-lossy")
     assert set(labels_df.get_column("group_id").unique().to_list()) == {"global_step", "global_nonstep"}
     assert labels_df.get_column("analysis_selected_group").cast(pl.Boolean).all()
+    assert set(labels_df.get_column("extractor_backend").drop_nulls().unique().to_list()) == {"torchnmf"}
+    assert set(labels_df.get_column("extractor_torch_dtype").drop_nulls().unique().to_list()) == {"float32"}
 
     metadata_df = pl.read_csv(run_dir / "all_clustering_metadata.csv", encoding="utf8-lossy")
     assert set(metadata_df.get_column("selection_method").unique().to_list()) == {"gap_statistic"}
+    assert set(metadata_df.get_column("algorithm_used").unique().to_list()) == {"torch_kmeans"}
+    assert set(metadata_df.get_column("torch_dtype").unique().to_list()) == {"float32"}
+    assert metadata_df.get_column("torch_device").str.len_chars().min() > 0
     assert metadata_df.get_column("selection_status").is_in(
         ["success_gap_unique", "success_gap_escalated_unique"]
     ).all()
