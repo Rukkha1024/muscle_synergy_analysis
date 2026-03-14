@@ -68,6 +68,63 @@ def _duplicate_trials(sample_map: list[dict[str, Any]], labels: np.ndarray) -> l
     return [key for key, values in grouped.items() if len(values) != len(set(values))]
 
 
+def _duplicate_trial_evidence(sample_map: list[dict[str, Any]], labels: np.ndarray) -> list[dict[str, Any]]:
+    grouped: dict[tuple[Any, Any, Any], list[tuple[dict[str, Any], int]]] = defaultdict(list)
+    for sample, label in zip(sample_map, labels.tolist()):
+        grouped[sample["trial_key"]].append((sample, int(label)))
+
+    evidence_rows = []
+    for trial_key, entries in grouped.items():
+        cluster_to_components: dict[int, list[int]] = defaultdict(list)
+        for sample, label in entries:
+            cluster_to_components[label].append(int(sample["component_index"]))
+        duplicate_clusters = {
+            int(cluster_id): sorted(component_indexes)
+            for cluster_id, component_indexes in cluster_to_components.items()
+            if len(component_indexes) > 1
+        }
+        if not duplicate_clusters:
+            continue
+        sample = entries[0][0]
+        duplicate_cluster_ids = sorted(duplicate_clusters)
+        duplicate_component_indexes = sorted(
+            component_index
+            for component_indexes in duplicate_clusters.values()
+            for component_index in component_indexes
+        )
+        evidence_rows.append(
+            {
+                "subject": sample["subject"],
+                "velocity": sample["velocity"],
+                "trial_num": sample["trial_num"],
+                "trial_id": sample["trial_id"],
+                "trial_key": trial_key,
+                "n_synergies_in_trial": len(entries),
+                "duplicate_cluster_labels": duplicate_cluster_ids,
+                "duplicate_component_indexes": duplicate_component_indexes,
+                "duplicate_cluster_count": len(duplicate_cluster_ids),
+                "duplicate_component_count": len(duplicate_component_indexes),
+                "duplicate_cluster_details": [
+                    {
+                        "cluster_id": int(cluster_id),
+                        "component_indexes": component_indexes,
+                        "component_count": len(component_indexes),
+                    }
+                    for cluster_id, component_indexes in sorted(duplicate_clusters.items())
+                ],
+            }
+        )
+    return sorted(
+        evidence_rows,
+        key=lambda row: (
+            str(row["subject"]),
+            str(row["velocity"]),
+            str(row["trial_num"]),
+            str(row["trial_id"]),
+        ),
+    )
+
+
 def _fit_kmeans(data: np.ndarray, n_clusters: int, cfg: dict[str, Any]):
     algorithm = str(cfg.get("algorithm", "cuml_kmeans")).strip().lower()
     random_state = int(cfg.get("random_state", 42))
@@ -262,14 +319,17 @@ def _search_zero_duplicate_candidate_at_k(
     feasible_objective = np.nan
     min_duplicate_trial_count: int | None = None
     representative_duplicate_trials: list[tuple[Any, Any, Any]] = []
+    representative_duplicate_evidence: list[dict[str, Any]] = []
     min_duplicate_objective = float("inf")
 
     if observed_result is not None:
         observed_labels = np.asarray(observed_result["labels"], dtype=np.int32)
         observed_duplicates = _duplicate_trials(sample_map, observed_labels)
+        observed_duplicate_evidence = _duplicate_trial_evidence(sample_map, observed_labels)
         observed_objective = float(observed_result["objective"])
         min_duplicate_trial_count = len(observed_duplicates)
         representative_duplicate_trials = observed_duplicates
+        representative_duplicate_evidence = observed_duplicate_evidence
         min_duplicate_objective = observed_objective
         if not observed_duplicates:
             best_zero_duplicate_result = {
@@ -282,7 +342,9 @@ def _search_zero_duplicate_candidate_at_k(
     for restart_index in range(candidate_restarts):
         seed = base_seed + restart_index
         candidate_result = _fit_single_kmeans_candidate(data, n_clusters, seed, cfg)
-        duplicate_trials = _duplicate_trials(sample_map, np.asarray(candidate_result["labels"], dtype=np.int32))
+        candidate_labels = np.asarray(candidate_result["labels"], dtype=np.int32)
+        duplicate_trials = _duplicate_trials(sample_map, candidate_labels)
+        duplicate_evidence = _duplicate_trial_evidence(sample_map, candidate_labels)
         duplicate_count = len(duplicate_trials)
         objective = float(candidate_result["objective"])
 
@@ -293,6 +355,7 @@ def _search_zero_duplicate_candidate_at_k(
         ):
             min_duplicate_trial_count = duplicate_count
             representative_duplicate_trials = duplicate_trials
+            representative_duplicate_evidence = duplicate_evidence
             min_duplicate_objective = objective
 
         if duplicate_count == 0 and (
@@ -312,6 +375,7 @@ def _search_zero_duplicate_candidate_at_k(
             int(min_duplicate_trial_count) if min_duplicate_trial_count is not None else np.nan
         ),
         "representative_duplicate_trials": representative_duplicate_trials,
+        "representative_duplicate_evidence": representative_duplicate_evidence,
         "searched_restarts": candidate_restarts,
     }
 
@@ -405,6 +469,7 @@ def cluster_feature_group(
     feasible_summary_by_k: dict[int, dict[str, Any]] = {}
     feasible_objective_by_k: dict[int, float] = {}
     duplicate_trial_count_by_k: dict[int, int] = {}
+    duplicate_trial_evidence_by_k: dict[int, list[dict[str, Any]]] = {}
     k_min_unique: int | None = None
     if require_zero_duplicate:
         for n_clusters in k_values:
@@ -418,6 +483,7 @@ def cluster_feature_group(
             feasible_summary_by_k[n_clusters] = feasible_summary
             feasible_objective_by_k[n_clusters] = feasible_summary["feasible_objective"]
             duplicate_trial_count_by_k[n_clusters] = int(feasible_summary["min_duplicate_trial_count"])
+            duplicate_trial_evidence_by_k[n_clusters] = list(feasible_summary.get("representative_duplicate_evidence", []))
             if k_min_unique is None and feasible_summary["best_zero_duplicate_result"] is not None:
                 k_min_unique = int(n_clusters)
     else:
@@ -426,6 +492,7 @@ def cluster_feature_group(
             duplicate_count = len(_duplicate_trials(sample_map, observed_labels))
             feasible_objective_by_k[n_clusters] = np.nan
             duplicate_trial_count_by_k[n_clusters] = duplicate_count
+            duplicate_trial_evidence_by_k[n_clusters] = _duplicate_trial_evidence(sample_map, observed_labels)
             if k_min_unique is None and duplicate_count == 0:
                 k_min_unique = int(n_clusters)
 
@@ -468,6 +535,7 @@ def cluster_feature_group(
                 "observed_objective_by_k": gap_result["observed_objective_by_k"],
                 "feasible_objective_by_k": feasible_objective_by_k,
                 "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
+                "duplicate_trial_evidence_by_k": duplicate_trial_evidence_by_k,
             }
         selection_status = "success_gap_unique" if selected_k == k_gap_raw else "success_gap_escalated_unique"
         selected_result = feasible_summary_by_k[selected_k]["best_zero_duplicate_result"]
@@ -501,6 +569,7 @@ def cluster_feature_group(
             "observed_objective_by_k": gap_result["observed_objective_by_k"],
             "feasible_objective_by_k": feasible_objective_by_k,
             "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
+            "duplicate_trial_evidence_by_k": duplicate_trial_evidence_by_k,
         }
     return {
         "status": "success",
@@ -530,6 +599,7 @@ def cluster_feature_group(
         "observed_objective_by_k": gap_result["observed_objective_by_k"],
         "feasible_objective_by_k": feasible_objective_by_k,
         "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
+        "duplicate_trial_evidence_by_k": duplicate_trial_evidence_by_k,
     }
 
 

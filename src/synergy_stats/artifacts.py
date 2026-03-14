@@ -8,11 +8,13 @@ and records the final parquet plus figure paths.
 from __future__ import annotations
 
 from pathlib import Path
+import logging
 from typing import Any
 
 import pandas as pd
 
 from .clustering import build_group_exports, save_group_outputs
+from .excel_audit import validate_clustering_audit_workbook, write_clustering_audit_workbook
 from .figures import figure_suffix, save_group_cluster_figure, save_trial_nmf_figure
 
 
@@ -181,8 +183,22 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     final_parquet_path = Path(runtime_cfg["final_parquet_path"])
     final_parquet_path.parent.mkdir(parents=True, exist_ok=True)
     final_parquet_frame.to_parquet(final_parquet_path, index=False)
+    workbook_path = write_clustering_audit_workbook(
+        output_dir / "clustering_audit.xlsx",
+        context["cluster_group_results"],
+    )
+    workbook_validation = validate_clustering_audit_workbook(workbook_path)
+    logging.info("Saved clustering audit workbook to %s", workbook_path)
+    logging.info(
+        "Clustering audit workbook validation: engine=%s excel_ui_visual_qa=%s fallback_reason=%s",
+        workbook_validation["engine"],
+        workbook_validation["excel_ui_visual_qa"],
+        workbook_validation["fallback_reason"],
+    )
     context["artifacts"]["summary_path"] = str(output_dir / "final_summary.csv")
     context["artifacts"]["final_parquet_path"] = str(final_parquet_path)
+    context["artifacts"]["clustering_audit_workbook_path"] = str(workbook_path)
+    context["artifacts"]["clustering_audit_workbook_validation"] = workbook_validation
     context["artifacts"]["group_figure_paths"] = [str(path) for path in group_figure_paths]
     context["artifacts"]["trial_figure_paths"] = [str(path) for path in trial_figure_paths]
     return context

@@ -365,6 +365,8 @@ def test_gap_selection_escalates_to_first_zero_duplicate_solution(monkeypatch: p
     assert len(result.get("duplicate_trials", [])) == 0
     assert float(result.get("inertia", 0.0)) == pytest.approx(30.0)
     assert result.get("duplicate_trial_count_by_k") == {2: 3, 3: 0}
+    assert result.get("duplicate_trial_evidence_by_k", {}).get(2) == []
+    assert result.get("duplicate_trial_evidence_by_k", {}).get(3) == []
     assert np.isnan(result.get("feasible_objective_by_k", {}).get(2, np.nan))
     assert result.get("feasible_objective_by_k", {}).get(3) == pytest.approx(30.0)
 
@@ -655,3 +657,25 @@ def test_greedy_fallback_assignment_is_deterministic_for_ties() -> None:
 
     assert np.array_equal(first, second)
     assert len(set(first.tolist())) == costs.shape[0]
+
+
+def test_duplicate_trial_evidence_captures_trial_and_cluster_details() -> None:
+    """Duplicate evidence should flatten trial-level and cluster-level duplicate structure."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, feature_rows = _make_feature_rows("step")
+    data, sample_map = clustering_module._stack_weight_vectors(feature_rows, "global_step")
+    labels = np.array([0, 0, 1, 1, 0, 0], dtype=np.int32)
+
+    evidence = clustering_module._duplicate_trial_evidence(sample_map, labels)
+
+    assert len(evidence) == 3
+    first = evidence[0]
+    assert first["trial_id"] == "S01_v1_T1"
+    assert first["duplicate_cluster_labels"] == [0]
+    assert first["duplicate_component_indexes"] == [0, 1]
+    assert first["duplicate_cluster_count"] == 1
+    assert first["duplicate_component_count"] == 2
+    assert first["duplicate_cluster_details"] == [
+        {"cluster_id": 0, "component_indexes": [0, 1], "component_count": 2}
+    ]
