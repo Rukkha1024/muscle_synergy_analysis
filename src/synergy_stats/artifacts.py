@@ -15,6 +15,10 @@ import pandas as pd
 
 from .clustering import build_group_exports, save_group_outputs
 from .excel_audit import validate_clustering_audit_workbook, write_clustering_audit_workbook
+from .excel_results import (
+    validate_results_interpretation_workbook,
+    write_results_interpretation_workbook,
+)
 from .figures import figure_suffix, save_group_cluster_figure, save_trial_nmf_figure
 
 
@@ -172,8 +176,10 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         "trial_windows": "all_trial_window_metadata.csv",
     }
     final_parquet_frame = None
+    aggregate_frames: dict[str, pd.DataFrame] = {}
     for key, filename in aggregate_name_map.items():
         frame = pd.concat(all_frames[key], ignore_index=True) if all_frames[key] else pd.DataFrame()
+        aggregate_frames[key] = frame
         _write_csv(frame, output_dir / filename)
         if key == "minimal_W":
             final_parquet_frame = frame
@@ -188,6 +194,12 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         context["cluster_group_results"],
     )
     workbook_validation = validate_clustering_audit_workbook(workbook_path)
+    interpretation_workbook_path = write_results_interpretation_workbook(
+        output_dir / "results_interpretation.xlsx",
+        summary_df,
+        aggregate_frames,
+    )
+    interpretation_workbook_validation = validate_results_interpretation_workbook(interpretation_workbook_path)
     logging.info("Saved clustering audit workbook to %s", workbook_path)
     logging.info(
         "Clustering audit workbook validation: engine=%s excel_ui_visual_qa=%s fallback_reason=%s",
@@ -195,10 +207,19 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         workbook_validation["excel_ui_visual_qa"],
         workbook_validation["fallback_reason"],
     )
+    logging.info("Saved interpretation workbook to %s", interpretation_workbook_path)
+    logging.info(
+        "Interpretation workbook validation: engine=%s excel_ui_visual_qa=%s fallback_reason=%s",
+        interpretation_workbook_validation["engine"],
+        interpretation_workbook_validation["excel_ui_visual_qa"],
+        interpretation_workbook_validation["fallback_reason"],
+    )
     context["artifacts"]["summary_path"] = str(output_dir / "final_summary.csv")
     context["artifacts"]["final_parquet_path"] = str(final_parquet_path)
     context["artifacts"]["clustering_audit_workbook_path"] = str(workbook_path)
     context["artifacts"]["clustering_audit_workbook_validation"] = workbook_validation
+    context["artifacts"]["results_interpretation_workbook_path"] = str(interpretation_workbook_path)
+    context["artifacts"]["results_interpretation_workbook_validation"] = interpretation_workbook_validation
     context["artifacts"]["group_figure_paths"] = [str(path) for path in group_figure_paths]
     context["artifacts"]["trial_figure_paths"] = [str(path) for path in trial_figure_paths]
     return context

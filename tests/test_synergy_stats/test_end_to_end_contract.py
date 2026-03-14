@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from openpyxl import load_workbook
 import pandas as pd
 import polars as pl
 import pytest
@@ -45,6 +46,7 @@ def test_fixture_run_writes_global_group_artifacts(
     manifest_path = run_dir / "run_manifest.json"
     trial_window_metadata = run_dir / "all_trial_window_metadata.csv"
     summary_path = run_dir / "final_summary.csv"
+    interpretation_workbook = run_dir / "results_interpretation.xlsx"
     step_figure = run_dir / "figures" / "global_step_clusters.png"
     nonstep_figure = run_dir / "figures" / "global_nonstep_clusters.png"
     trial_figure_dir = run_dir / "figures" / "nmf_trials"
@@ -56,6 +58,7 @@ def test_fixture_run_writes_global_group_artifacts(
     assert manifest_path.exists()
     assert summary_path.exists()
     assert trial_window_metadata.exists()
+    assert interpretation_workbook.exists()
     assert step_figure.exists()
     assert nonstep_figure.exists()
     assert trial_figure_dir.exists()
@@ -118,3 +121,11 @@ def test_fixture_run_writes_global_group_artifacts(
     assert len(trial_figures) == window_df["trial_id"].nunique()
     assert all("_v" in path.name and "_T" in path.name for path in trial_figures)
     assert all(path.stem.endswith(("_step_nmf", "_nonstep_nmf")) for path in trial_figures)
+
+    interpretation_book = load_workbook(interpretation_workbook)
+    try:
+        assert {"summary", "trial_windows", "cluster_labels", "table_guide"}.issubset(
+            set(interpretation_book.sheetnames)
+        )
+    finally:
+        interpretation_book.close()

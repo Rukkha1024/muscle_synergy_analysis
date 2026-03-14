@@ -15,7 +15,7 @@ from typing import Any
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.worksheet.table import Table, TableStyleInfo
 import pandas as pd
 import polars as pl
@@ -33,9 +33,33 @@ GUIDE_LINES = [
     "예를 들어 k_gap_raw=6, k_min_unique=7, k_selected=7 이면, gap statistic이 먼저 고른 K=6에는 중복 trial이 남아 있어서 중복이 처음 0개가 되는 K=7을 최종 채택했다는 뜻입니다.",
     "어떤 trial에서 중복이 발생했는지는 tbl_duplicate_trial_summary 에서 보고, 그 중복이 어떤 cluster에서 나왔는지는 tbl_duplicate_cluster_detail 에서 확인하면 됩니다.",
     "[실행 환경 메모]",
-    "Workbook 엔진: openpyxl fallback.",
-    "사유: 이 환경에서는 xlwings 또는 데스크톱 Excel 자동화를 사용할 수 없었습니다.",
+    "Workbook 엔진: openpyxl 기본값.",
+    "사유: WSL 또는 headless 환경에서는 openpyxl을 기본 workbook 엔진으로 사용합니다.",
     "Excel UI 시각 검수: 데스크톱 Excel 자동화를 사용할 수 없어 건너뛰었습니다.",
+]
+
+DUPLICATES_GUIDE_LINES = [
+    "[목적] 이 시트는 후보 K에서 실제로 중복 cluster 할당이 발생한 trial과 세부 cluster 충돌 내역을 보여줍니다.",
+    "[표 읽는 순서]",
+    "1. 먼저 tbl_duplicate_trial_summary 에서 어떤 group_id, k, trial_id 에 중복이 있었는지 확인합니다.",
+    "2. duplicate_cluster_count 는 해당 trial 안에서 몇 개의 cluster가 중복되었는지를 뜻합니다.",
+    "3. duplicate_component_indexes_json 은 중복에 관련된 component index 목록입니다.",
+    "4. 더 자세한 충돌 원인은 아래 tbl_duplicate_cluster_detail 에서 cluster_id 와 component_indexes_json 으로 확인합니다.",
+    "[예시]",
+    "예를 들어 trial_id=S01_v1_T2, k=9, duplicate_cluster_count=2 라면, K=9에서 이 trial 안에 서로 다른 component가 같은 cluster로 두 번 이상 묶였다는 뜻입니다.",
+    "이때 아래 표에서 같은 trial_id 의 cluster_id 와 component_indexes_json 을 보면 어떤 cluster에서 중복이 났는지 바로 확인할 수 있습니다.",
+]
+
+TABLE_GUIDE_LINES = [
+    "[목적] 이 시트는 워크북 안에 있는 모든 Excel Table의 위치와 해석 방법을 한눈에 정리한 안내표입니다.",
+    "[표 읽는 순서]",
+    "1. table_name 은 실제 Excel Table 이름입니다.",
+    "2. sheet_name 과 table_range 를 함께 보면 해당 표가 워크북 어디에 있는지 찾을 수 있습니다.",
+    "3. description 은 표가 무엇을 요약하는지 설명합니다.",
+    "4. key_columns 는 해석할 때 먼저 봐야 하는 핵심 컬럼입니다.",
+    "5. notes 는 읽을 때 주의할 점이나 바로 적용할 해석 팁입니다.",
+    "[예시]",
+    "예를 들어 tbl_duplicate_trial_summary 행을 보면 duplicates 시트의 어느 범위에 trial 중복 요약표가 있는지 찾을 수 있고, key_columns 를 보고 group_id, k, trial_id 를 먼저 확인하면 됩니다.",
 ]
 
 
@@ -382,11 +406,12 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
         }
     )
 
+    duplicates_start_row = _write_text_block(duplicates_sheet, DUPLICATES_GUIDE_LINES, start_row=1, start_col=1) + 1
     duplicates_placements = [
         TablePlacement(
             table_name="tbl_duplicate_trial_summary",
             sheet_name="duplicates",
-            start_row=1,
+            start_row=duplicates_start_row,
             start_col=1,
             frame=duplicate_trial_frame,
             description="One row per duplicate trial at a candidate K.",
@@ -460,6 +485,7 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
         }
     )
 
+    guide_start_row = _write_text_block(guide_sheet, TABLE_GUIDE_LINES, start_row=1, start_col=1) + 1
     guide_frame = _table_guide_rows(table_info)
     guide_row = {
         "table_name": "tbl_table_guide",
@@ -473,7 +499,7 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
     guide_placement = TablePlacement(
         table_name="tbl_table_guide",
         sheet_name="table_guide",
-        start_row=1,
+        start_row=guide_start_row,
         start_col=1,
         frame=guide_frame,
         description="Inventory of workbook tables and how to interpret them.",
@@ -522,23 +548,34 @@ def validate_clustering_audit_workbook(path: Path) -> dict[str, Any]:
             for table_name in sorted(table_names - actual_table_names):
                 issues["tables"].append((table_name, "missing_table"))
 
-        summary_sheet = workbook["summary"]
-        for coord in ("A1", "A2", "A8", "A9", "A11", "A12", "A13", "A14"):
-            value = summary_sheet[coord].value
-            if value in (None, ""):
-                issues["blanks"].append(("summary", coord))
+        required_guide_cells = {
+            "summary": ("A1", "A2", "A8", "A9", "A11", "A12", "A13", "A14"),
+            "duplicates": ("A1", "A2", "A7", "A8", "A9"),
+            "table_guide": ("A1", "A2", "A8", "A9"),
+        }
+        for sheet_name, coords in required_guide_cells.items():
+            if sheet_name not in workbook.sheetnames:
+                continue
+            sheet = workbook[sheet_name]
+            for coord in coords:
+                value = sheet[coord].value
+                if value in (None, ""):
+                    issues["blanks"].append((sheet_name, coord))
 
-        guide_sheet = workbook["table_guide"]
-        guide_table = guide_sheet.tables.get("tbl_table_guide")
-        if guide_table is None:
+        guide_sheet = workbook["table_guide"] if "table_guide" in workbook.sheetnames else None
+        guide_table = None if guide_sheet is None else guide_sheet.tables.get("tbl_table_guide")
+        if guide_sheet is None:
+            pass
+        elif guide_table is None:
             issues["tables"].append(("tbl_table_guide", "missing_table"))
         else:
+            min_col, min_row, max_col, max_row = range_boundaries(guide_table.ref)
             rows = list(
                 guide_sheet.iter_rows(
-                    min_row=guide_table.headerRowCount + 1,
-                    max_row=guide_sheet.max_row,
-                    min_col=1,
-                    max_col=6,
+                    min_row=min_row + 1,
+                    max_row=max_row,
+                    min_col=min_col,
+                    max_col=max_col,
                     values_only=True,
                 )
             )
@@ -564,6 +601,6 @@ def validate_clustering_audit_workbook(path: Path) -> dict[str, Any]:
         "table_count": sum(len(values) for values in expected_tables.values()),
         "engine": "openpyxl",
         "excel_ui_visual_qa": "skipped_desktop_excel_unavailable",
-        "fallback_reason": "xlwings_or_desktop_excel_automation_unavailable",
+        "fallback_reason": "openpyxl_default_wsl_headless_environment",
         "issues": issues,
     }
