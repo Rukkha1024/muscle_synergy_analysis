@@ -498,7 +498,7 @@ def _audit_paper_like(
         group_vectors = vector_df.loc[vector_df["group_id"] == group_id].reset_index(drop=True)
         vectors = np.stack(group_vectors["vector"].to_list(), axis=0)
         k_values = list(range(2, min(int(paper_cfg.cluster_k_max), vectors.shape[0]) + 1))
-        gap_result = compare_mod.compute_gap_statistic(vectors, k_values, paper_cfg, seed + offset)
+        gap_result = compare_mod.compute_cheung_gap_statistic(vectors, k_values, paper_cfg, seed + offset)
         selected_k = int(gap_result["selected_k"])
 
         sample_map = [
@@ -1020,7 +1020,7 @@ forced reassignment는 이번 source-of-truth 코드 경로에는 없다. source
 - `_collect_trial_results()`가 각 trial의 EMG matrix에 대해 `run_paper_nmf_for_trial()`을 호출한다.
 - `run_paper_nmf_for_trial()`은 multiplicative-update NMF를 rank search로 반복하고, `structures`를 row-wise L2 norm으로 정규화한 `normalized_structures`를 만든다.
 - `_build_vector_rows()`가 trial 내부 각 synergy를 독립 sample로 펼쳐 `vector` column을 만든다.
-- `compute_gap_statistic()`가 candidate `K`별 ordinary pooled k-means를 평가하고, `_best_plain_kmeans_solution()`의 SSE를 사용해 gap statistic을 계산한다.
+- `compute_cheung_gap_statistic()`이 candidate `K`별 ordinary pooled k-means를 평가하고, `_best_plain_kmeans_solution()`의 SSE를 사용해 gap statistic을 계산한다.
 - 최종 selected `K`의 label은 raw group-specific label space를 이룬다.
 - `identify_common_clusters()`가 subject-invariant centroid를 정의하고, `match_cluster_centroids()`가 step/nonstep centroid를 Hungarian matching으로 연결해 downstream canonical label space를 만든다.
 - forced reassignment / deduplication / unique matching은 cluster membership assignment 단계에는 개입하지 않는다. `linear_sum_assignment()`는 centroid matching에만 사용된다.

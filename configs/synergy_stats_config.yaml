@@ -24,7 +24,6 @@ synergy_clustering:
   torch_restart_batch_size: 128
   gap_reference_batch_size: 16
   selection_method: "gap_statistic"
-  disallow_within_trial_duplicate_assignment: true
   require_zero_duplicate_solution: true
   duplicate_resolution: "none"
   max_clusters: 20

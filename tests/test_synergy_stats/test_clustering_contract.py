@@ -57,7 +57,6 @@ def _cluster_cfg(**overrides):
         "gap_ref_n": 3,
         "gap_ref_restarts": 2,
         "random_state": 7,
-        "disallow_within_trial_duplicate_assignment": True,
         "require_zero_duplicate_solution": True,
         "duplicate_resolution": "none",
     }
@@ -570,6 +569,54 @@ def test_gap_selection_rescues_same_k_when_feasible_candidate_exists(monkeypatch
     assert result.get("feasible_objective_by_k") == {2: 20.0, 3: 30.0}
 
 
+def test_gap_selection_fails_when_no_zero_duplicate_solution_exists_at_or_above_gap_k(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Gap selection should fail when every candidate K at or above gap K still has duplicates."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, feature_rows = _make_feature_rows("step")
+
+    def _fake_gap_statistic(*, data, k_values, fit_best_fn, observed_restarts, gap_ref_n, gap_ref_restarts, seed):
+        labels_k2 = np.array([0, 0, 1, 1, 0, 0], dtype=np.int32)
+        labels_k3 = np.array([0, 1, 1, 2, 0, 2], dtype=np.int32)
+        return {
+            "selected_k": 2,
+            "gap_by_k": {2: 1.5, 3: 1.0},
+            "gap_sd_by_k": {2: 0.1, 3: 0.1},
+            "observed_objective_by_k": {2: 2.0, 3: 3.0},
+            "results_by_k": {
+                2: {"labels": labels_k2, "objective": 2.0, "algorithm_used": "mock_kmeans"},
+                3: {"labels": labels_k3, "objective": 3.0, "algorithm_used": "mock_kmeans"},
+            },
+        }
+
+    def _fake_search_zero_duplicate_candidate_at_k(data, sample_map, n_clusters, cfg, observed_result=None):
+        return {
+            "best_zero_duplicate_result": None,
+            "feasible_objective": np.nan,
+            "min_duplicate_trial_count": 2 if n_clusters == 2 else 1,
+            "representative_duplicate_trials": [("S01", 1, 1)],
+            "representative_duplicate_evidence": [],
+            "searched_restarts": 5,
+        }
+
+    monkeypatch.setattr(clustering_module, "compute_gap_statistic", _fake_gap_statistic)
+    monkeypatch.setattr(
+        clustering_module,
+        "_search_zero_duplicate_candidate_at_k",
+        _fake_search_zero_duplicate_candidate_at_k,
+    )
+    result = clustering_module.cluster_feature_group(feature_rows, _cluster_cfg(max_clusters=3), "global_step")
+
+    assert result.get("status") == "failed"
+    assert result.get("selection_status") == "failed_no_zero_duplicate_at_or_above_gap_k"
+    assert result.get("k_gap_raw") == 2
+    assert np.isnan(result.get("k_selected", np.nan))
+    assert np.isnan(result.get("k_min_unique", np.nan))
+    assert result.get("duplicate_trial_count_by_k") == {2: 2, 3: 1}
+
+
 def test_cluster_rejects_unsupported_selection_method(monkeypatch: pytest.MonkeyPatch) -> None:
     """Unsupported selection methods should fail before clustering starts."""
     import src.synergy_stats.clustering as clustering_module
@@ -586,7 +633,7 @@ def test_cluster_rejects_unsupported_selection_method(monkeypatch: pytest.Monkey
 
 
 def test_cluster_main_path_does_not_call_repair_assignment(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Main clustering path should not fall back to repair-based reassignment."""
+    """Main clustering path should resolve duplicates through candidate search only."""
     import src.synergy_stats.clustering as clustering_module
 
     _, _, feature_rows = _make_feature_rows("step")
@@ -621,11 +668,6 @@ def test_cluster_main_path_does_not_call_repair_assignment(monkeypatch: pytest.M
             "representative_duplicate_trials": [],
             "searched_restarts": 5,
         },
-    )
-    monkeypatch.setattr(
-        clustering_module,
-        "_enforce_unique_trial_labels",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("repair path should not run")),
     )
 
     result = clustering_module.cluster_feature_group(feature_rows, _cluster_cfg(max_clusters=2), "global_step")
@@ -678,18 +720,6 @@ def test_cluster_fails_when_max_clusters_is_lower_than_subject_hmax() -> None:
     result = clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
     assert result.get("status") == "failed"
     assert "Invalid K range" in str(result.get("reason"))
-
-
-def test_greedy_fallback_assignment_is_deterministic_for_ties() -> None:
-    """Fallback assignment should remain deterministic even when costs tie."""
-    import src.synergy_stats.clustering as clustering_module
-
-    costs = np.ones((11, 17), dtype=np.float64)
-    first = clustering_module._minimum_cost_unique_assignment(costs)
-    second = clustering_module._minimum_cost_unique_assignment(costs)
-
-    assert np.array_equal(first, second)
-    assert len(set(first.tolist())) == costs.shape[0]
 
 
 def test_duplicate_trial_evidence_captures_trial_and_cluster_details() -> None:

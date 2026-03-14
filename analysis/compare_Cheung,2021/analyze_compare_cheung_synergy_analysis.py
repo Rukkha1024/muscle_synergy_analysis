@@ -455,7 +455,14 @@ def _best_plain_kmeans_solution(vectors: np.ndarray, k: int, repeats: int, seed:
     return best_labels, best_centroids, float(best_obj)
 
 
-def compute_gap_statistic(vectors: np.ndarray, k_values: list[int], config: PaperMethodConfig, seed: int) -> dict[str, Any]:
+def compute_cheung_gap_statistic(
+    vectors: np.ndarray,
+    k_values: list[int],
+    config: PaperMethodConfig,
+    seed: int,
+) -> dict[str, Any]:
+    """Run the paper-specific gap-statistic orchestration for compare_Cheung."""
+
     def _fit_gap_solution(data: np.ndarray, k: int, repeats: int, fit_seed: int) -> dict[str, Any]:
         labels, centroids, objective = _best_plain_kmeans_solution(data, k, repeats, fit_seed)
         return {
@@ -1138,7 +1145,7 @@ def _run_group_clustering(group_id: str, vector_df: pd.DataFrame, manifest_df: p
     k_min = 2
     k_max = int(min(config.cluster_k_max, vectors.shape[0]))
     k_values = list(range(k_min, k_max + 1))
-    gap_result = compute_gap_statistic(vectors, k_values, config, seed)
+    gap_result = compute_cheung_gap_statistic(vectors, k_values, config, seed)
     member_rows = []
     for row, label in zip(group_vectors.itertuples(index=False), gap_result["labels"].tolist()):
         member_rows.append(
