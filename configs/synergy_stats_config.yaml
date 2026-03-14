@@ -25,6 +25,7 @@ synergy_clustering:
   repeats: 1000
   gap_ref_n: 500
   gap_ref_restarts: 100
+  uniqueness_candidate_restarts: 1000
   random_state: 42
   max_iter: 300
   representative:

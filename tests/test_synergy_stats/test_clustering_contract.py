@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 from collections import defaultdict
+import json
 from types import SimpleNamespace
 
 import numpy as np
@@ -154,7 +155,9 @@ def test_group_exports_include_group_summary_schema() -> None:
         "gap_by_k_json",
         "gap_sd_by_k_json",
         "observed_objective_by_k_json",
+        "feasible_objective_by_k_json",
         "duplicate_trial_count_by_k_json",
+        "uniqueness_candidate_restarts",
     }.issubset(metadata_columns)
     assert {"group_id", "subject", "velocity", "trial_num", "component_index", "cluster_id"}.issubset(label_columns)
 
@@ -293,6 +296,11 @@ def test_k_min_starts_from_subject_hmax(monkeypatch: pytest.MonkeyPatch) -> None
         }
 
     monkeypatch.setattr(clustering_module, "compute_gap_statistic", _fake_gap_statistic)
+    monkeypatch.setattr(
+        clustering_module,
+        "_search_zero_duplicate_candidate_at_k",
+        lambda *args, **kwargs: pytest.fail("zero-duplicate sweep should not run"),
+    )
     cfg = _cluster_cfg(max_clusters=6, max_iter=10, repeats=1, require_zero_duplicate_solution=False)
     clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
     assert captured["k_values"][0] == 5
@@ -318,7 +326,33 @@ def test_gap_selection_escalates_to_first_zero_duplicate_solution(monkeypatch: p
             },
         }
 
+    def _fake_search_zero_duplicate_candidate_at_k(data, sample_map, n_clusters, cfg, observed_result=None):
+        if n_clusters == 2:
+            return {
+                "best_zero_duplicate_result": None,
+                "feasible_objective": np.nan,
+                "min_duplicate_trial_count": 3,
+                "representative_duplicate_trials": [("S01", 1, 1)],
+                "searched_restarts": 5,
+            }
+        return {
+            "best_zero_duplicate_result": {
+                "labels": np.array([0, 1, 1, 2, 0, 2], dtype=np.int32),
+                "objective": 30.0,
+                "algorithm_used": "mock_candidate_kmeans",
+            },
+            "feasible_objective": 30.0,
+            "min_duplicate_trial_count": 0,
+            "representative_duplicate_trials": [],
+            "searched_restarts": 5,
+        }
+
     monkeypatch.setattr(clustering_module, "compute_gap_statistic", _fake_gap_statistic)
+    monkeypatch.setattr(
+        clustering_module,
+        "_search_zero_duplicate_candidate_at_k",
+        _fake_search_zero_duplicate_candidate_at_k,
+    )
     cfg = _cluster_cfg(max_clusters=3, max_iter=10, repeats=1, gap_ref_n=2, gap_ref_restarts=1)
     result = clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
 
@@ -329,14 +363,253 @@ def test_gap_selection_escalates_to_first_zero_duplicate_solution(monkeypatch: p
     assert result.get("k_min_unique") == 3
     assert result.get("selection_status") == "success_gap_escalated_unique"
     assert len(result.get("duplicate_trials", [])) == 0
-    assert float(result.get("inertia", 0.0)) == pytest.approx(3.0)
+    assert float(result.get("inertia", 0.0)) == pytest.approx(30.0)
     assert result.get("duplicate_trial_count_by_k") == {2: 3, 3: 0}
+    assert np.isnan(result.get("feasible_objective_by_k", {}).get(2, np.nan))
+    assert result.get("feasible_objective_by_k", {}).get(3) == pytest.approx(30.0)
 
     trial_clusters = defaultdict(list)
     for sample, label in zip(result.get("sample_map", []), np.asarray(result.get("labels"))):
         trial_clusters[sample["trial_key"]].append(int(label))
     assert trial_clusters
     assert all(len(values) == len(set(values)) for values in trial_clusters.values())
+
+
+def test_search_zero_duplicate_candidate_prefers_best_feasible_seed_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Candidate search should use deterministic seeds and keep the best feasible objective."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, feature_rows = _make_feature_rows("step")
+    data, sample_map = clustering_module._stack_weight_vectors(feature_rows, "global_step")
+    seen_seeds = []
+
+    def _fake_fit_single_kmeans_candidate(data, n_clusters, seed, cfg):
+        seen_seeds.append(seed)
+        candidate_map = {
+            200007: {
+                "labels": np.array([0, 0, 1, 1, 0, 0], dtype=np.int32),
+                "objective": 5.0,
+                "algorithm_used": "mock_candidate_kmeans",
+            },
+            200008: {
+                "labels": np.array([0, 1, 1, 0, 0, 1], dtype=np.int32),
+                "objective": 7.0,
+                "algorithm_used": "mock_candidate_kmeans",
+            },
+            200009: {
+                "labels": np.array([1, 0, 0, 1, 1, 0], dtype=np.int32),
+                "objective": 6.0,
+                "algorithm_used": "mock_candidate_kmeans",
+            },
+        }
+        return candidate_map[seed]
+
+    monkeypatch.setattr(
+        clustering_module,
+        "_fit_single_kmeans_candidate",
+        _fake_fit_single_kmeans_candidate,
+    )
+
+    result = clustering_module._search_zero_duplicate_candidate_at_k(
+        data,
+        sample_map,
+        2,
+        _cluster_cfg(uniqueness_candidate_restarts=3, random_state=7),
+        observed_result=None,
+    )
+
+    assert seen_seeds == [200007, 200008, 200009]
+    assert result["searched_restarts"] == 3
+    assert result["min_duplicate_trial_count"] == 0
+    assert result["representative_duplicate_trials"] == []
+    assert result["feasible_objective"] == pytest.approx(6.0)
+    assert result["best_zero_duplicate_result"]["objective"] == pytest.approx(6.0)
+    assert np.array_equal(
+        result["best_zero_duplicate_result"]["labels"],
+        np.array([1, 0, 0, 1, 1, 0], dtype=np.int32),
+    )
+
+
+def test_search_zero_duplicate_candidate_considers_observed_gap_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Observed gap-best results should count as feasible candidates before extra sweeps."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, feature_rows = _make_feature_rows("step")
+    data, sample_map = clustering_module._stack_weight_vectors(feature_rows, "global_step")
+
+    monkeypatch.setattr(
+        clustering_module,
+        "_fit_single_kmeans_candidate",
+        lambda data, n_clusters, seed, cfg: {
+            "labels": np.array([0, 0, 1, 1, 0, 0], dtype=np.int32),
+            "objective": 5.0,
+            "algorithm_used": "mock_candidate_kmeans",
+        },
+    )
+
+    observed_result = {
+        "labels": np.array([0, 1, 1, 0, 0, 1], dtype=np.int32),
+        "objective": 4.0,
+        "algorithm_used": "mock_gap_kmeans",
+    }
+    result = clustering_module._search_zero_duplicate_candidate_at_k(
+        data,
+        sample_map,
+        2,
+        _cluster_cfg(uniqueness_candidate_restarts=3, random_state=7),
+        observed_result=observed_result,
+    )
+
+    assert result["min_duplicate_trial_count"] == 0
+    assert result["representative_duplicate_trials"] == []
+    assert result["feasible_objective"] == pytest.approx(4.0)
+    assert result["best_zero_duplicate_result"]["algorithm_used"] == "mock_gap_kmeans"
+
+
+def test_gap_selection_rescues_same_k_when_feasible_candidate_exists(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Gap raw K should stay fixed when a same-K zero-duplicate candidate exists."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, feature_rows = _make_feature_rows("step")
+
+    def _fake_gap_statistic(*, data, k_values, fit_best_fn, observed_restarts, gap_ref_n, gap_ref_restarts, seed):
+        labels_k2 = np.array([0, 0, 1, 1, 0, 0], dtype=np.int32)
+        labels_k3 = np.array([0, 1, 1, 2, 0, 2], dtype=np.int32)
+        return {
+            "selected_k": 2,
+            "gap_by_k": {2: 1.5, 3: 1.0},
+            "gap_sd_by_k": {2: 0.1, 3: 0.1},
+            "observed_objective_by_k": {2: 2.0, 3: 3.0},
+            "results_by_k": {
+                2: {"labels": labels_k2, "objective": 2.0, "algorithm_used": "mock_kmeans"},
+                3: {"labels": labels_k3, "objective": 3.0, "algorithm_used": "mock_kmeans"},
+            },
+        }
+
+    def _fake_search_zero_duplicate_candidate_at_k(data, sample_map, n_clusters, cfg, observed_result=None):
+        if n_clusters == 2:
+            return {
+                "best_zero_duplicate_result": {
+                    "labels": np.array([0, 1, 1, 0, 0, 1], dtype=np.int32),
+                    "objective": 20.0,
+                    "algorithm_used": "mock_candidate_kmeans",
+                },
+                "feasible_objective": 20.0,
+                "min_duplicate_trial_count": 0,
+                "representative_duplicate_trials": [],
+                "searched_restarts": 5,
+            }
+        return {
+            "best_zero_duplicate_result": {
+                "labels": np.array([0, 1, 1, 2, 0, 2], dtype=np.int32),
+                "objective": 30.0,
+                "algorithm_used": "mock_candidate_kmeans",
+            },
+            "feasible_objective": 30.0,
+            "min_duplicate_trial_count": 0,
+            "representative_duplicate_trials": [],
+            "searched_restarts": 5,
+        }
+
+    monkeypatch.setattr(clustering_module, "compute_gap_statistic", _fake_gap_statistic)
+    monkeypatch.setattr(
+        clustering_module,
+        "_search_zero_duplicate_candidate_at_k",
+        _fake_search_zero_duplicate_candidate_at_k,
+    )
+    cfg = _cluster_cfg(max_clusters=3, max_iter=10, repeats=1, gap_ref_n=2, gap_ref_restarts=1)
+    result = clustering_module.cluster_feature_group(feature_rows, cfg, "global_step")
+
+    assert result.get("status") == "success"
+    assert result.get("k_gap_raw") == 2
+    assert result.get("k_selected") == 2
+    assert result.get("n_clusters") == 2
+    assert result.get("k_min_unique") == 2
+    assert result.get("selection_status") == "success_gap_unique"
+    assert result.get("duplicate_trials") == []
+    assert float(result.get("inertia", 0.0)) == pytest.approx(20.0)
+    assert result.get("feasible_objective_by_k") == {2: 20.0, 3: 30.0}
+
+
+def test_cluster_rejects_unsupported_selection_method(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unsupported selection methods should fail before clustering starts."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, feature_rows = _make_feature_rows("step")
+    monkeypatch.setattr(clustering_module, "compute_gap_statistic", lambda **kwargs: pytest.fail("should not run"))
+
+    with pytest.raises(ValueError, match="Unsupported selection_method"):
+        clustering_module.cluster_feature_group(
+            feature_rows,
+            _cluster_cfg(selection_method="elbow"),
+            "global_step",
+        )
+
+
+def test_cluster_main_path_does_not_call_repair_assignment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Main clustering path should not fall back to repair-based reassignment."""
+    import src.synergy_stats.clustering as clustering_module
+
+    _, _, feature_rows = _make_feature_rows("step")
+
+    def _fake_gap_statistic(*, data, k_values, fit_best_fn, observed_restarts, gap_ref_n, gap_ref_restarts, seed):
+        return {
+            "selected_k": 2,
+            "gap_by_k": {2: 1.5},
+            "gap_sd_by_k": {2: 0.1},
+            "observed_objective_by_k": {2: 2.0},
+            "results_by_k": {
+                2: {
+                    "labels": np.array([0, 0, 1, 1, 0, 0], dtype=np.int32),
+                    "objective": 2.0,
+                    "algorithm_used": "mock_kmeans",
+                }
+            },
+        }
+
+    monkeypatch.setattr(clustering_module, "compute_gap_statistic", _fake_gap_statistic)
+    monkeypatch.setattr(
+        clustering_module,
+        "_search_zero_duplicate_candidate_at_k",
+        lambda data, sample_map, n_clusters, cfg, observed_result=None: {
+            "best_zero_duplicate_result": {
+                "labels": np.array([0, 1, 1, 0, 0, 1], dtype=np.int32),
+                "objective": 20.0,
+                "algorithm_used": "mock_candidate_kmeans",
+            },
+            "feasible_objective": 20.0,
+            "min_duplicate_trial_count": 0,
+            "representative_duplicate_trials": [],
+            "searched_restarts": 5,
+        },
+    )
+    monkeypatch.setattr(
+        clustering_module,
+        "_enforce_unique_trial_labels",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("repair path should not run")),
+    )
+
+    result = clustering_module.cluster_feature_group(feature_rows, _cluster_cfg(max_clusters=2), "global_step")
+    assert result.get("status") == "success"
+    assert result.get("duplicate_trials") == []
+
+
+def test_group_exports_serialize_strict_json_metrics() -> None:
+    """Exported metric JSON should stay parseable even when feasible values are missing."""
+    cluster_func, export_func, feature_rows = _make_feature_rows("step")
+    cfg = _cluster_cfg()
+    result = cluster_func(feature_rows, cfg, "global_step")
+    result["feasible_objective_by_k"] = {2: np.nan, 3: 1.0}
+    exports = export_func("global_step", feature_rows, result, ["M1", "M2", "M3"], 10)
+
+    feasible_payload = exports["metadata"].loc[0, "feasible_objective_by_k_json"]
+    parsed = json.loads(feasible_payload)
+    assert parsed["2"] is None
+    assert parsed["3"] == pytest.approx(1.0)
 
 
 def test_cluster_fails_when_max_clusters_is_lower_than_subject_hmax() -> None:

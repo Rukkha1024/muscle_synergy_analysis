@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -85,7 +86,15 @@ def test_fixture_run_writes_global_group_artifacts(
     ).all()
     assert metadata_df.get_column("k_gap_raw").cast(pl.Int64).min() >= 2
     assert metadata_df.filter(pl.col("k_selected").cast(pl.Int64) < pl.col("k_gap_raw").cast(pl.Int64)).is_empty()
+    assert metadata_df.get_column("uniqueness_candidate_restarts").cast(pl.Int64).min() > 0
+    assert metadata_df.get_column("feasible_objective_by_k_json").str.len_chars().min() > 0
     assert metadata_df.get_column("duplicate_trial_count_by_k_json").str.len_chars().min() > 0
+    for payload in metadata_df.get_column("feasible_objective_by_k_json").to_list():
+        parsed = json.loads(payload)
+        assert isinstance(parsed, dict)
+    for payload in metadata_df.get_column("duplicate_trial_count_by_k_json").to_list():
+        parsed = json.loads(payload)
+        assert isinstance(parsed, dict)
 
     step_df = labels_df.filter(pl.col("group_id") == "global_step")
     nonstep_df = labels_df.filter(pl.col("group_id") == "global_nonstep")

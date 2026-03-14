@@ -201,6 +201,13 @@ def _selection_method(cfg: dict[str, Any]) -> str:
     return str(cfg.get("selection_method", "gap_statistic")).strip().lower() or "gap_statistic"
 
 
+def _validated_selection_method(cfg: dict[str, Any]) -> str:
+    selection_method = _selection_method(cfg)
+    if selection_method != "gap_statistic":
+        raise ValueError(f"Unsupported selection_method: {selection_method}")
+    return selection_method
+
+
 def _require_zero_duplicate_solution(cfg: dict[str, Any]) -> bool:
     if "require_zero_duplicate_solution" in cfg:
         return bool(cfg.get("require_zero_duplicate_solution"))
@@ -229,9 +236,96 @@ def _fit_best_kmeans_result(
     }
 
 
+def _uniqueness_candidate_restarts(cfg: dict[str, Any]) -> int:
+    return max(1, int(cfg.get("uniqueness_candidate_restarts", cfg.get("repeats", 25))))
+
+
+def _fit_single_kmeans_candidate(
+    data: np.ndarray,
+    n_clusters: int,
+    seed: int,
+    cfg: dict[str, Any],
+) -> dict[str, Any]:
+    return _fit_best_kmeans_result(data, n_clusters, repeats=1, seed=seed, cfg=cfg)
+
+
+def _search_zero_duplicate_candidate_at_k(
+    data: np.ndarray,
+    sample_map: list[dict[str, Any]],
+    n_clusters: int,
+    cfg: dict[str, Any],
+    observed_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    candidate_restarts = _uniqueness_candidate_restarts(cfg)
+    base_seed = int(cfg.get("random_state", 42)) + (int(n_clusters) * 100000)
+    best_zero_duplicate_result: dict[str, Any] | None = None
+    feasible_objective = np.nan
+    min_duplicate_trial_count: int | None = None
+    representative_duplicate_trials: list[tuple[Any, Any, Any]] = []
+    min_duplicate_objective = float("inf")
+
+    if observed_result is not None:
+        observed_labels = np.asarray(observed_result["labels"], dtype=np.int32)
+        observed_duplicates = _duplicate_trials(sample_map, observed_labels)
+        observed_objective = float(observed_result["objective"])
+        min_duplicate_trial_count = len(observed_duplicates)
+        representative_duplicate_trials = observed_duplicates
+        min_duplicate_objective = observed_objective
+        if not observed_duplicates:
+            best_zero_duplicate_result = {
+                "labels": observed_labels,
+                "objective": observed_objective,
+                "algorithm_used": observed_result.get("algorithm_used", ""),
+            }
+            feasible_objective = observed_objective
+
+    for restart_index in range(candidate_restarts):
+        seed = base_seed + restart_index
+        candidate_result = _fit_single_kmeans_candidate(data, n_clusters, seed, cfg)
+        duplicate_trials = _duplicate_trials(sample_map, np.asarray(candidate_result["labels"], dtype=np.int32))
+        duplicate_count = len(duplicate_trials)
+        objective = float(candidate_result["objective"])
+
+        if (
+            min_duplicate_trial_count is None
+            or duplicate_count < min_duplicate_trial_count
+            or (duplicate_count == min_duplicate_trial_count and objective < min_duplicate_objective)
+        ):
+            min_duplicate_trial_count = duplicate_count
+            representative_duplicate_trials = duplicate_trials
+            min_duplicate_objective = objective
+
+        if duplicate_count == 0 and (
+            best_zero_duplicate_result is None or objective < float(best_zero_duplicate_result["objective"])
+        ):
+            best_zero_duplicate_result = {
+                "labels": np.asarray(candidate_result["labels"], dtype=np.int32),
+                "objective": objective,
+                "algorithm_used": candidate_result.get("algorithm_used", ""),
+            }
+            feasible_objective = objective
+
+    return {
+        "best_zero_duplicate_result": best_zero_duplicate_result,
+        "feasible_objective": feasible_objective,
+        "min_duplicate_trial_count": (
+            int(min_duplicate_trial_count) if min_duplicate_trial_count is not None else np.nan
+        ),
+        "representative_duplicate_trials": representative_duplicate_trials,
+        "searched_restarts": candidate_restarts,
+    }
+
+
 def _json_metric_dict(values: dict[Any, Any]) -> str:
-    normalized = {str(key): value for key, value in values.items()}
-    return json.dumps(normalized, ensure_ascii=False, sort_keys=True)
+    normalized: dict[str, Any] = {}
+    for key, value in values.items():
+        normalized_key = str(key)
+        if isinstance(value, (np.floating, float)):
+            scalar = float(value)
+            normalized[normalized_key] = scalar if np.isfinite(scalar) else None
+            continue
+        normalized[normalized_key] = value
+    return json.dumps(normalized, ensure_ascii=False, sort_keys=True, allow_nan=False)
 
 
 def cluster_feature_group(
@@ -239,12 +333,13 @@ def cluster_feature_group(
     cfg: dict[str, Any],
     group_id: str,
 ) -> dict[str, Any]:
-    selection_method = _selection_method(cfg)
+    selection_method = _validated_selection_method(cfg)
     require_zero_duplicate = _require_zero_duplicate_solution(cfg)
     duplicate_resolution = _duplicate_resolution(cfg)
     repeats = int(cfg.get("repeats", 25))
     gap_ref_n = int(cfg.get("gap_ref_n", 500))
     gap_ref_restarts = int(cfg.get("gap_ref_restarts", 100))
+    uniqueness_candidate_restarts = _uniqueness_candidate_restarts(cfg)
 
     if not feature_rows:
         return {
@@ -258,6 +353,7 @@ def cluster_feature_group(
             "gap_ref_n": gap_ref_n,
             "gap_ref_restarts": gap_ref_restarts,
             "repeats": repeats,
+            "uniqueness_candidate_restarts": uniqueness_candidate_restarts,
         }
 
     data, sample_map = _stack_weight_vectors(feature_rows, group_id)
@@ -285,6 +381,7 @@ def cluster_feature_group(
             "gap_ref_n": gap_ref_n,
             "gap_ref_restarts": gap_ref_restarts,
             "repeats": repeats,
+            "uniqueness_candidate_restarts": uniqueness_candidate_restarts,
         }
 
     k_values = list(range(k_min, k_max + 1))
@@ -305,26 +402,44 @@ def cluster_feature_group(
     )
 
     results_by_k = gap_result["results_by_k"]
-    duplicate_trials_by_k: dict[int, list[tuple[Any, Any, Any]]] = {}
+    feasible_summary_by_k: dict[int, dict[str, Any]] = {}
+    feasible_objective_by_k: dict[int, float] = {}
     duplicate_trial_count_by_k: dict[int, int] = {}
     k_min_unique: int | None = None
-    for n_clusters in k_values:
-        candidate_labels = np.asarray(results_by_k[n_clusters]["labels"], dtype=np.int32)
-        duplicates = _duplicate_trials(sample_map, candidate_labels)
-        duplicate_trials_by_k[n_clusters] = duplicates
-        duplicate_trial_count_by_k[n_clusters] = len(duplicates)
-        if k_min_unique is None and not duplicates:
-            k_min_unique = int(n_clusters)
+    if require_zero_duplicate:
+        for n_clusters in k_values:
+            feasible_summary = _search_zero_duplicate_candidate_at_k(
+                data,
+                sample_map,
+                n_clusters,
+                cfg,
+                observed_result=results_by_k[n_clusters],
+            )
+            feasible_summary_by_k[n_clusters] = feasible_summary
+            feasible_objective_by_k[n_clusters] = feasible_summary["feasible_objective"]
+            duplicate_trial_count_by_k[n_clusters] = int(feasible_summary["min_duplicate_trial_count"])
+            if k_min_unique is None and feasible_summary["best_zero_duplicate_result"] is not None:
+                k_min_unique = int(n_clusters)
+    else:
+        for n_clusters in k_values:
+            observed_labels = np.asarray(results_by_k[n_clusters]["labels"], dtype=np.int32)
+            duplicate_count = len(_duplicate_trials(sample_map, observed_labels))
+            feasible_objective_by_k[n_clusters] = np.nan
+            duplicate_trial_count_by_k[n_clusters] = duplicate_count
+            if k_min_unique is None and duplicate_count == 0:
+                k_min_unique = int(n_clusters)
 
     k_gap_raw = int(gap_result["selected_k"])
     selected_k = k_gap_raw
     selection_status = "success_gap_without_uniqueness_requirement"
+    selected_result = results_by_k[selected_k]
+    duplicate_trials = _duplicate_trials(sample_map, np.asarray(selected_result["labels"], dtype=np.int32))
     if require_zero_duplicate:
         selected_k = -1
         for n_clusters in k_values:
             if n_clusters < k_gap_raw:
                 continue
-            if duplicate_trial_count_by_k[n_clusters] == 0:
+            if feasible_summary_by_k[n_clusters]["best_zero_duplicate_result"] is not None:
                 selected_k = int(n_clusters)
                 break
         if selected_k < 0:
@@ -332,7 +447,7 @@ def cluster_feature_group(
                 "status": "failed",
                 "group_id": group_id,
                 "reason": f"No zero-duplicate clustering solution found in K=[{k_gap_raw},{k_max}]",
-                "duplicate_trials": duplicate_trials_by_k.get(k_gap_raw, []),
+                "duplicate_trials": feasible_summary_by_k.get(k_gap_raw, {}).get("representative_duplicate_trials", []),
                 "sample_map": sample_map,
                 "n_trials": len(feature_rows),
                 "n_components": int(data.shape[0]),
@@ -347,16 +462,19 @@ def cluster_feature_group(
                 "gap_ref_n": gap_ref_n,
                 "gap_ref_restarts": gap_ref_restarts,
                 "repeats": repeats,
+                "uniqueness_candidate_restarts": uniqueness_candidate_restarts,
                 "gap_by_k": gap_result["gap_by_k"],
                 "gap_sd_by_k": gap_result["gap_sd_by_k"],
                 "observed_objective_by_k": gap_result["observed_objective_by_k"],
+                "feasible_objective_by_k": feasible_objective_by_k,
                 "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
             }
         selection_status = "success_gap_unique" if selected_k == k_gap_raw else "success_gap_escalated_unique"
-
-    selected_result = results_by_k[selected_k]
-    labels = np.asarray(selected_result["labels"], dtype=np.int32)
-    duplicate_trials = duplicate_trials_by_k[selected_k]
+        selected_result = feasible_summary_by_k[selected_k]["best_zero_duplicate_result"]
+        labels = np.asarray(selected_result["labels"], dtype=np.int32)
+        duplicate_trials = []
+    else:
+        labels = np.asarray(selected_result["labels"], dtype=np.int32)
     if require_zero_duplicate and duplicate_trials:
         return {
             "status": "failed",
@@ -377,9 +495,11 @@ def cluster_feature_group(
             "gap_ref_n": gap_ref_n,
             "gap_ref_restarts": gap_ref_restarts,
             "repeats": repeats,
+            "uniqueness_candidate_restarts": uniqueness_candidate_restarts,
             "gap_by_k": gap_result["gap_by_k"],
             "gap_sd_by_k": gap_result["gap_sd_by_k"],
             "observed_objective_by_k": gap_result["observed_objective_by_k"],
+            "feasible_objective_by_k": feasible_objective_by_k,
             "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
         }
     return {
@@ -404,9 +524,11 @@ def cluster_feature_group(
         "gap_ref_n": gap_ref_n,
         "gap_ref_restarts": gap_ref_restarts,
         "repeats": repeats,
+        "uniqueness_candidate_restarts": uniqueness_candidate_restarts,
         "gap_by_k": gap_result["gap_by_k"],
         "gap_sd_by_k": gap_result["gap_sd_by_k"],
         "observed_objective_by_k": gap_result["observed_objective_by_k"],
+        "feasible_objective_by_k": feasible_objective_by_k,
         "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
     }
 
@@ -480,9 +602,11 @@ def build_group_exports(
                 "repeats": cluster_result.get("repeats", np.nan),
                 "gap_ref_n": cluster_result.get("gap_ref_n", np.nan),
                 "gap_ref_restarts": cluster_result.get("gap_ref_restarts", np.nan),
+                "uniqueness_candidate_restarts": cluster_result.get("uniqueness_candidate_restarts", np.nan),
                 "gap_by_k_json": _json_metric_dict(cluster_result.get("gap_by_k", {})),
                 "gap_sd_by_k_json": _json_metric_dict(cluster_result.get("gap_sd_by_k", {})),
                 "observed_objective_by_k_json": _json_metric_dict(cluster_result.get("observed_objective_by_k", {})),
+                "feasible_objective_by_k_json": _json_metric_dict(cluster_result.get("feasible_objective_by_k", {})),
                 "duplicate_trial_count_by_k_json": _json_metric_dict(cluster_result.get("duplicate_trial_count_by_k", {})),
             }
         ]
