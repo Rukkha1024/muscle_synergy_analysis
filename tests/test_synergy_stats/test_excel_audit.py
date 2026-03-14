@@ -81,10 +81,10 @@ def test_write_clustering_audit_workbook_creates_expected_sheets_and_tables(tmp_
     workbook = load_workbook(output_path)
     try:
         assert workbook.sheetnames == ["summary", "duplicates", "table_guide"]
-        assert workbook["summary"]["A2"].value == "[table reading guide]"
-        assert workbook["summary"]["A8"].value == "[example]"
-        assert workbook["summary"]["A11"].value == "[runtime note]"
-        assert workbook["summary"]["A12"].value == "Workbook engine: openpyxl fallback."
+        assert workbook["summary"]["A2"].value == "[표 읽는 순서]"
+        assert workbook["summary"]["A8"].value == "[예시]"
+        assert workbook["summary"]["A11"].value == "[실행 환경 메모]"
+        assert workbook["summary"]["A12"].value == "Workbook 엔진: openpyxl fallback."
         assert set(workbook["summary"].tables.keys()) == {
             "tbl_clustering_selection_summary",
             "tbl_clustering_k_audit",

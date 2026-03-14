@@ -22,20 +22,20 @@ import polars as pl
 
 
 GUIDE_LINES = [
-    "[purpose] This workbook explains why each clustering K was accepted and where within-trial duplicates appeared.",
-    "[table reading guide]",
-    "1. k_gap_raw is the K first selected by the gap statistic.",
-    "2. k_min_unique is the first K that can satisfy zero within-trial duplicates.",
-    "3. k_selected is the final adopted K for the run.",
-    "4. duplicate_trial_count counts how many trials still contain duplicate cluster assignments at that K.",
-    "5. In the audit table, is_gap_raw_k, is_selected_k, and is_first_zero_duplicate_k mark the key K values to inspect first.",
-    "[example]",
-    "If k_gap_raw=6, k_min_unique=7, and k_selected=7, then the gap-preferred K still had duplicate trials, so the first zero-duplicate K=7 was adopted.",
-    "Use tbl_duplicate_trial_summary to see which trials duplicated at the flagged K, and use tbl_duplicate_cluster_detail to see which cluster each duplicate came from.",
-    "[runtime note]",
-    "Workbook engine: openpyxl fallback.",
-    "Reason: xlwings or desktop Excel automation was unavailable in this environment.",
-    "Excel UI visual QA: skipped because desktop Excel automation was unavailable.",
+    "[목적] 이 워크북은 각 clustering K가 왜 채택되었는지와 trial 내부 중복이 어디서 발생했는지를 설명합니다.",
+    "[표 읽는 순서]",
+    "1. k_gap_raw 는 gap statistic이 처음 선택한 K입니다.",
+    "2. k_min_unique 는 trial 내부 중복이 0개가 되는 첫 번째 K입니다.",
+    "3. k_selected 는 이번 실행에서 최종 채택된 K입니다.",
+    "4. duplicate_trial_count 는 해당 K에서 아직 중복 cluster 할당이 남아 있는 trial 수입니다.",
+    "5. audit table에서는 is_gap_raw_k, is_selected_k, is_first_zero_duplicate_k 를 먼저 보면 핵심 K를 빠르게 찾을 수 있습니다.",
+    "[예시]",
+    "예를 들어 k_gap_raw=6, k_min_unique=7, k_selected=7 이면, gap statistic이 먼저 고른 K=6에는 중복 trial이 남아 있어서 중복이 처음 0개가 되는 K=7을 최종 채택했다는 뜻입니다.",
+    "어떤 trial에서 중복이 발생했는지는 tbl_duplicate_trial_summary 에서 보고, 그 중복이 어떤 cluster에서 나왔는지는 tbl_duplicate_cluster_detail 에서 확인하면 됩니다.",
+    "[실행 환경 메모]",
+    "Workbook 엔진: openpyxl fallback.",
+    "사유: 이 환경에서는 xlwings 또는 데스크톱 Excel 자동화를 사용할 수 없었습니다.",
+    "Excel UI 시각 검수: 데스크톱 Excel 자동화를 사용할 수 없어 건너뛰었습니다.",
 ]
 
 
