@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analysis Reviewer"
+  short_description: "Review/fix analysis folders with quantitative verification"
+  default_prompt: "Use for existing analysis/* review tasks. Validate script reproducibility, compare stdout numbers to report.md, classify findings by severity, auto-fix High issues only, and report actual quantitative results in console-first mode. Run literature-method alignment automatically when papers or PDFs are referenced."

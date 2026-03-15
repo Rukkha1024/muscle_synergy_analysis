@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<optitrack_conventional_marker_set total_markers="39">
+
+  <overview>
+    The Conventional marker set is a full-body marker configuration
+    used to capture human motion. It uses 39 reflective markers placed
+    on specific anatomical landmarks to model the head, torso, waist,
+    upper extremities, hands, lower extremities, and feet. The markers
+    can be used with OptiTrack's motion capture system to reconstruct
+    skeletal motion and joint centers.
+  </overview>
+
+  <!-- ===== HEAD ===== -->
+  <segment name="head" marker_count="4">
+    <marker id="LAH" side="left"  segment="Head"
+            location="Anterior head (left forehead)" />
+    <marker id="RAH" side="right" segment="Head"
+            location="Anterior head (right forehead)" />
+    <marker id="LPH" side="left"  segment="Head"
+            location="Posterior head (approx. 2 cm behind left ear)" />
+    <marker id="RPH" side="right" segment="Head"
+            location="Posterior head (approx. 2 cm behind right ear)" />
+    <placement>
+      Anterior markers (LAH/RAH): left and right sides of the forehead.
+      Posterior markers (LPH/RPH): left and right sides of the head,
+      roughly 2 cm behind the ear.
+    </placement>
+  </segment>
+
+  <!-- ===== TORSO ===== -->
+  <segment name="torso" marker_count="5">
+    <marker id="SJN" alias="IJ" segment="Thorax"
+            location="Sternum jugular notch" />
+    <marker id="SXS" alias="PX" segment="Thorax"
+            location="Sternum xiphoid process" />
+    <marker id="CV7" alias="C7" segment="Thorax"
+            location="Cervical spine vertebra 7" />
+    <marker id="TV2" alias="T2" segment="Thorax"
+            location="Thoracic spine vertebra 2" />
+    <marker id="TV7" alias="T7" segment="Thorax"
+            location="Thoracic spine vertebra 7" />
+    <placement>
+      SJN: topmost section of the sternum, center of clavicle bones.
+      SXS: about 1-2 cm above where the rib cages meet.
+      CV7: prominent C7 vertebra at the base of the neck.
+      TV2: second thoracic vertebra, ~3 spine levels below C7,
+           at shoulder height.
+      TV7: near the centre of the thoracic spinal column.
+    </placement>
+  </segment>
+
+  <!-- ===== WAIST / PELVIS ===== -->
+  <segment name="waist" marker_count="4">
+    <marker id="LIAS" side="left"  segment="Pelvis"
+            location="Left iliac anterior spine (ASIS)" />
+    <marker id="RIAS" side="right" segment="Pelvis"
+            location="Right iliac anterior spine (ASIS)" />
+    <marker id="LIPS" side="left"  segment="Pelvis"
+            location="Left iliac posterior spine (PSIS)" />
+    <marker id="RIPS" side="right" segment="Pelvis"
+            location="Right iliac posterior spine (PSIS)" />
+    <placement>
+      LIAS/RIAS: protruding bones at the front of the pelvis (ASIS).
+      LIPS/RIPS: two dimples near the spine above the hips (PSIS).
+      Key for modeling the pelvis, which governs other segments.
+    </placement>
+  </segment>
+
+  <!-- ===== UPPER EXTREMITIES ===== -->
+  <segment name="upper_extremity" marker_count="6">
+    <marker id="LCAJ" side="left"  segment="Thorax"
+            location="Left clavicle-acromion joint" />
+    <marker id="RCAJ" side="right" segment="Thorax"
+            location="Right clavicle-acromion joint" />
+    <marker id="LHLE" side="left"  segment="Upper arm"
+            location="Left humerus lateral epicondyle" />
+    <marker id="RHLE" side="right" segment="Upper arm"
+            location="Right humerus lateral epicondyle" />
+    <marker id="LUA"  side="left"  segment="Upper arm"
+            location="Left upper arm (mid-humerus)" />
+    <marker id="RUA"  side="right" segment="Upper arm"
+            location="Right upper arm (mid-humerus)" />
+    <placement>
+      LCAJ/RCAJ: T-pose; palpate protruding bone at end of clavicle.
+      LHLE/RHLE: lateral elbow; flex/extend arm to find axis.
+      LUA/RUA: groove between triceps on mid-humerus (minimal skin
+               motion).
+    </placement>
+  </segment>
+
+  <!-- ===== HANDS ===== -->
+  <segment name="hand" marker_count="6">
+    <marker id="LHM2" side="left"  segment="Hand"
+            location="Left 2nd metacarpal (below index knuckle)" />
+    <marker id="RHM2" side="right" segment="Hand"
+            location="Right 2nd metacarpal (below index knuckle)" />
+    <marker id="LUSP" side="left"  segment="Hand"
+            location="Left ulna styloid process (lateral wrist)" />
+    <marker id="RUSP" side="right" segment="Hand"
+            location="Right ulna styloid process (lateral wrist)" />
+    <marker id="LRSP" side="left"  segment="Hand"
+            location="Left radius styloid process (medial wrist)" />
+    <marker id="RRSP" side="right" segment="Hand"
+            location="Right radius styloid process (medial wrist)" />
+    <placement>
+      LHM2/RHM2: slightly below the index-finger knuckle.
+      LUSP/RUSP: lateral side of the wrist axis (ulna styloid).
+      LRSP/RRSP: medial side of the wrist axis (radius styloid).
+      Arrange three markers per hand asymmetrically;
+      offset LHM2/RHM2 positions to distinguish L/R.
+    </placement>
+  </segment>
+
+  <!-- ===== LOWER EXTREMITIES ===== -->
+  <segment name="lower_extremity" marker_count="8">
+    <marker id="LFLE" side="left"  segment="Upper leg"
+            location="Left femur lateral epicondyle" />
+    <marker id="RFLE" side="right" segment="Upper leg"
+            location="Right femur lateral epicondyle" />
+    <marker id="LTH"  side="left"  segment="Upper leg"
+            location="Left thigh (midline)" />
+    <marker id="RTH"  side="right" segment="Upper leg"
+            location="Right thigh (midline)" />
+    <marker id="LSK"  side="left"  segment="Upper leg"
+            location="Left superior knee (shin near midline)" />
+    <marker id="RSK"  side="right" segment="Upper leg"
+            location="Right superior knee (shin near midline)" />
+    <marker id="LTTC" side="left"  segment="Lower leg"
+            location="Left tibial tubercle" />
+    <marker id="RTTC" side="right" segment="Lower leg"
+            location="Right tibial tubercle" />
+    <placement>
+      LFLE/RFLE: lateral prominence of knee joint axis
+                 (femur epicondyle); flex/extend knee.
+      LTH/RTH: front centre of each thigh; offset L/R heights.
+      LSK/RSK: shin bone near midline; offset heights.
+      LTTC/RTTC: tibial tubercle, ~2-3 cm below kneecap,
+                 most anterior point of tibia.
+    </placement>
+    <joint_modeling>
+      Knee and ankle joint centres: midpoints between lateral
+      and medial markers (FLE/FME for knee; FAL/TAM for ankle).
+      Virtual hip joint: aligned with acetabulum centre,
+      modeled using IAS/IPS markers.
+    </joint_modeling>
+  </segment>
+
+  <!-- ===== FEET ===== -->
+  <segment name="foot" marker_count="6">
+    <marker id="LFAL" side="left"  segment="Lower leg / Foot"
+            location="Left fibula ankle lateral (lateral malleolus)" />
+    <marker id="RFAL" side="right" segment="Lower leg / Foot"
+            location="Right fibula ankle lateral (lateral malleolus)" />
+    <marker id="LFM2" side="left"  segment="Foot" optional="true"
+            location="Left foot 2nd metatarsal (dorsal)" />
+    <marker id="RFM2" side="right" segment="Foot" optional="true"
+            location="Right foot 2nd metatarsal (dorsal)" />
+    <marker id="LFCC" side="left"  segment="Foot"
+            location="Left calcaneus (heel, Achilles attachment)" />
+    <marker id="RFCC" side="right" segment="Foot"
+            location="Right calcaneus (heel, Achilles attachment)" />
+    <placement>
+      LFAL/RFAL: lateral ankle axis, lateral malleolus prominence.
+      LFM2/RFM2: dorsal 2nd metatarsal. (Optional.)
+      LFCC/RFCC: heel centre, Achilles-calcaneus attachment.
+    </placement>
+  </segment>
+
+  <!-- ===== USER-ADDED MEDIAL MARKERS ===== -->
+  <custom_medial_markers
+      description="User-added medial markers supplementing the standard
+        39-marker set. Placed at medial counterparts of existing lateral
+        markers. Used to define joint axes and calculate joint centres.
+        Correspond to red-labelled markers in the reference skeleton."
+      note="Custom names differ from OptiTrack standard naming.">
+
+    <marker id="RHME" custom_name="RUArm_3" side="right"
+            standard_counterpart="RHLE"
+            location="Right humerus medial epicondyle (medial elbow)"
+            purpose="Elbow joint axis with RHLE" />
+    <marker id="LHME" custom_name="LUArm_3" side="left"
+            standard_counterpart="LHLE"
+            location="Left humerus medial epicondyle (medial elbow)"
+            purpose="Elbow joint axis with LHLE" />
+    <marker id="RFME" custom_name="RShin_3" side="right"
+            standard_counterpart="RFLE"
+            location="Right femur medial epicondyle (medial knee)"
+            purpose="Knee joint centre with RFLE" />
+    <marker id="LFME" custom_name="LShin_3" side="left"
+            standard_counterpart="LFLE"
+            location="Left femur medial epicondyle (medial knee)"
+            purpose="Knee joint centre with LFLE" />
+    <marker id="RTAM" custom_name="RFoot_3" side="right"
+            standard_counterpart="RFAL"
+            location="Right tibial ankle medial (medial malleolus)"
+            purpose="Ankle joint centre with RFAL" />
+    <marker id="LTAM" custom_name="LFoot_3" side="left"
+            standard_counterpart="LFAL"
+            location="Left tibial ankle medial (medial malleolus)"
+            purpose="Ankle joint centre with LFAL" />
+
+    <naming_map description="OptiTrack standard ID -> user custom name">
+      <!-- Upper arm medial -->
+      <entry standard="RHME" custom="RUArm_3" />
+      <entry standard="LHME" custom="LUArm_3" />
+      <!-- Knee medial -->
+      <entry standard="RFME" custom="RShin_3" />
+      <entry standard="LFME" custom="LShin_3" />
+      <!-- Ankle medial -->
+      <entry standard="RTAM" custom="RFoot_3" />
+      <entry standard="LTAM" custom="LFoot_3" />
+    </naming_map>
+  </custom_medial_markers>
+
+  <!-- ===== REFERENCES ===== -->
+  <references>
+    <ref>Leardini et al. (2011). Multi-segment trunk kinematics
+      during locomotion. Clinical Biomechanics, 26, 562-571.</ref>
+    <ref>Leardini et al. (2007). Anatomically based protocol for
+      gait analysis in children. Gait &amp; Posture, 26, 560-571.</ref>
+  </references>
+
+</optitrack_conventional_marker_set>

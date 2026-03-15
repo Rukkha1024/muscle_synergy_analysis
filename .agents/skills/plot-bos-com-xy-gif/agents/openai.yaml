@@ -1,0 +1,4 @@
+interface:
+  display_name: "BOS-COM XY GIF Plot"
+  short_description: "Generate BOS+COM XY PNG/GIF"
+  default_prompt: "Use when asked to visualize COM position relative to BOS over time in replace_V3D. Generate static PNG and/or animated GIF from output/all_trials_timeseries.csv, with CCW rotation view, axis direction labels, inside/outside coloring, step_onset BOS-freeze for step trials, and step_R/step_L/nonstep labels from data/perturb_inform.xlsm."

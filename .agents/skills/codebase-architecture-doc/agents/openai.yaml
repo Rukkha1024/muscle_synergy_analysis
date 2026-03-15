@@ -1,0 +1,7 @@
+﻿interface:
+  display_name: "Codebase Architecture Doc"
+  short_description: "Apply repo architecture rules and folder layout"
+  default_prompt: "Use $codebase-architecture-doc to decide the correct folder structure and context for my change."
+
+policy:
+  allow_implicit_invocation: true

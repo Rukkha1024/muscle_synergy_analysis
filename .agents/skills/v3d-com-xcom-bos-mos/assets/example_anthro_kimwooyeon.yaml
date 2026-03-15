@@ -1,0 +1,16 @@
+# Example anthropometrics for subject: 김우연
+# All values in meters unless otherwise noted.
+subject: "김우연"
+units: metric
+
+# Required (used directly)
+leg_length_m: 0.86        # 86 cm
+foot_length_m: 0.24       # 240 mm
+foot_width_m: 0.085       # 8.5 cm
+ankle_width_m: 0.065      # 6.5 cm
+knee_width_m: 0.09        # 9 cm
+
+# Optional (useful if you later build a fuller kinematic model)
+elbow_width_m: 0.08       # 8 cm
+wrist_width_m: 0.055      # 5.5 cm
+shoulder_circumference_m: 0.39   # 39 cm

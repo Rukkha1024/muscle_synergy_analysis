@@ -1,0 +1,4 @@
+interface:
+  display_name: "Excel Xlwings Workflow"
+  short_description: "Default to openpyxl in WSL/headless and validate interpretation workbooks after reopen"
+  default_prompt: "Use for Excel workbook creation/updates in this repo. In WSL/headless Linux, default to openpyxl and treat xlwings as optional desktop-Excel integration. For interpretation workbooks, place each important table on a sheet with a Korean guide/example block, maintain a table_guide reading index, and always reopen the saved workbook to validate errors and blanks."
