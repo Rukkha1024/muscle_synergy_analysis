@@ -118,9 +118,9 @@ English: The implementer follows the steps below. All commands run from the repo
     2. analysis script의 duplicate-free 관련 함수와 CLI를 plain-kmeans 기준으로 교체한다.
     3. README와 report 설명을 수정하거나 재생성한다.
     4. dry-run을 실행한다.
-       conda run --no-capture-output -n module python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py --dry-run
+       conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py --dry-run
     5. full run을 실행한다.
-       conda run --no-capture-output -n module python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py
+       conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py
     6. 같은 명령을 한 번 더 실행해 재현성 checksum을 만든다.
     7. explorer와 reviewer를 실행해 코드 경로, regression, 설명 문구 일관성을 점검한다.
     8. 한국어 5줄 이상 커밋 메시지로 커밋한다.

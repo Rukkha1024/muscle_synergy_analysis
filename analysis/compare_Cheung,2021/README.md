@@ -155,19 +155,19 @@ baseline user synergy analysis 결과는 `outputs/runs/default_run/` 아래에 �
 dry-run:
 
 ```bash
-conda run --no-capture-output -n module python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py --dry-run
+conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py --dry-run
 ```
 
 full run:
 
 ```bash
-conda run --no-capture-output -n module python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py
+conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py
 ```
 
 기본 실행이 이미 논문 기준 clustering 반복 수를 사용한다. 다만 저장소에 체크인된 `report.md`와 `checksums.md5`는 tractable local validation을 위해 아래 override command로 생성되었다.
 
 ```bash
-conda run --no-capture-output -n module python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py --kmeans-restarts 10 --gap-ref-n 5 --gap-ref-restarts 3
+conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py --kmeans-restarts 10 --gap-ref-n 5 --gap-ref-restarts 3
 ```
 
 즉, 기본 실행은 더 무겁고 더 오래 걸릴 수 있으며, override 없이 다시 돌리면 현재 체크인된 report/checksum과 달라질 수 있다.

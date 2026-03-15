@@ -22,8 +22,8 @@
 repo root에서 실행합니다.
 
 ```bash
-conda run --no-capture-output -n module python analysis/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py --dry-run
-conda run --no-capture-output -n module python analysis/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py
+conda run --no-capture-output -n cuda python analysis/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py --dry-run
+conda run --no-capture-output -n cuda python analysis/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py
 ```
 
 기본 runtime은 현재 체크인된 `analysis/compare_Cheung,2021/report.md`와 맞추기 위해 다음 override를 사용합니다.
@@ -37,7 +37,7 @@ compare_Cheung script의 코드 기본값은 `1000 / 500 / 100`이므로, paper-
 ## Verify
 
 ```bash
-conda run --no-capture-output -n module python analysis/duplicate_assignment_audit/verify_duplicate_assignment_audit.py
+conda run --no-capture-output -n cuda python analysis/duplicate_assignment_audit/verify_duplicate_assignment_audit.py
 ```
 
 이 검증은 아래를 확인합니다.

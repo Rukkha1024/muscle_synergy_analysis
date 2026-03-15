@@ -8,7 +8,7 @@ baseline 파이프라인 결과(`outputs/runs/default_run`)와 비교한다.
 
 ## 실행 커맨드
 
-    conda run -n module python analysis/compare_professor/compare_step_nonstep_professor_logic.py \
+    conda run -n cuda python analysis/compare_professor/compare_step_nonstep_professor_logic.py \
       --config configs/global_config.yaml \
       --baseline-run outputs/runs/default_run \
       --outdir analysis/compare_professor/artifacts/professor_step_nonstep_compare_retry_rerun \

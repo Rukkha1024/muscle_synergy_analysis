@@ -1063,13 +1063,13 @@ This analysis does not replay the paper's raw EMG preprocessing and does not com
 {runtime_override_note}Run the dry-run first:
 
 ```bash
-conda run --no-capture-output -n module python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py --dry-run
+conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py --dry-run
 ```
 
 Run the full analysis with the paper-aligned defaults:
 
 ```bash
-conda run --no-capture-output -n module python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py
+conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py
 ```
 
 ## Figures

@@ -304,7 +304,7 @@ conda run --no-capture-output -n cuda python \
   --seeds 42,123,456,789,1024 --patience 5 --cnn-epochs 50
 
 # 4. Figure 주석 추가
-conda run -n module python \
+conda run -n cuda python \
   analysis/260312-0026-cnn_step_vs_nonstep/enhance_figures.py
 ```
 

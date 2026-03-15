@@ -1,7 +1,7 @@
 """기존 CNN figure에 한국어 개념 주석을 오버레이하고 아키텍처 다이어그램을 생성한다.
 
 Usage:
-    conda run -n module python analysis/260312-0026-cnn_step_vs_nonstep/enhance_figures.py
+    conda run -n cuda python analysis/260312-0026-cnn_step_vs_nonstep/enhance_figures.py
 """
 
 from __future__ import annotations

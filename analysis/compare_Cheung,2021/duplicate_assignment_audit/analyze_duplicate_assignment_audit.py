@@ -1090,13 +1090,13 @@ worst duplicate units:
 실행:
 
 ```bash
-conda run --no-capture-output -n module python analysis/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py
+conda run --no-capture-output -n cuda python analysis/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py
 ```
 
 검증:
 
 ```bash
-conda run --no-capture-output -n module python analysis/duplicate_assignment_audit/verify_duplicate_assignment_audit.py
+conda run --no-capture-output -n cuda python analysis/duplicate_assignment_audit/verify_duplicate_assignment_audit.py
 ```
 
 산출물:
