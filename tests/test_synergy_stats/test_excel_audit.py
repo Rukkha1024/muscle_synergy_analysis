@@ -330,7 +330,6 @@ def test_export_results_records_clustering_audit_workbook_path(tmp_path: Path, m
             "clustering_meta",
             "trial_windows",
             "cluster_labels",
-            "cluster_members",
             "representative_W",
             "representative_H",
             "minimal_W",

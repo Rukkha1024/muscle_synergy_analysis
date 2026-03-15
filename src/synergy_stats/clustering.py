@@ -857,7 +857,6 @@ def build_group_exports(
 
     W_store = {_trial_identity(item): item.bundle.W_muscle for item in feature_rows}
     H_store = {_trial_identity(item): item.bundle.H_time for item in feature_rows}
-    member_rows = []
     representative_w_rows = []
     representative_h_rows = []
     minimal_w_rows = []
@@ -922,18 +921,6 @@ def build_group_exports(
                 component_index = sample["component_index"]
                 W_members.append(W_store[trial_key][:, component_index])
                 H_members.append(_interpolate_series(H_store[trial_key][:, component_index], target_windows))
-                member_rows.append(
-                    {
-                        "group_id": group_id,
-                        "subject": sample["subject"],
-                        "velocity": sample["velocity"],
-                        "trial_num": sample["trial_num"],
-                        "trial_id": sample["trial_id"],
-                        "cluster_id": int(cluster_id),
-                        "component_index": component_index,
-                        **trial_meta_lookup.get(trial_key, {}),
-                    }
-                )
             representative_w = np.mean(np.stack(W_members, axis=1), axis=1)
             norm = np.linalg.norm(representative_w)
             if norm > 0:
@@ -961,31 +948,9 @@ def build_group_exports(
     return {
         "metadata": metadata_df,
         "labels": labels_df,
-        "members": pd.DataFrame(member_rows),
         "rep_W": pd.DataFrame(representative_w_rows),
         "rep_H_long": pd.DataFrame(representative_h_rows),
         "minimal_W": pd.DataFrame(minimal_w_rows),
         "minimal_H_long": pd.DataFrame(minimal_h_rows),
         "trial_windows": pd.DataFrame(trial_window_rows).drop_duplicates(),
     }
-
-
-def save_group_outputs(group_dir: Path, exports: dict[str, pd.DataFrame]) -> None:
-    group_dir.mkdir(parents=True, exist_ok=True)
-    name_map = {
-        "metadata": "clustering_metadata.csv",
-        "labels": "cluster_labels.csv",
-        "members": "cluster_members.csv",
-        "rep_W": "representative_W_posthoc.csv",
-        "rep_H_long": "representative_H_posthoc_long.csv",
-        "minimal_W": "minimal_units_W.csv",
-        "minimal_H_long": "minimal_units_H_long.csv",
-        "trial_windows": "trial_window_metadata.csv",
-    }
-    for key, filename in name_map.items():
-        exports.get(key, pd.DataFrame()).to_csv(
-            group_dir / filename,
-            index=False,
-            encoding="utf-8-sig",
-            float_format="%.10f",
-        )

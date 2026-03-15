@@ -9,7 +9,6 @@ from pathlib import Path
 
 STABLE_RELATIVE_PATHS = {
     "all_cluster_labels.csv",
-    "all_cluster_members.csv",
     "all_clustering_metadata.csv",
     "all_minimal_units_H_long.csv",
     "all_minimal_units_W.csv",
@@ -17,22 +16,6 @@ STABLE_RELATIVE_PATHS = {
     "all_representative_W_posthoc.csv",
     "all_trial_window_metadata.csv",
     "final_summary.csv",
-    "global_step/clustering_metadata.csv",
-    "global_step/cluster_labels.csv",
-    "global_step/cluster_members.csv",
-    "global_step/minimal_units_H_long.csv",
-    "global_step/minimal_units_W.csv",
-    "global_step/representative_H_posthoc_long.csv",
-    "global_step/representative_W_posthoc.csv",
-    "global_step/trial_window_metadata.csv",
-    "global_nonstep/clustering_metadata.csv",
-    "global_nonstep/cluster_labels.csv",
-    "global_nonstep/cluster_members.csv",
-    "global_nonstep/minimal_units_H_long.csv",
-    "global_nonstep/minimal_units_W.csv",
-    "global_nonstep/representative_H_posthoc_long.csv",
-    "global_nonstep/representative_W_posthoc.csv",
-    "global_nonstep/trial_window_metadata.csv",
 }
 
 

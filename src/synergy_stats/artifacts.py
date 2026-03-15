@@ -13,7 +13,7 @@ from typing import Any
 
 import pandas as pd
 
-from .clustering import build_group_exports, save_group_outputs
+from .clustering import build_group_exports
 from .excel_audit import validate_clustering_audit_workbook, write_clustering_audit_workbook
 from .excel_results import (
     validate_results_interpretation_workbook,
@@ -66,7 +66,6 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     all_frames = {
         "metadata": [],
         "labels": [],
-        "members": [],
         "rep_W": [],
         "rep_H_long": [],
         "minimal_W": [],
@@ -87,8 +86,6 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
             muscle_names=muscle_names,
             target_windows=target_windows,
         )
-        group_dir = output_dir / group_id
-        save_group_outputs(group_dir, exports)
         group_figure_path = figure_dir / f"{group_id}_clusters{figure_ext}"
         save_group_cluster_figure(
             group_id=group_id,
@@ -168,7 +165,6 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     aggregate_name_map = {
         "metadata": "all_clustering_metadata.csv",
         "labels": "all_cluster_labels.csv",
-        "members": "all_cluster_members.csv",
         "rep_W": "all_representative_W_posthoc.csv",
         "rep_H_long": "all_representative_H_posthoc_long.csv",
         "minimal_W": "all_minimal_units_W.csv",

@@ -109,24 +109,6 @@ RESULT_SHEET_CONFIGS = (
         notes="component 단위 cluster 할당을 직접 확인할 때 사용합니다.",
     ),
     ResultSheetConfig(
-        source_key="members",
-        sheet_name="cluster_members",
-        table_name="tbl_cluster_members",
-        description="대표 cluster 기준으로 어떤 component들이 구성원인지 cluster 중심으로 보여줍니다.",
-        key_columns="cluster_id, trial_id, component_index, group_id",
-        column_help=(
-            "cluster_id: 대표 cluster 번호입니다.",
-            "trial_id: 구성원이 나온 trial 입니다.",
-            "component_index: 해당 trial 안 component 번호입니다.",
-            "group_id: step/nonstep 그룹을 구분합니다.",
-        ),
-        example_lines=(
-            "예를 들어 cluster_id=1 행들을 모아 보면, 어떤 trial의 어떤 component들이 대표 cluster 1을 이루는지 알 수 있습니다.",
-            "cluster별 구성 비교가 필요할 때는 이 시트를 cluster_id 기준으로 먼저 필터링하면 됩니다.",
-        ),
-        notes="cluster 중심 membership 해석에 적합합니다.",
-    ),
-    ResultSheetConfig(
         source_key="rep_W",
         sheet_name="representative_W",
         table_name="tbl_representative_w",
