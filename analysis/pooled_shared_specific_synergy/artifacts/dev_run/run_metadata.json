@@ -1,0 +1,8607 @@
+﻿{
+  "cluster_result": {
+    "algorithm_used": "sklearn_kmeans",
+    "duplicate_resolution": "none",
+    "duplicate_trial_count_by_k": {
+      "10": 4,
+      "11": 5,
+      "12": 2,
+      "13": 1,
+      "14": 1,
+      "15": 1,
+      "16": 0,
+      "17": 0,
+      "18": 0,
+      "19": 0,
+      "20": 0,
+      "7": 22,
+      "8": 9,
+      "9": 7
+    },
+    "duplicate_trial_evidence_by_k": {
+      "10": [
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 1,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            1
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T2",
+          "trial_key": [
+            "오나영",
+            25.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 25.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "유도경",
+          "trial_id": "유도경_v35.0_T3",
+          "trial_key": [
+            "유도경",
+            35.0,
+            3
+          ],
+          "trial_num": 3,
+          "velocity": 35.0
+        },
+        {
+          "duplicate_cluster_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                3
+              ]
+            },
+            {
+              "cluster_id": 9,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                5
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            6,
+            9
+          ],
+          "duplicate_component_count": 4,
+          "duplicate_component_indexes": [
+            0,
+            2,
+            3,
+            5
+          ],
+          "n_synergies_in_trial": 6,
+          "subject": "유병한",
+          "trial_id": "유병한_v110.0_T6",
+          "trial_key": [
+            "유병한",
+            110.0,
+            6
+          ],
+          "trial_num": 6,
+          "velocity": 110.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 1,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            1
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "이재유",
+          "trial_id": "이재유_v20.0_T6",
+          "trial_key": [
+            "이재유",
+            20.0,
+            6
+          ],
+          "trial_num": 6,
+          "velocity": 20.0
+        }
+      ],
+      "11": [
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 8,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            8
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "가윤호",
+          "trial_id": "가윤호_v60.0_T9",
+          "trial_key": [
+            "가윤호",
+            60.0,
+            9
+          ],
+          "trial_num": 9,
+          "velocity": 60.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            2,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "김유민",
+          "trial_id": "김유민_v70.0_T5",
+          "trial_key": [
+            "김유민",
+            70.0,
+            5
+          ],
+          "trial_num": 5,
+          "velocity": 70.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 5,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            5
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T2",
+          "trial_key": [
+            "오나영",
+            25.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 25.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 5,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            5
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "이재유",
+          "trial_id": "이재유_v20.0_T6",
+          "trial_key": [
+            "이재유",
+            20.0,
+            6
+          ],
+          "trial_num": 6,
+          "velocity": 20.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 8,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            8
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "정혜진",
+          "trial_id": "정혜진_v20.0_T4",
+          "trial_key": [
+            "정혜진",
+            20.0,
+            4
+          ],
+          "trial_num": 4,
+          "velocity": 20.0
+        }
+      ],
+      "12": [
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T2",
+          "trial_key": [
+            "오나영",
+            25.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 25.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "이재유",
+          "trial_id": "이재유_v20.0_T6",
+          "trial_key": [
+            "이재유",
+            20.0,
+            6
+          ],
+          "trial_num": 6,
+          "velocity": 20.0
+        }
+      ],
+      "13": [
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 8,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            8
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T2",
+          "trial_key": [
+            "오나영",
+            25.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 25.0
+        }
+      ],
+      "14": [
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "가윤호",
+          "trial_id": "가윤호_v60.0_T9",
+          "trial_key": [
+            "가윤호",
+            60.0,
+            9
+          ],
+          "trial_num": 9,
+          "velocity": 60.0
+        }
+      ],
+      "15": [
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 0,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                1
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            0
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            1
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "가윤호",
+          "trial_id": "가윤호_v60.0_T8",
+          "trial_key": [
+            "가윤호",
+            60.0,
+            8
+          ],
+          "trial_num": 8,
+          "velocity": 60.0
+        }
+      ],
+      "16": [],
+      "17": [],
+      "18": [],
+      "19": [],
+      "20": [],
+      "7": [
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 4,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                1
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            4
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            1
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "가윤호",
+          "trial_id": "가윤호_v60.0_T4",
+          "trial_key": [
+            "가윤호",
+            60.0,
+            4
+          ],
+          "trial_num": 4,
+          "velocity": 60.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 0,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            0
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "가윤호",
+          "trial_id": "가윤호_v60.0_T9",
+          "trial_key": [
+            "가윤호",
+            60.0,
+            9
+          ],
+          "trial_num": 9,
+          "velocity": 60.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "권유영",
+          "trial_id": "권유영_v35.0_T2",
+          "trial_key": [
+            "권유영",
+            35.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 35.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            2,
+            3
+          ],
+          "n_synergies_in_trial": 6,
+          "subject": "김유민",
+          "trial_id": "김유민_v70.0_T1",
+          "trial_key": [
+            "김유민",
+            70.0,
+            1
+          ],
+          "trial_num": 1,
+          "velocity": 70.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            2,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "김유민",
+          "trial_id": "김유민_v70.0_T5",
+          "trial_key": [
+            "김유민",
+            70.0,
+            5
+          ],
+          "trial_num": 5,
+          "velocity": 70.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            3
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "성효은",
+          "trial_id": "성효은_v30.0_T9",
+          "trial_key": [
+            "성효은",
+            30.0,
+            9
+          ],
+          "trial_num": 9,
+          "velocity": 30.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 5,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            5
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T2",
+          "trial_key": [
+            "오나영",
+            25.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 25.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T3",
+          "trial_key": [
+            "오나영",
+            25.0,
+            3
+          ],
+          "trial_num": 3,
+          "velocity": 25.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T5",
+          "trial_key": [
+            "오나영",
+            25.0,
+            5
+          ],
+          "trial_num": 5,
+          "velocity": 25.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T8",
+          "trial_key": [
+            "오나영",
+            25.0,
+            8
+          ],
+          "trial_num": 8,
+          "velocity": 25.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "유도경",
+          "trial_id": "유도경_v35.0_T3",
+          "trial_key": [
+            "유도경",
+            35.0,
+            3
+          ],
+          "trial_num": 3,
+          "velocity": 35.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            2,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "유병한",
+          "trial_id": "유병한_v110.0_T3",
+          "trial_key": [
+            "유병한",
+            110.0,
+            3
+          ],
+          "trial_num": 3,
+          "velocity": 110.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "유병한",
+          "trial_id": "유병한_v110.0_T5",
+          "trial_key": [
+            "유병한",
+            110.0,
+            5
+          ],
+          "trial_num": 5,
+          "velocity": 110.0
+        },
+        {
+          "duplicate_cluster_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                3
+              ]
+            },
+            {
+              "cluster_id": 4,
+              "component_count": 2,
+              "component_indexes": [
+                4,
+                5
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3,
+            4
+          ],
+          "duplicate_component_count": 4,
+          "duplicate_component_indexes": [
+            2,
+            3,
+            4,
+            5
+          ],
+          "n_synergies_in_trial": 6,
+          "subject": "유병한",
+          "trial_id": "유병한_v110.0_T6",
+          "trial_key": [
+            "유병한",
+            110.0,
+            6
+          ],
+          "trial_num": 6,
+          "velocity": 110.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "유재원",
+          "trial_id": "유재원_v45.0_T9",
+          "trial_key": [
+            "유재원",
+            45.0,
+            9
+          ],
+          "trial_num": 9,
+          "velocity": 45.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 1,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            1
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "정혜진",
+          "trial_id": "정혜진_v20.0_T2",
+          "trial_key": [
+            "정혜진",
+            20.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 20.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 0,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            0
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "정혜진",
+          "trial_id": "정혜진_v20.0_T4",
+          "trial_key": [
+            "정혜진",
+            20.0,
+            4
+          ],
+          "trial_num": 4,
+          "velocity": 20.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_count": 3,
+              "component_indexes": [
+                1,
+                3,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_count": 3,
+          "duplicate_component_indexes": [
+            1,
+            3,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "정혜진",
+          "trial_id": "정혜진_v20.0_T5",
+          "trial_key": [
+            "정혜진",
+            20.0,
+            5
+          ],
+          "trial_num": 5,
+          "velocity": 20.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                5
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            2,
+            5
+          ],
+          "n_synergies_in_trial": 6,
+          "subject": "조민석",
+          "trial_id": "조민석_v30.0_T2",
+          "trial_key": [
+            "조민석",
+            30.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 30.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                5
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            5
+          ],
+          "n_synergies_in_trial": 7,
+          "subject": "조민석",
+          "trial_id": "조민석_v30.0_T3",
+          "trial_key": [
+            "조민석",
+            30.0,
+            3
+          ],
+          "trial_num": 3,
+          "velocity": 30.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                3,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            3,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "조민석",
+          "trial_id": "조민석_v30.0_T4",
+          "trial_key": [
+            "조민석",
+            30.0,
+            4
+          ],
+          "trial_num": 4,
+          "velocity": 30.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "최지유",
+          "trial_id": "최지유_v35.0_T8",
+          "trial_key": [
+            "최지유",
+            35.0,
+            8
+          ],
+          "trial_num": 8,
+          "velocity": 35.0
+        }
+      ],
+      "8": [
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 7,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            7
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "가윤호",
+          "trial_id": "가윤호_v60.0_T9",
+          "trial_key": [
+            "가윤호",
+            60.0,
+            9
+          ],
+          "trial_num": 9,
+          "velocity": 60.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 5,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            5
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            2,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "김유민",
+          "trial_id": "김유민_v70.0_T5",
+          "trial_key": [
+            "김유민",
+            70.0,
+            5
+          ],
+          "trial_num": 5,
+          "velocity": 70.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T2",
+          "trial_key": [
+            "오나영",
+            25.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 25.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "유병한",
+          "trial_id": "유병한_v110.0_T5",
+          "trial_key": [
+            "유병한",
+            110.0,
+            5
+          ],
+          "trial_num": 5,
+          "velocity": 110.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 0,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            0
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            3
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "유재원",
+          "trial_id": "유재원_v45.0_T4",
+          "trial_key": [
+            "유재원",
+            45.0,
+            4
+          ],
+          "trial_num": 4,
+          "velocity": 45.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 4,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            4
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "정혜진",
+          "trial_id": "정혜진_v20.0_T2",
+          "trial_key": [
+            "정혜진",
+            20.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 20.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 7,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            7
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "정혜진",
+          "trial_id": "정혜진_v20.0_T4",
+          "trial_key": [
+            "정혜진",
+            20.0,
+            4
+          ],
+          "trial_num": 4,
+          "velocity": 20.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            2,
+            3
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "최지유",
+          "trial_id": "최지유_v35.0_T1",
+          "trial_key": [
+            "최지유",
+            35.0,
+            1
+          ],
+          "trial_num": 1,
+          "velocity": 35.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 5,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            5
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "최지유",
+          "trial_id": "최지유_v35.0_T8",
+          "trial_key": [
+            "최지유",
+            35.0,
+            8
+          ],
+          "trial_num": 8,
+          "velocity": 35.0
+        }
+      ],
+      "9": [
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                1
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            1
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "가윤호",
+          "trial_id": "가윤호_v60.0_T4",
+          "trial_key": [
+            "가윤호",
+            60.0,
+            4
+          ],
+          "trial_num": 4,
+          "velocity": 60.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 1,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            1
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "오나영",
+          "trial_id": "오나영_v25.0_T2",
+          "trial_key": [
+            "오나영",
+            25.0,
+            2
+          ],
+          "trial_num": 2,
+          "velocity": 25.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                4
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            4
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "유도경",
+          "trial_id": "유도경_v35.0_T3",
+          "trial_key": [
+            "유도경",
+            35.0,
+            3
+          ],
+          "trial_num": 3,
+          "velocity": 35.0
+        },
+        {
+          "duplicate_cluster_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_count": 2,
+              "component_indexes": [
+                4,
+                5
+              ]
+            },
+            {
+              "cluster_id": 3,
+              "component_count": 2,
+              "component_indexes": [
+                2,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            2,
+            3
+          ],
+          "duplicate_component_count": 4,
+          "duplicate_component_indexes": [
+            2,
+            3,
+            4,
+            5
+          ],
+          "n_synergies_in_trial": 6,
+          "subject": "유병한",
+          "trial_id": "유병한_v110.0_T6",
+          "trial_key": [
+            "유병한",
+            110.0,
+            6
+          ],
+          "trial_num": 6,
+          "velocity": 110.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 1,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                2
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            1
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "n_synergies_in_trial": 3,
+          "subject": "이재유",
+          "trial_id": "이재유_v20.0_T6",
+          "trial_key": [
+            "이재유",
+            20.0,
+            6
+          ],
+          "trial_num": 6,
+          "velocity": 20.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_count": 2,
+              "component_indexes": [
+                0,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "n_synergies_in_trial": 4,
+          "subject": "정혜진",
+          "trial_id": "정혜진_v20.0_T4",
+          "trial_key": [
+            "정혜진",
+            20.0,
+            4
+          ],
+          "trial_num": 4,
+          "velocity": 20.0
+        },
+        {
+          "duplicate_cluster_count": 1,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 0,
+              "component_count": 2,
+              "component_indexes": [
+                1,
+                3
+              ]
+            }
+          ],
+          "duplicate_cluster_labels": [
+            0
+          ],
+          "duplicate_component_count": 2,
+          "duplicate_component_indexes": [
+            1,
+            3
+          ],
+          "n_synergies_in_trial": 5,
+          "subject": "정혜진",
+          "trial_id": "정혜진_v20.0_T5",
+          "trial_key": [
+            "정혜진",
+            20.0,
+            5
+          ],
+          "trial_num": 5,
+          "velocity": 20.0
+        }
+      ]
+    },
+    "duplicate_trials": [],
+    "feasible_objective_by_k": {
+      "10": null,
+      "11": null,
+      "12": null,
+      "13": null,
+      "14": null,
+      "15": null,
+      "16": 102.51628113,
+      "17": 100.59737396,
+      "18": 98.06803131,
+      "19": 96.81129456,
+      "20": 94.90498352,
+      "7": null,
+      "8": null,
+      "9": null
+    },
+    "gap_by_k": {
+      "10": 1.20173382,
+      "11": 1.23753623,
+      "12": 1.25792334,
+      "13": 1.2892862,
+      "14": 1.29718627,
+      "15": 1.31416898,
+      "16": 1.32120966,
+      "17": 1.32705062,
+      "18": 1.34205403,
+      "19": 1.34125961,
+      "20": 1.35620606,
+      "7": 1.11051537,
+      "8": 1.14540796,
+      "9": 1.17622576
+    },
+    "gap_ref_n": 20,
+    "gap_ref_restarts": 10,
+    "gap_sd_by_k": {
+      "10": 0.01308535,
+      "11": 0.01034926,
+      "12": 0.01041532,
+      "13": 0.0104173,
+      "14": 0.00865618,
+      "15": 0.00968214,
+      "16": 0.01060458,
+      "17": 0.01168834,
+      "18": 0.01193679,
+      "19": 0.01056796,
+      "20": 0.01356934,
+      "7": 0.00730021,
+      "8": 0.01114679,
+      "9": 0.0141208
+    },
+    "group_id": "pooled_step_nonstep",
+    "inertia": 102.51628113,
+    "k_gap_raw": 13,
+    "k_lb": 7,
+    "k_min_unique": 16.0,
+    "k_selected": 16,
+    "labels": [
+      4,
+      1,
+      3,
+      3,
+      4,
+      11,
+      4,
+      10,
+      1,
+      10,
+      1,
+      3,
+      14,
+      4,
+      2,
+      4,
+      12,
+      9,
+      12,
+      7,
+      10,
+      3,
+      9,
+      10,
+      9,
+      7,
+      12,
+      10,
+      5,
+      7,
+      1,
+      10,
+      0,
+      9,
+      7,
+      10,
+      1,
+      0,
+      8,
+      10,
+      9,
+      7,
+      0,
+      10,
+      9,
+      8,
+      0,
+      13,
+      2,
+      3,
+      11,
+      7,
+      4,
+      9,
+      10,
+      7,
+      2,
+      12,
+      6,
+      4,
+      7,
+      9,
+      10,
+      2,
+      7,
+      3,
+      6,
+      9,
+      2,
+      10,
+      9,
+      4,
+      0,
+      15,
+      3,
+      6,
+      8,
+      15,
+      14,
+      0,
+      11,
+      13,
+      15,
+      1,
+      7,
+      3,
+      15,
+      1,
+      3,
+      6,
+      5,
+      15,
+      0,
+      6,
+      9,
+      15,
+      2,
+      5,
+      3,
+      15,
+      3,
+      5,
+      9,
+      8,
+      15,
+      1,
+      0,
+      8,
+      2,
+      8,
+      3,
+      4,
+      3,
+      2,
+      5,
+      10,
+      15,
+      11,
+      5,
+      6,
+      10,
+      0,
+      5,
+      8,
+      2,
+      4,
+      0,
+      2,
+      8,
+      3,
+      4,
+      4,
+      2,
+      7,
+      10,
+      8,
+      10,
+      3,
+      9,
+      12,
+      10,
+      4,
+      7,
+      1,
+      10,
+      2,
+      4,
+      1,
+      10,
+      2,
+      4,
+      8,
+      8,
+      10,
+      2,
+      14,
+      0,
+      9,
+      8,
+      10,
+      2,
+      1,
+      2,
+      9,
+      4,
+      1,
+      4,
+      11,
+      1,
+      5,
+      0,
+      4,
+      0,
+      7,
+      2,
+      12,
+      13,
+      11,
+      11,
+      2,
+      11,
+      11,
+      0,
+      4,
+      15,
+      5,
+      4,
+      14,
+      10,
+      14,
+      5,
+      8,
+      4,
+      15,
+      5,
+      0,
+      11,
+      15,
+      11,
+      5,
+      4,
+      4,
+      14,
+      12,
+      4,
+      9,
+      0,
+      6,
+      15,
+      2,
+      6,
+      0,
+      4,
+      7,
+      2,
+      4,
+      0,
+      9,
+      7,
+      4,
+      7,
+      2,
+      4,
+      9,
+      0,
+      7,
+      0,
+      9,
+      12,
+      6,
+      14,
+      10,
+      8,
+      6,
+      12,
+      8,
+      13,
+      11,
+      12,
+      15,
+      8,
+      13,
+      7,
+      10,
+      15,
+      14,
+      12,
+      6,
+      15,
+      14,
+      11,
+      7,
+      0,
+      7,
+      12,
+      11,
+      8,
+      10,
+      0,
+      8,
+      14,
+      15,
+      5,
+      4,
+      6,
+      11,
+      2,
+      15,
+      15,
+      6,
+      12,
+      11,
+      7,
+      15,
+      5,
+      6,
+      12,
+      4,
+      13,
+      7,
+      14,
+      6,
+      10,
+      7,
+      11,
+      4,
+      4,
+      13,
+      11,
+      7,
+      1,
+      15,
+      9,
+      7,
+      6,
+      1,
+      4,
+      15,
+      9,
+      12,
+      6,
+      13,
+      1,
+      10,
+      8,
+      2,
+      4,
+      3,
+      13,
+      9,
+      15,
+      6,
+      2,
+      5,
+      4,
+      12,
+      6,
+      4,
+      6,
+      9,
+      10,
+      8,
+      15,
+      6,
+      13,
+      14,
+      15,
+      7,
+      2,
+      14,
+      15,
+      9,
+      8,
+      2,
+      5,
+      15,
+      11,
+      5,
+      8,
+      2,
+      5,
+      14,
+      4,
+      13,
+      10,
+      1,
+      2,
+      10,
+      4,
+      1,
+      5,
+      14,
+      4,
+      9,
+      14,
+      4,
+      14,
+      0,
+      3,
+      14,
+      9,
+      4,
+      4,
+      7,
+      14,
+      0,
+      14,
+      12,
+      0,
+      14,
+      10,
+      3,
+      1,
+      2,
+      15,
+      9,
+      3,
+      15,
+      0,
+      2,
+      2,
+      14,
+      2,
+      9,
+      3,
+      4,
+      0,
+      9,
+      15,
+      13,
+      15,
+      9,
+      0,
+      8,
+      13,
+      15,
+      8,
+      0,
+      9,
+      15,
+      0,
+      6,
+      15,
+      6,
+      9,
+      15,
+      6,
+      0,
+      7,
+      15,
+      5,
+      13,
+      10,
+      12,
+      13,
+      15,
+      15,
+      9,
+      14,
+      13,
+      5,
+      15,
+      13,
+      5,
+      8,
+      12,
+      9,
+      4,
+      8,
+      13,
+      1,
+      5,
+      6,
+      10,
+      4,
+      1,
+      13,
+      6,
+      8,
+      4,
+      8,
+      11,
+      5,
+      10,
+      13,
+      4,
+      13,
+      5,
+      8,
+      4,
+      13,
+      5,
+      8,
+      4,
+      8,
+      13,
+      14,
+      12,
+      10,
+      6,
+      13,
+      2,
+      4,
+      2,
+      12,
+      4,
+      5,
+      2,
+      14,
+      12,
+      4,
+      2,
+      4,
+      2,
+      3,
+      11,
+      4,
+      1,
+      7,
+      2,
+      10,
+      11,
+      0,
+      15,
+      11,
+      10
+    ],
+    "n_clusters": 16,
+    "n_components": 486,
+    "n_trials": 125,
+    "observed_objective_by_k": {
+      "10": 125.18978583,
+      "11": 119.48674826,
+      "12": 114.55248668,
+      "13": 109.8635975,
+      "14": 106.82161201,
+      "15": 104.19622475,
+      "16": 101.94246101,
+      "17": 100.2961793,
+      "18": 97.8365431,
+      "19": 96.48636148,
+      "20": 94.3922174,
+      "7": 144.74573999,
+      "8": 137.69274528,
+      "9": 131.06732977
+    },
+    "repeats": 40,
+    "require_zero_duplicate_solution": 1,
+    "sample_map": [
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T2",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T2",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T2",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T4",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T4",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T4",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T8",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T8",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T8",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T9",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T9",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T9",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T10",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T10",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T10",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T12",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          12
+        ],
+        "trial_num": 12,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T12",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          12
+        ],
+        "trial_num": 12,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "가윤호",
+        "trial_id": "가윤호_v60.0_T12",
+        "trial_key": [
+          "가윤호",
+          60.0,
+          12
+        ],
+        "trial_num": 12,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T1",
+        "trial_key": [
+          "강비은",
+          30.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T1",
+        "trial_key": [
+          "강비은",
+          30.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T1",
+        "trial_key": [
+          "강비은",
+          30.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T2",
+        "trial_key": [
+          "강비은",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T2",
+        "trial_key": [
+          "강비은",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T4",
+        "trial_key": [
+          "강비은",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T4",
+        "trial_key": [
+          "강비은",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T4",
+        "trial_key": [
+          "강비은",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T4",
+        "trial_key": [
+          "강비은",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T5",
+        "trial_key": [
+          "강비은",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T5",
+        "trial_key": [
+          "강비은",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T5",
+        "trial_key": [
+          "강비은",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T5",
+        "trial_key": [
+          "강비은",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T6",
+        "trial_key": [
+          "강비은",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T6",
+        "trial_key": [
+          "강비은",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T6",
+        "trial_key": [
+          "강비은",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T6",
+        "trial_key": [
+          "강비은",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T7",
+        "trial_key": [
+          "강비은",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T7",
+        "trial_key": [
+          "강비은",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T7",
+        "trial_key": [
+          "강비은",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T7",
+        "trial_key": [
+          "강비은",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T8",
+        "trial_key": [
+          "강비은",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T8",
+        "trial_key": [
+          "강비은",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T8",
+        "trial_key": [
+          "강비은",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T10",
+        "trial_key": [
+          "강비은",
+          30.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T10",
+        "trial_key": [
+          "강비은",
+          30.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T10",
+        "trial_key": [
+          "강비은",
+          30.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "강비은",
+        "trial_id": "강비은_v30.0_T10",
+        "trial_key": [
+          "강비은",
+          30.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "권유영",
+        "trial_id": "권유영_v35.0_T2",
+        "trial_key": [
+          "권유영",
+          35.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "권유영",
+        "trial_id": "권유영_v35.0_T2",
+        "trial_key": [
+          "권유영",
+          35.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "권유영",
+        "trial_id": "권유영_v35.0_T2",
+        "trial_key": [
+          "권유영",
+          35.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "권유영",
+        "trial_id": "권유영_v35.0_T2",
+        "trial_key": [
+          "권유영",
+          35.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "권유영",
+        "trial_id": "권유영_v35.0_T2",
+        "trial_key": [
+          "권유영",
+          35.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T1",
+        "trial_key": [
+          "김민정",
+          20.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T1",
+        "trial_key": [
+          "김민정",
+          20.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T1",
+        "trial_key": [
+          "김민정",
+          20.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T2",
+        "trial_key": [
+          "김민정",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T2",
+        "trial_key": [
+          "김민정",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T2",
+        "trial_key": [
+          "김민정",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T2",
+        "trial_key": [
+          "김민정",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T3",
+        "trial_key": [
+          "김민정",
+          20.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T3",
+        "trial_key": [
+          "김민정",
+          20.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T3",
+        "trial_key": [
+          "김민정",
+          20.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T4",
+        "trial_key": [
+          "김민정",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T4",
+        "trial_key": [
+          "김민정",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T4",
+        "trial_key": [
+          "김민정",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T4",
+        "trial_key": [
+          "김민정",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T5",
+        "trial_key": [
+          "김민정",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T5",
+        "trial_key": [
+          "김민정",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T5",
+        "trial_key": [
+          "김민정",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T5",
+        "trial_key": [
+          "김민정",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T6",
+        "trial_key": [
+          "김민정",
+          20.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T6",
+        "trial_key": [
+          "김민정",
+          20.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T6",
+        "trial_key": [
+          "김민정",
+          20.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김민정",
+        "trial_id": "김민정_v20.0_T6",
+        "trial_key": [
+          "김민정",
+          20.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T1",
+        "trial_key": [
+          "김서하",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T1",
+        "trial_key": [
+          "김서하",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T1",
+        "trial_key": [
+          "김서하",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T1",
+        "trial_key": [
+          "김서하",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T2",
+        "trial_key": [
+          "김서하",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T2",
+        "trial_key": [
+          "김서하",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T2",
+        "trial_key": [
+          "김서하",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T2",
+        "trial_key": [
+          "김서하",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T2",
+        "trial_key": [
+          "김서하",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T3",
+        "trial_key": [
+          "김서하",
+          130.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T3",
+        "trial_key": [
+          "김서하",
+          130.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T3",
+        "trial_key": [
+          "김서하",
+          130.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T3",
+        "trial_key": [
+          "김서하",
+          130.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T4",
+        "trial_key": [
+          "김서하",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T4",
+        "trial_key": [
+          "김서하",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T4",
+        "trial_key": [
+          "김서하",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T4",
+        "trial_key": [
+          "김서하",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T4",
+        "trial_key": [
+          "김서하",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T5",
+        "trial_key": [
+          "김서하",
+          130.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T5",
+        "trial_key": [
+          "김서하",
+          130.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T5",
+        "trial_key": [
+          "김서하",
+          130.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T5",
+        "trial_key": [
+          "김서하",
+          130.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T7",
+        "trial_key": [
+          "김서하",
+          130.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T7",
+        "trial_key": [
+          "김서하",
+          130.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T7",
+        "trial_key": [
+          "김서하",
+          130.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T7",
+        "trial_key": [
+          "김서하",
+          130.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T8",
+        "trial_key": [
+          "김서하",
+          130.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T8",
+        "trial_key": [
+          "김서하",
+          130.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T8",
+        "trial_key": [
+          "김서하",
+          130.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T8",
+        "trial_key": [
+          "김서하",
+          130.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T8",
+        "trial_key": [
+          "김서하",
+          130.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T11",
+        "trial_key": [
+          "김서하",
+          130.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T11",
+        "trial_key": [
+          "김서하",
+          130.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T11",
+        "trial_key": [
+          "김서하",
+          130.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T11",
+        "trial_key": [
+          "김서하",
+          130.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T12",
+        "trial_key": [
+          "김서하",
+          130.0,
+          12
+        ],
+        "trial_num": 12,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T12",
+        "trial_key": [
+          "김서하",
+          130.0,
+          12
+        ],
+        "trial_num": 12,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김서하",
+        "trial_id": "김서하_v130.0_T12",
+        "trial_key": [
+          "김서하",
+          130.0,
+          12
+        ],
+        "trial_num": 12,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김우연",
+        "trial_id": "김우연_v60.0_T3",
+        "trial_key": [
+          "김우연",
+          60.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김우연",
+        "trial_id": "김우연_v60.0_T3",
+        "trial_key": [
+          "김우연",
+          60.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김우연",
+        "trial_id": "김우연_v60.0_T3",
+        "trial_key": [
+          "김우연",
+          60.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김우연",
+        "trial_id": "김우연_v60.0_T3",
+        "trial_key": [
+          "김우연",
+          60.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김우연",
+        "trial_id": "김우연_v60.0_T3",
+        "trial_key": [
+          "김우연",
+          60.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김우연",
+        "trial_id": "김우연_v60.0_T4",
+        "trial_key": [
+          "김우연",
+          60.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김우연",
+        "trial_id": "김우연_v60.0_T4",
+        "trial_key": [
+          "김우연",
+          60.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김우연",
+        "trial_id": "김우연_v60.0_T4",
+        "trial_key": [
+          "김우연",
+          60.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김우연",
+        "trial_id": "김우연_v60.0_T4",
+        "trial_key": [
+          "김우연",
+          60.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 60.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T1",
+        "trial_key": [
+          "김유민",
+          70.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T1",
+        "trial_key": [
+          "김유민",
+          70.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T1",
+        "trial_key": [
+          "김유민",
+          70.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T1",
+        "trial_key": [
+          "김유민",
+          70.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T1",
+        "trial_key": [
+          "김유민",
+          70.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 5,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T1",
+        "trial_key": [
+          "김유민",
+          70.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T3",
+        "trial_key": [
+          "김유민",
+          70.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T3",
+        "trial_key": [
+          "김유민",
+          70.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T3",
+        "trial_key": [
+          "김유민",
+          70.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T3",
+        "trial_key": [
+          "김유민",
+          70.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T3",
+        "trial_key": [
+          "김유민",
+          70.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T5",
+        "trial_key": [
+          "김유민",
+          70.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T5",
+        "trial_key": [
+          "김유민",
+          70.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T5",
+        "trial_key": [
+          "김유민",
+          70.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T5",
+        "trial_key": [
+          "김유민",
+          70.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T5",
+        "trial_key": [
+          "김유민",
+          70.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T6",
+        "trial_key": [
+          "김유민",
+          70.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T6",
+        "trial_key": [
+          "김유민",
+          70.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T6",
+        "trial_key": [
+          "김유민",
+          70.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T6",
+        "trial_key": [
+          "김유민",
+          70.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T7",
+        "trial_key": [
+          "김유민",
+          70.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T7",
+        "trial_key": [
+          "김유민",
+          70.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T7",
+        "trial_key": [
+          "김유민",
+          70.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T7",
+        "trial_key": [
+          "김유민",
+          70.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T8",
+        "trial_key": [
+          "김유민",
+          70.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T8",
+        "trial_key": [
+          "김유민",
+          70.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T8",
+        "trial_key": [
+          "김유민",
+          70.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T8",
+        "trial_key": [
+          "김유민",
+          70.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T9",
+        "trial_key": [
+          "김유민",
+          70.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T9",
+        "trial_key": [
+          "김유민",
+          70.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T9",
+        "trial_key": [
+          "김유민",
+          70.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T9",
+        "trial_key": [
+          "김유민",
+          70.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T10",
+        "trial_key": [
+          "김유민",
+          70.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T10",
+        "trial_key": [
+          "김유민",
+          70.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T10",
+        "trial_key": [
+          "김유민",
+          70.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T10",
+        "trial_key": [
+          "김유민",
+          70.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김유민",
+        "trial_id": "김유민_v70.0_T10",
+        "trial_key": [
+          "김유민",
+          70.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 70.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김종철",
+        "trial_id": "김종철_v135.0_T3",
+        "trial_key": [
+          "김종철",
+          135.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 135.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김종철",
+        "trial_id": "김종철_v135.0_T3",
+        "trial_key": [
+          "김종철",
+          135.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 135.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김종철",
+        "trial_id": "김종철_v135.0_T3",
+        "trial_key": [
+          "김종철",
+          135.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 135.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김종철",
+        "trial_id": "김종철_v135.0_T4",
+        "trial_key": [
+          "김종철",
+          135.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 135.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "김종철",
+        "trial_id": "김종철_v135.0_T4",
+        "trial_key": [
+          "김종철",
+          135.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 135.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T2",
+        "trial_key": [
+          "방수진",
+          50.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T2",
+        "trial_key": [
+          "방수진",
+          50.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T2",
+        "trial_key": [
+          "방수진",
+          50.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T2",
+        "trial_key": [
+          "방수진",
+          50.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T3",
+        "trial_key": [
+          "방수진",
+          50.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T3",
+        "trial_key": [
+          "방수진",
+          50.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T3",
+        "trial_key": [
+          "방수진",
+          50.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T3",
+        "trial_key": [
+          "방수진",
+          50.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T3",
+        "trial_key": [
+          "방수진",
+          50.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T4",
+        "trial_key": [
+          "방수진",
+          50.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T4",
+        "trial_key": [
+          "방수진",
+          50.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T4",
+        "trial_key": [
+          "방수진",
+          50.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방수진",
+        "trial_id": "방수진_v50.0_T4",
+        "trial_key": [
+          "방수진",
+          50.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 50.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방주원",
+        "trial_id": "방주원_v200.0_T3",
+        "trial_key": [
+          "방주원",
+          200.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 200.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방주원",
+        "trial_id": "방주원_v200.0_T3",
+        "trial_key": [
+          "방주원",
+          200.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 200.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방주원",
+        "trial_id": "방주원_v200.0_T3",
+        "trial_key": [
+          "방주원",
+          200.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 200.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방주원",
+        "trial_id": "방주원_v200.0_T4",
+        "trial_key": [
+          "방주원",
+          200.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 200.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방주원",
+        "trial_id": "방주원_v200.0_T4",
+        "trial_key": [
+          "방주원",
+          200.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 200.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "방주원",
+        "trial_id": "방주원_v200.0_T5",
+        "trial_key": [
+          "방주원",
+          200.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 200.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T1",
+        "trial_key": [
+          "성효은",
+          30.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T1",
+        "trial_key": [
+          "성효은",
+          30.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T1",
+        "trial_key": [
+          "성효은",
+          30.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T6",
+        "trial_key": [
+          "성효은",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T6",
+        "trial_key": [
+          "성효은",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T6",
+        "trial_key": [
+          "성효은",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T6",
+        "trial_key": [
+          "성효은",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T8",
+        "trial_key": [
+          "성효은",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T8",
+        "trial_key": [
+          "성효은",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T8",
+        "trial_key": [
+          "성효은",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T8",
+        "trial_key": [
+          "성효은",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T8",
+        "trial_key": [
+          "성효은",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T9",
+        "trial_key": [
+          "성효은",
+          30.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T9",
+        "trial_key": [
+          "성효은",
+          30.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T9",
+        "trial_key": [
+          "성효은",
+          30.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T9",
+        "trial_key": [
+          "성효은",
+          30.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T10",
+        "trial_key": [
+          "성효은",
+          30.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T10",
+        "trial_key": [
+          "성효은",
+          30.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T10",
+        "trial_key": [
+          "성효은",
+          30.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T10",
+        "trial_key": [
+          "성효은",
+          30.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T11",
+        "trial_key": [
+          "성효은",
+          30.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T11",
+        "trial_key": [
+          "성효은",
+          30.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "성효은",
+        "trial_id": "성효은_v30.0_T11",
+        "trial_key": [
+          "성효은",
+          30.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T1",
+        "trial_key": [
+          "안지연",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T1",
+        "trial_key": [
+          "안지연",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T1",
+        "trial_key": [
+          "안지연",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T1",
+        "trial_key": [
+          "안지연",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T2",
+        "trial_key": [
+          "안지연",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T2",
+        "trial_key": [
+          "안지연",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T2",
+        "trial_key": [
+          "안지연",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T2",
+        "trial_key": [
+          "안지연",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T4",
+        "trial_key": [
+          "안지연",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T4",
+        "trial_key": [
+          "안지연",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T4",
+        "trial_key": [
+          "안지연",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T5",
+        "trial_key": [
+          "안지연",
+          130.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T5",
+        "trial_key": [
+          "안지연",
+          130.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T5",
+        "trial_key": [
+          "안지연",
+          130.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T5",
+        "trial_key": [
+          "안지연",
+          130.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T6",
+        "trial_key": [
+          "안지연",
+          130.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T6",
+        "trial_key": [
+          "안지연",
+          130.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T6",
+        "trial_key": [
+          "안지연",
+          130.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T7",
+        "trial_key": [
+          "안지연",
+          130.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T7",
+        "trial_key": [
+          "안지연",
+          130.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T7",
+        "trial_key": [
+          "안지연",
+          130.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "안지연",
+        "trial_id": "안지연_v130.0_T7",
+        "trial_key": [
+          "안지연",
+          130.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T2",
+        "trial_key": [
+          "오나영",
+          25.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T2",
+        "trial_key": [
+          "오나영",
+          25.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T2",
+        "trial_key": [
+          "오나영",
+          25.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T2",
+        "trial_key": [
+          "오나영",
+          25.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T2",
+        "trial_key": [
+          "오나영",
+          25.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T3",
+        "trial_key": [
+          "오나영",
+          25.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T3",
+        "trial_key": [
+          "오나영",
+          25.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T3",
+        "trial_key": [
+          "오나영",
+          25.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T3",
+        "trial_key": [
+          "오나영",
+          25.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T4",
+        "trial_key": [
+          "오나영",
+          25.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T4",
+        "trial_key": [
+          "오나영",
+          25.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T4",
+        "trial_key": [
+          "오나영",
+          25.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T4",
+        "trial_key": [
+          "오나영",
+          25.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T4",
+        "trial_key": [
+          "오나영",
+          25.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T5",
+        "trial_key": [
+          "오나영",
+          25.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T5",
+        "trial_key": [
+          "오나영",
+          25.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T5",
+        "trial_key": [
+          "오나영",
+          25.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T5",
+        "trial_key": [
+          "오나영",
+          25.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T6",
+        "trial_key": [
+          "오나영",
+          25.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T6",
+        "trial_key": [
+          "오나영",
+          25.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T6",
+        "trial_key": [
+          "오나영",
+          25.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T6",
+        "trial_key": [
+          "오나영",
+          25.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T7",
+        "trial_key": [
+          "오나영",
+          25.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T7",
+        "trial_key": [
+          "오나영",
+          25.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T7",
+        "trial_key": [
+          "오나영",
+          25.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T7",
+        "trial_key": [
+          "오나영",
+          25.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T7",
+        "trial_key": [
+          "오나영",
+          25.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T8",
+        "trial_key": [
+          "오나영",
+          25.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T8",
+        "trial_key": [
+          "오나영",
+          25.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T8",
+        "trial_key": [
+          "오나영",
+          25.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T8",
+        "trial_key": [
+          "오나영",
+          25.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T8",
+        "trial_key": [
+          "오나영",
+          25.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T10",
+        "trial_key": [
+          "오나영",
+          25.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T10",
+        "trial_key": [
+          "오나영",
+          25.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T10",
+        "trial_key": [
+          "오나영",
+          25.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T10",
+        "trial_key": [
+          "오나영",
+          25.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "오나영",
+        "trial_id": "오나영_v25.0_T10",
+        "trial_key": [
+          "오나영",
+          25.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 25.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T1",
+        "trial_key": [
+          "유도경",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T1",
+        "trial_key": [
+          "유도경",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T1",
+        "trial_key": [
+          "유도경",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T1",
+        "trial_key": [
+          "유도경",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T1",
+        "trial_key": [
+          "유도경",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T3",
+        "trial_key": [
+          "유도경",
+          35.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T3",
+        "trial_key": [
+          "유도경",
+          35.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T3",
+        "trial_key": [
+          "유도경",
+          35.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T3",
+        "trial_key": [
+          "유도경",
+          35.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유도경",
+        "trial_id": "유도경_v35.0_T3",
+        "trial_key": [
+          "유도경",
+          35.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T2",
+        "trial_key": [
+          "유병한",
+          110.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T2",
+        "trial_key": [
+          "유병한",
+          110.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T2",
+        "trial_key": [
+          "유병한",
+          110.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T2",
+        "trial_key": [
+          "유병한",
+          110.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T3",
+        "trial_key": [
+          "유병한",
+          110.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T3",
+        "trial_key": [
+          "유병한",
+          110.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T3",
+        "trial_key": [
+          "유병한",
+          110.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T3",
+        "trial_key": [
+          "유병한",
+          110.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T3",
+        "trial_key": [
+          "유병한",
+          110.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T4",
+        "trial_key": [
+          "유병한",
+          110.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T4",
+        "trial_key": [
+          "유병한",
+          110.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T4",
+        "trial_key": [
+          "유병한",
+          110.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T4",
+        "trial_key": [
+          "유병한",
+          110.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T5",
+        "trial_key": [
+          "유병한",
+          110.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T5",
+        "trial_key": [
+          "유병한",
+          110.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T5",
+        "trial_key": [
+          "유병한",
+          110.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T5",
+        "trial_key": [
+          "유병한",
+          110.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T5",
+        "trial_key": [
+          "유병한",
+          110.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T6",
+        "trial_key": [
+          "유병한",
+          110.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T6",
+        "trial_key": [
+          "유병한",
+          110.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T6",
+        "trial_key": [
+          "유병한",
+          110.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T6",
+        "trial_key": [
+          "유병한",
+          110.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T6",
+        "trial_key": [
+          "유병한",
+          110.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 5,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유병한",
+        "trial_id": "유병한_v110.0_T6",
+        "trial_key": [
+          "유병한",
+          110.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 110.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T1",
+        "trial_key": [
+          "유재원",
+          45.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T1",
+        "trial_key": [
+          "유재원",
+          45.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T1",
+        "trial_key": [
+          "유재원",
+          45.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T1",
+        "trial_key": [
+          "유재원",
+          45.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T1",
+        "trial_key": [
+          "유재원",
+          45.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T2",
+        "trial_key": [
+          "유재원",
+          45.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T2",
+        "trial_key": [
+          "유재원",
+          45.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T2",
+        "trial_key": [
+          "유재원",
+          45.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T2",
+        "trial_key": [
+          "유재원",
+          45.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T3",
+        "trial_key": [
+          "유재원",
+          45.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T3",
+        "trial_key": [
+          "유재원",
+          45.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T3",
+        "trial_key": [
+          "유재원",
+          45.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T3",
+        "trial_key": [
+          "유재원",
+          45.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T4",
+        "trial_key": [
+          "유재원",
+          45.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T4",
+        "trial_key": [
+          "유재원",
+          45.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T4",
+        "trial_key": [
+          "유재원",
+          45.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T4",
+        "trial_key": [
+          "유재원",
+          45.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T5",
+        "trial_key": [
+          "유재원",
+          45.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T5",
+        "trial_key": [
+          "유재원",
+          45.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T5",
+        "trial_key": [
+          "유재원",
+          45.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T9",
+        "trial_key": [
+          "유재원",
+          45.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T9",
+        "trial_key": [
+          "유재원",
+          45.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T9",
+        "trial_key": [
+          "유재원",
+          45.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T9",
+        "trial_key": [
+          "유재원",
+          45.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "유재원",
+        "trial_id": "유재원_v45.0_T9",
+        "trial_key": [
+          "유재원",
+          45.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 45.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T1",
+        "trial_key": [
+          "이은수",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T1",
+        "trial_key": [
+          "이은수",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T1",
+        "trial_key": [
+          "이은수",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T1",
+        "trial_key": [
+          "이은수",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T4",
+        "trial_key": [
+          "이은수",
+          35.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T4",
+        "trial_key": [
+          "이은수",
+          35.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T4",
+        "trial_key": [
+          "이은수",
+          35.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T4",
+        "trial_key": [
+          "이은수",
+          35.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T7",
+        "trial_key": [
+          "이은수",
+          35.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T7",
+        "trial_key": [
+          "이은수",
+          35.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T7",
+        "trial_key": [
+          "이은수",
+          35.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T7",
+        "trial_key": [
+          "이은수",
+          35.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T7",
+        "trial_key": [
+          "이은수",
+          35.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T8",
+        "trial_key": [
+          "이은수",
+          35.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T8",
+        "trial_key": [
+          "이은수",
+          35.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T8",
+        "trial_key": [
+          "이은수",
+          35.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이은수",
+        "trial_id": "이은수_v35.0_T8",
+        "trial_key": [
+          "이은수",
+          35.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T2",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T2",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T2",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T3",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T3",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T3",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T4",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T4",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T5",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이인섭",
+        "trial_id": "이인섭_v30.0_T5",
+        "trial_key": [
+          "이인섭",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T1",
+        "trial_key": [
+          "이재유",
+          20.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T1",
+        "trial_key": [
+          "이재유",
+          20.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T1",
+        "trial_key": [
+          "이재유",
+          20.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T2",
+        "trial_key": [
+          "이재유",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T2",
+        "trial_key": [
+          "이재유",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T2",
+        "trial_key": [
+          "이재유",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T3",
+        "trial_key": [
+          "이재유",
+          20.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T3",
+        "trial_key": [
+          "이재유",
+          20.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T3",
+        "trial_key": [
+          "이재유",
+          20.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T4",
+        "trial_key": [
+          "이재유",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T4",
+        "trial_key": [
+          "이재유",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T4",
+        "trial_key": [
+          "이재유",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T4",
+        "trial_key": [
+          "이재유",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T5",
+        "trial_key": [
+          "이재유",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T5",
+        "trial_key": [
+          "이재유",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T5",
+        "trial_key": [
+          "이재유",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T6",
+        "trial_key": [
+          "이재유",
+          20.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T6",
+        "trial_key": [
+          "이재유",
+          20.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T6",
+        "trial_key": [
+          "이재유",
+          20.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T7",
+        "trial_key": [
+          "이재유",
+          20.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T7",
+        "trial_key": [
+          "이재유",
+          20.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이재유",
+        "trial_id": "이재유_v20.0_T7",
+        "trial_key": [
+          "이재유",
+          20.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T1",
+        "trial_key": [
+          "이지수",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T1",
+        "trial_key": [
+          "이지수",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T1",
+        "trial_key": [
+          "이지수",
+          130.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T2",
+        "trial_key": [
+          "이지수",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T2",
+        "trial_key": [
+          "이지수",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T2",
+        "trial_key": [
+          "이지수",
+          130.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T3",
+        "trial_key": [
+          "이지수",
+          130.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T3",
+        "trial_key": [
+          "이지수",
+          130.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T3",
+        "trial_key": [
+          "이지수",
+          130.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T4",
+        "trial_key": [
+          "이지수",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T4",
+        "trial_key": [
+          "이지수",
+          130.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T6",
+        "trial_key": [
+          "이지수",
+          130.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T6",
+        "trial_key": [
+          "이지수",
+          130.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T6",
+        "trial_key": [
+          "이지수",
+          130.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "이지수",
+        "trial_id": "이지수_v130.0_T6",
+        "trial_key": [
+          "이지수",
+          130.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 130.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T3",
+        "trial_key": [
+          "임상우",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T3",
+        "trial_key": [
+          "임상우",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T3",
+        "trial_key": [
+          "임상우",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T3",
+        "trial_key": [
+          "임상우",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T5",
+        "trial_key": [
+          "임상우",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T5",
+        "trial_key": [
+          "임상우",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T5",
+        "trial_key": [
+          "임상우",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T5",
+        "trial_key": [
+          "임상우",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T5",
+        "trial_key": [
+          "임상우",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T6",
+        "trial_key": [
+          "임상우",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T6",
+        "trial_key": [
+          "임상우",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T6",
+        "trial_key": [
+          "임상우",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T6",
+        "trial_key": [
+          "임상우",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T7",
+        "trial_key": [
+          "임상우",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T7",
+        "trial_key": [
+          "임상우",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T7",
+        "trial_key": [
+          "임상우",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T8",
+        "trial_key": [
+          "임상우",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T8",
+        "trial_key": [
+          "임상우",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T8",
+        "trial_key": [
+          "임상우",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T9",
+        "trial_key": [
+          "임상우",
+          30.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T9",
+        "trial_key": [
+          "임상우",
+          30.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "임상우",
+        "trial_id": "임상우_v30.0_T9",
+        "trial_key": [
+          "임상우",
+          30.0,
+          9
+        ],
+        "trial_num": 9,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T2",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T2",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T2",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T2",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T4",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T4",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T4",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T4",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T5",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T5",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T5",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T5",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "정혜진",
+        "trial_id": "정혜진_v20.0_T5",
+        "trial_key": [
+          "정혜진",
+          20.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 20.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T2",
+        "trial_key": [
+          "조민석",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T2",
+        "trial_key": [
+          "조민석",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T2",
+        "trial_key": [
+          "조민석",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T2",
+        "trial_key": [
+          "조민석",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T2",
+        "trial_key": [
+          "조민석",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 5,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T2",
+        "trial_key": [
+          "조민석",
+          30.0,
+          2
+        ],
+        "trial_num": 2,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T3",
+        "trial_key": [
+          "조민석",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T3",
+        "trial_key": [
+          "조민석",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T3",
+        "trial_key": [
+          "조민석",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T3",
+        "trial_key": [
+          "조민석",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T3",
+        "trial_key": [
+          "조민석",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 5,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T3",
+        "trial_key": [
+          "조민석",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 6,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T3",
+        "trial_key": [
+          "조민석",
+          30.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T4",
+        "trial_key": [
+          "조민석",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T4",
+        "trial_key": [
+          "조민석",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T4",
+        "trial_key": [
+          "조민석",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T4",
+        "trial_key": [
+          "조민석",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T4",
+        "trial_key": [
+          "조민석",
+          30.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T5",
+        "trial_key": [
+          "조민석",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T5",
+        "trial_key": [
+          "조민석",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T5",
+        "trial_key": [
+          "조민석",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T5",
+        "trial_key": [
+          "조민석",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T5",
+        "trial_key": [
+          "조민석",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 5,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T5",
+        "trial_key": [
+          "조민석",
+          30.0,
+          5
+        ],
+        "trial_num": 5,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T6",
+        "trial_key": [
+          "조민석",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T6",
+        "trial_key": [
+          "조민석",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T6",
+        "trial_key": [
+          "조민석",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T6",
+        "trial_key": [
+          "조민석",
+          30.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T7",
+        "trial_key": [
+          "조민석",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T7",
+        "trial_key": [
+          "조민석",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T7",
+        "trial_key": [
+          "조민석",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T7",
+        "trial_key": [
+          "조민석",
+          30.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T8",
+        "trial_key": [
+          "조민석",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T8",
+        "trial_key": [
+          "조민석",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T8",
+        "trial_key": [
+          "조민석",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T8",
+        "trial_key": [
+          "조민석",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 4,
+        "group_id": "pooled_step_nonstep",
+        "subject": "조민석",
+        "trial_id": "조민석_v30.0_T8",
+        "trial_key": [
+          "조민석",
+          30.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 30.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T1",
+        "trial_key": [
+          "최지유",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T1",
+        "trial_key": [
+          "최지유",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T1",
+        "trial_key": [
+          "최지유",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T1",
+        "trial_key": [
+          "최지유",
+          35.0,
+          1
+        ],
+        "trial_num": 1,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T3",
+        "trial_key": [
+          "최지유",
+          35.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T3",
+        "trial_key": [
+          "최지유",
+          35.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T3",
+        "trial_key": [
+          "최지유",
+          35.0,
+          3
+        ],
+        "trial_num": 3,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T4",
+        "trial_key": [
+          "최지유",
+          35.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T4",
+        "trial_key": [
+          "최지유",
+          35.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T4",
+        "trial_key": [
+          "최지유",
+          35.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T4",
+        "trial_key": [
+          "최지유",
+          35.0,
+          4
+        ],
+        "trial_num": 4,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T6",
+        "trial_key": [
+          "최지유",
+          35.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T6",
+        "trial_key": [
+          "최지유",
+          35.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T6",
+        "trial_key": [
+          "최지유",
+          35.0,
+          6
+        ],
+        "trial_num": 6,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T7",
+        "trial_key": [
+          "최지유",
+          35.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T7",
+        "trial_key": [
+          "최지유",
+          35.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T7",
+        "trial_key": [
+          "최지유",
+          35.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T7",
+        "trial_key": [
+          "최지유",
+          35.0,
+          7
+        ],
+        "trial_num": 7,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T8",
+        "trial_key": [
+          "최지유",
+          35.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T8",
+        "trial_key": [
+          "최지유",
+          35.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T8",
+        "trial_key": [
+          "최지유",
+          35.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 3,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T8",
+        "trial_key": [
+          "최지유",
+          35.0,
+          8
+        ],
+        "trial_num": 8,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T10",
+        "trial_key": [
+          "최지유",
+          35.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T10",
+        "trial_key": [
+          "최지유",
+          35.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T10",
+        "trial_key": [
+          "최지유",
+          35.0,
+          10
+        ],
+        "trial_num": 10,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 0,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T11",
+        "trial_key": [
+          "최지유",
+          35.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 1,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T11",
+        "trial_key": [
+          "최지유",
+          35.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 35.0
+      },
+      {
+        "component_index": 2,
+        "group_id": "pooled_step_nonstep",
+        "subject": "최지유",
+        "trial_id": "최지유_v35.0_T11",
+        "trial_key": [
+          "최지유",
+          35.0,
+          11
+        ],
+        "trial_num": 11,
+        "velocity": 35.0
+      }
+    ],
+    "selection_method": "gap_statistic",
+    "selection_status": "success_gap_escalated_unique",
+    "status": "success",
+    "torch_device": "",
+    "torch_dtype": "",
+    "uniqueness_candidate_restarts": 80
+  },
+  "report_inputs": {
+    "baseline_run": "outputs/runs/default_run",
+    "emg_parquet_path": "/mnt/c/Users/Alice/OneDrive - 청주대학교/근전도 분석 코드/shared_files/output/03_post_processed_min_max_only/min-max_norm_only.parquet",
+    "event_xlsm_path": "/mnt/c/Users/Alice/OneDrive - 청주대학교/연구실 자료/연구실_노인균형프로토콜/데이터 정리-설문, 신체계측, 기타 데이터/perturb_inform.xlsm",
+    "n_nonstep_trials": 72,
+    "n_step_trials": 53,
+    "n_subjects": 24,
+    "n_trials": 125,
+    "target_windows": 100
+  },
+  "runtime_notes": {
+    "clustering_algorithm_effective": "sklearn_kmeans",
+    "clustering_algorithm_requested": "torch_kmeans",
+    "clustering_backend_note": "",
+    "config_path": "configs/global_config.yaml",
+    "nmf_backend_effective": "sklearn_nmf",
+    "nmf_backend_note": "",
+    "nmf_backend_requested": "torchnmf",
+    "seed": 42,
+    "target_windows": 100
+  }
+}
