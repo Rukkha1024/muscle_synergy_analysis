@@ -48,6 +48,7 @@ from src.synergy_stats.cross_group_similarity import (
 from src.synergy_stats.figures import (
     save_cross_group_decision_summary,
     save_cross_group_heatmap,
+    save_cross_group_matched_h,
     save_cross_group_matched_w,
 )
 
@@ -610,6 +611,36 @@ def _representative_w_long(
     return pd.DataFrame(rows)
 
 
+def _representative_h_long(
+    h_long: pl.DataFrame,
+    sample_map: list[dict[str, Any]],
+    labels: np.ndarray,
+    excluded_indices: set[int],
+    group_id: str,
+) -> pd.DataFrame:
+    """Compute representative H (mean H per cluster) from minimal H long table."""
+    mapping_rows = []
+    for idx, (sample, cluster_id) in enumerate(zip(sample_map, labels.tolist())):
+        if idx in excluded_indices:
+            continue
+        mapping_rows.append({
+            "trial_id": sample["trial_id"],
+            "component_index": sample["component_index"],
+            "cluster_id": int(cluster_id),
+        })
+    mapping_df = pd.DataFrame(mapping_rows)
+
+    h_group = h_long.filter(pl.col("group_id") == group_id).to_pandas()
+    h_merged = h_group.merge(mapping_df, on=["trial_id", "component_index"], how="inner")
+
+    rep_h = (
+        h_merged.groupby(["cluster_id", "frame_idx"], as_index=False)["h_value"]
+        .mean()
+    )
+    rep_h["group_id"] = group_id
+    return rep_h[["group_id", "cluster_id", "frame_idx", "h_value"]]
+
+
 def _cluster_member_counts(labels: np.ndarray, excluded_indices: set[int], n_clusters: int) -> pd.DataFrame:
     """Summarize cluster membership before and after duplicate-component exclusion."""
     rows = []
@@ -729,6 +760,9 @@ def main() -> None:
     rep_w = _read_csv(baseline_run / "all_representative_W_posthoc.csv").to_pandas()
     metadata = _read_csv(baseline_run / "all_clustering_metadata.csv")
 
+    rep_h_baseline = _read_csv(baseline_run / "all_representative_H_posthoc_long.csv")
+    nonstep_rep_h = rep_h_baseline.filter(pl.col("group_id") == NONSTEP_GROUP_ID).to_pandas()
+
     step_features = _load_trial_features(w_long, h_long, STEP_GROUP_ID, muscle_order)
     step_data, step_sample_map = _stack_weight_vectors_from_baseline_order(
         w_long,
@@ -836,6 +870,36 @@ def main() -> None:
         muscle_names=muscle_order,
         cfg=cfg,
         output_path=figure_dir / "cross_group_matched_w.png",
+    )
+    step_rep_h = _representative_h_long(
+        h_long, step_sample_map, step_labels, excluded_indices, STEP_GROUP_ID,
+    )
+    step_label_rows = []
+    for idx, (sample, cid) in enumerate(zip(step_sample_map, step_labels.tolist())):
+        if idx in excluded_indices:
+            continue
+        step_label_rows.append({
+            "group_id": STEP_GROUP_ID,
+            "trial_id": sample["trial_id"],
+            "component_index": sample["component_index"],
+            "cluster_id": int(cid),
+        })
+    nonstep_baseline_labels = baseline_labels.filter(
+        pl.col("group_id") == NONSTEP_GROUP_ID
+    ).select(["group_id", "trial_id", "component_index", "cluster_id"]).to_pandas()
+    combined_labels = pd.concat(
+        [pd.DataFrame(step_label_rows), nonstep_baseline_labels], ignore_index=True,
+    )
+    save_cross_group_matched_h(
+        rep_h_step=step_rep_h,
+        rep_h_nonstep=nonstep_rep_h,
+        minimal_h=h_long.select(
+            ["group_id", "trial_id", "component_index", "frame_idx", "h_value"]
+        ).to_pandas(),
+        labels=combined_labels,
+        decision_df=decision_df,
+        cfg=cfg,
+        output_path=figure_dir / "cross_group_matched_h.png",
     )
     save_cross_group_decision_summary(
         decision_df=decision_df,
