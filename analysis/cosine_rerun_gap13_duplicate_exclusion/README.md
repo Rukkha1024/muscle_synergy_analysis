@@ -24,6 +24,9 @@
 
 - `analyze_cosine_rerun_gap13_duplicate_exclusion.py`
   - baseline export를 읽고, step `K=13` 고정 rerun과 duplicate-component exclusion을 수행한다.
+- `analyze_spm1d_h_comparison.py`
+  - same_synergy 11쌍에 대해 step/nonstep H(activation) curve를 SPM 1D로 비교한다.
+  - 모수(Welch t) + 비모수(permutation) 검정, BH-FDR 다중비교 보정 포함.
 - `report.md`
   - 왜 이 분석을 했는지, 어떤 규칙으로 제외했는지, 결과가 baseline과 어떻게 달라졌는지 요약한다.
 - `artifacts/gap13_duplicate_component_exclusion_rerun/`
@@ -45,6 +48,14 @@ conda run --no-capture-output -n cuda python \
   --dry-run
 ```
 
+### SPM 1D H curve 비교
+
+```bash
+conda run --no-capture-output -n cuda python \
+  analysis/cosine_rerun_gap13_duplicate_exclusion/analyze_spm1d_h_comparison.py \
+  --overwrite
+```
+
 ## 주요 산출물
 
 - `summary.json`
@@ -59,6 +70,7 @@ conda run --no-capture-output -n cuda python \
 - `figures/cross_group_decision_summary.png`
 - `md5_compare_vs_default_run_figures.csv`
 - `checksums.md5`
+- `figures/spm1d_h_pair_same_synergy_*.png` × 11 — SPM 1D H curve 비교 figure
 
 ## 이번 실행에서 바로 확인할 수 있는 결과
 

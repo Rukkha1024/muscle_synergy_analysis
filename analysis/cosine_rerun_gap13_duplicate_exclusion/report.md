@@ -88,6 +88,32 @@ baseline `default_run`의 decision summary는 다음과 같았다.
 세 figure 모두 checksum이 달라서, rerun 결과가 baseline과 다른 이미지 바이트로 저장되었음을 확인했다.  
 다만 이 값은 폰트/렌더링 환경에도 영향을 받을 수 있으므로, 분석 변화의 직접 근거는 decision table의 cluster count 변화와 함께 해석해야 한다.
 
+### 5. SPM 1D H-curve comparison (step vs nonstep)
+
+W가 유사한 same_synergy 11쌍에서 H(activation timing)가 step/nonstep 간 어디서 다른지를 SPM 1D two-sample t-test로 검정했다.
+
+- **모수 검정**: `spm1d.stats.ttest2` (Welch, equal_var=False), α=0.05
+- **비모수 검정**: `spm1d.stats.nonparam.ttest2`, 10,000 permutations, α=0.05
+- **다중비교 보정**: 11쌍의 cluster-level p-value에 BH-FDR 보정 적용
+
+| match_id | step_cluster | nonstep_cluster | n_step | n_nonstep | p_param | p_corr_param | p_nonparam | p_corr_nonparam | sig |
+|----------|-------------|-----------------|--------|-----------|---------|-------------|------------|----------------|-----|
+| same_synergy_01 | 0 | 5 | 20 | 21 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | n.s. |
+| same_synergy_02 | 1 | 10 | 19 | 18 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | n.s. |
+| same_synergy_03 | 2 | 7 | 22 | 22 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | n.s. |
+| same_synergy_04 | 3 | 12 | 10 | 13 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | n.s. |
+| same_synergy_05 | 4 | 13 | 21 | 17 | 1.0000 | 1.0000 | 0.0415 | 0.2283 | n.s. |
+| same_synergy_06 | 5 | 2 | 28 | 21 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | n.s. |
+| same_synergy_07 | 6 | 4 | 12 | 18 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | n.s. |
+| same_synergy_08 | 7 | 9 | 13 | 15 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | n.s. |
+| same_synergy_09 | 9 | 8 | 22 | 36 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | n.s. |
+| same_synergy_10 | 11 | 11 | 12 | 23 | 0.0283 | 0.3115 | 0.0117 | 0.1287 | n.s. |
+| same_synergy_11 | 12 | 6 | 15 | 15 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | n.s. |
+
+BH-FDR 보정 후 11쌍 모두 유의하지 않았다. same_synergy_10 (step cluster 11 ↔ nonstep cluster 11)만 보정 전 비모수 p=0.0117로 경향성을 보였으나, FDR 보정 후 p=0.1287로 유의 수준 미달이었다.
+
+이는 W가 유사하게 매칭된 쌍에서 H(activation timing)도 step/nonstep 간에 통계적으로 구분되지 않음을 시사한다.
+
 ## Interpretation
 
 이 rerun은 “gap statistic이 제안한 구조 K=13”을 완전히 포기하지 않아도, duplicate component를 국소적으로 제거하는 방식으로 cross-group similarity를 다시 볼 수 있음을 보여준다.
@@ -99,10 +125,18 @@ baseline `default_run`의 decision summary는 다음과 같았다.
 
 이번 분석은 “step K를 16으로 올려야만 cross-group matching이 성립한다”기보다, **`K=13 + duplicate-component exclusion`만으로도 matching count 수준의 큰 틀은 유지된다**는 해석을 뒷받침한다.
 
+SPM 1D 분석에서는 W가 유사하게 매칭된 11쌍 모두에서 H curve의 step/nonstep 간 유의차가 없었다 (BH-FDR 보정 후 전체 n.s.). 이는 cross-group W matching으로 짝지은 시너지 쌍이 activation timing 측면에서도 그룹 간 차이가 없음을 추가적으로 확인해 준다.
+
 ## Reproduction
 
 ```bash
+# Cross-group cosine rerun
 conda run --no-capture-output -n cuda python \
   analysis/cosine_rerun_gap13_duplicate_exclusion/analyze_cosine_rerun_gap13_duplicate_exclusion.py \
+  --overwrite
+
+# SPM 1D H-curve comparison
+conda run --no-capture-output -n cuda python \
+  analysis/cosine_rerun_gap13_duplicate_exclusion/analyze_spm1d_h_comparison.py \
   --overwrite
 ```
