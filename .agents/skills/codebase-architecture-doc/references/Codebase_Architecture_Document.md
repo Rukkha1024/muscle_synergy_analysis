@@ -42,6 +42,9 @@ project_root/
 │
 ├── analysis/                   # Hypothesis testing and statistical analysis
 │   └── {topic}/
+│       ├── README.md           # why this folder exists + user goal
+│       ├── analyze_{topic}.py  # analysis entry point
+│       └── report.md           # analysis report
 │
 ├── outputs/                    # Final artifacts from code execution
 │   ├── figures/                # Visualization image files
@@ -166,8 +169,12 @@ with open("configs/emg_config.yaml") as f:
 analysis/
 ├── step_vs_nonstep/
 │   ├── analyze_step_vs_nonstep.py
+│   ├── README.md
+│   └── report.md
 └── age_group_comparison/
-    └── analyze_age_group_comparison.py
+    ├── analyze_age_group_comparison.py
+    ├── README.md
+    └── report.md
 ```
 
 An **independent analysis space** that loads `outputs/final.parquet` (or the final refined file) to test research hypotheses.
@@ -176,11 +183,13 @@ An **independent analysis space** that loads `outputs/final.parquet` (or the fin
 
 - **No Jupyter Notebooks.** All code is written as pure Python or R scripts only.
 - **References only the single final output file from the pipeline.** There are no dependencies on `src/` or `scripts/`.
+- **Every new analysis subfolder must include `README.md`.** The README explains why the folder was created, the user's goal, the expected inputs, and the intended outputs.
 - By **completely separating the contexts** of pipeline coding and statistical analysis coding, confusion during AI collaboration is prevented.
 
 **Folder naming:** `{topic}`
 
-- Timestamps and topic names enable tracking of the analysis history.
+- Use a descriptive topic name so the folder purpose is clear from the path itself.
+- Each `{topic}` folder should remain self-descriptive through its `README.md`, `analyze_{topic}.py`, and `report.md`.
 
 ### 3.6 `outputs/` — Final Artifacts
 
@@ -257,7 +266,7 @@ data/raw/  ──→  main.py (orchestrator; defined step order)
 | Improve synergy extraction logic | `src/synergy_stats/` + `configs/synergy_config.yaml` |
 | Write pipeline scripts | Target `scripts/` file + relevant `src/{domain}/` |
 | Orchestrate the end-to-end pipeline | `main.py` + the target `scripts/` steps (+ relevant `src/{domain}/` + `configs/*.yaml`) |
-| Write statistical analysis code | `analysis/{target folder}/` + `outputs/final.parquet` schema info |
+| Write statistical analysis code | `analysis/{target folder}/` + `analysis/{target folder}/README.md` + `outputs/final.parquet` schema info |
 | Write test code | `tests/test_{domain}/` + corresponding `src/{domain}/` |
 
 ### 5.2 Rules to Follow

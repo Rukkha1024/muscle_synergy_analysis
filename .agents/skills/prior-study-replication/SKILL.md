@@ -19,7 +19,7 @@ description: "Companion to analysis-report. Provides report.md structure for ana
 
 ## Relationship to Other Skills
 
-- **Always use together with `analysis-report`** — that skill handles folder structure, code rules, environment notes, color conventions, script boilerplate
+- **Always use together with `analysis-report`** — that skill handles folder structure, code rules, environment notes, color conventions, script boilerplate, and the required `README.md` that explains why the analysis subfolder exists plus the user's goal
 - This skill **only** defines the `report.md` structure
 - Use `analysis-report/templates/script_boilerplate.py` for the Python script
 - Use **this skill's** `templates/report_template.md` for the report
@@ -74,6 +74,7 @@ description: "Companion to analysis-report. Provides report.md structure for ana
 
 ## Validation
 
+- `README.md` exists per `analysis-report` and explains why the subfolder exists and the user's goal
 - report.md contains all 11 mandatory sections in order
 - Prior Studies: ≥1 study with all four items (methodology, design, results, conclusions) with specific numbers
 - Methodological Adaptation: comparison table present; all deviation rows have rationale
@@ -83,6 +84,7 @@ description: "Companion to analysis-report. Provides report.md structure for ana
 
 ## Completion Checklist
 
+- [ ] `README.md` follows the `analysis-report` folder rule and documents the subfolder purpose plus the user's goal
 - [ ] `report.md` follows this skill's template (not `analysis-report` template)
 - [ ] Prior Studies section has concrete numbers from each referenced paper
 - [ ] Methodological Adaptation table explains all deviations

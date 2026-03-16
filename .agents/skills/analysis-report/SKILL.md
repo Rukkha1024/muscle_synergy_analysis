@@ -18,11 +18,13 @@ description: "Create self-contained analysis workflows under analysis/. Each fol
 
 ```
 analysis/<topic>/
+  README.md               # why this folder exists + user goal
   analyze_<topic>.py      # single entry point
   report.md               # research report
 ```
 
 - Folder name: `snake_case`, descriptive of the analysis topic
+- README: `README.md` (always present; explain why the subfolder was created and the user's goal)
 - Script: `analyze_<topic>.py` (single entry point)
 - Report: `report.md` (always present)
 
@@ -76,6 +78,7 @@ analysis/<topic>/
 
 1. **Define research question** — Confirm core question, hypotheses, and required data with the user
 2. **Create folder** — Create `analysis/<topic>/` directory
+   - Add `README.md` first and state why this subfolder exists, the user's goal, the expected inputs, and the intended outputs
 3. **Write script** — Copy `templates/script_boilerplate.py` → `analyze_<topic>.py`, then customize
    - Data loading → preprocessing → statistics → stdout output
 4. **Dry-run verify** — `conda run --no-capture-output -n module python analysis/<topic>/analyze_<topic>.py --dry-run`
@@ -89,6 +92,7 @@ analysis/<topic>/
 
 - `analyze_<topic>.py --dry-run` succeeds (data loading OK)
 - `analyze_<topic>.py` full run completes without errors
+- `README.md` exists and explains why the subfolder exists and what the user wants to achieve
 - `report.md` exists with required sections: Research Question, Data Summary, **Analysis Methodology**, Results, Interpretation, Reproduction
 - Key statistics printed to stdout match report.md content
 - No Excel/CSV files generated
@@ -100,6 +104,7 @@ analysis/<topic>/
 ## Completion Checklist
 
 - [ ] `analysis/<topic>/` folder exists
+- [ ] `README.md` exists and captures the subfolder purpose plus the user's goal
 - [ ] `analyze_<topic>.py --dry-run` succeeds
 - [ ] `analyze_<topic>.py` full run completes without errors
 - [ ] `report.md` complete (all required sections present, including Analysis Methodology)
