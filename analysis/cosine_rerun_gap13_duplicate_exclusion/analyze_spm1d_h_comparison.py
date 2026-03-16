@@ -310,18 +310,19 @@ def save_significance_map_figure(
     from matplotlib.patches import Patch
 
     n = len(results)
-    row_h = 0.5
+    row_h = 0.7
     fig_h = n * row_h + 2.0
     fig, ax = plt.subplots(figsize=(12, fig_h))
 
     y_labels = []
     for i, r in enumerate(results):
         y = n - 1 - i
-        label = (
-            f"{r['match_id']}  "
+        title = r["match_id"]
+        content = (
             f"(step c{r['step_cluster']} n={r['step_h'].shape[0]} ↔ "
             f"nonstep c{r['nonstep_cluster']} n={r['nonstep_h'].shape[0]})"
         )
+        label = f"{title}\n{content}"
         y_labels.append(label)
 
         # Background bar
@@ -356,7 +357,7 @@ def save_significance_map_figure(
         ax.text(N_FRAMES + 1, y, sig_txt, va="center", fontsize=8, color=color)
 
     ax.set_yticks(range(n))
-    ax.set_yticklabels(reversed(y_labels), fontsize=8)
+    ax.set_yticklabels(reversed(y_labels), fontsize=8, linespacing=1.4)
     ax.set_xlim(0, N_FRAMES)
     ax.set_xlabel("Normalized time (%)", fontsize=10)
     ax.set_title(
