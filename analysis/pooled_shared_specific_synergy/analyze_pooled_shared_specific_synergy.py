@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import polars as pl
 
 
@@ -706,6 +707,9 @@ def generate_figures(outdir: Path, artifacts: dict[str, Any], cfg: dict[str, Any
     figure_dir = outdir / "figures"
     figure_dir.mkdir(parents=True, exist_ok=True)
     rep_w_pdf = artifacts["rep_w"].to_pandas()
+    muscle_order = cfg["muscles"]["names"]
+    rep_w_pdf["muscle"] = pd.Categorical(rep_w_pdf["muscle"], categories=muscle_order, ordered=True)
+    rep_w_pdf = rep_w_pdf.sort_values(["cluster_id", "strategy_view", "muscle"])
     rep_h_pdf = artifacts["rep_h"].to_pandas()
     summary_pdf = artifacts["summary"].to_pandas().sort_values("cluster_id")
     cluster_ids = summary_pdf["cluster_id"].astype(int).tolist()
