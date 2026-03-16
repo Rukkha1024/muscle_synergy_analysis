@@ -227,6 +227,207 @@ def save_trial_nmf_figure(
     )
 
 
+def save_cross_group_heatmap(
+    pairwise_df: pd.DataFrame,
+    threshold: float,
+    cfg: dict,
+    output_path: Path,
+) -> None:
+    """Render a step×nonstep cosine similarity heatmap with assignment highlights."""
+    from matplotlib.patches import Rectangle
+
+    plt = _pyplot()
+    _configure_fonts()
+
+    step_ids = sorted(pairwise_df["step_cluster_id"].unique())
+    nonstep_ids = sorted(pairwise_df["nonstep_cluster_id"].unique())
+    n_step = len(step_ids)
+    n_nonstep = len(nonstep_ids)
+
+    matrix = (
+        pairwise_df.pivot(index="step_cluster_id", columns="nonstep_cluster_id", values="cosine_similarity")
+        .reindex(index=step_ids, columns=nonstep_ids)
+    )
+
+    fig, ax = plt.subplots(figsize=(max(6, 1.2 * n_nonstep), max(4, 1.0 * n_step)))
+    im = ax.imshow(matrix.to_numpy(dtype=float), vmin=0.0, vmax=1.0, cmap="Blues", aspect="auto")
+
+    ax.set_xticks(range(n_nonstep))
+    ax.set_xticklabels([str(c) for c in nonstep_ids])
+    ax.set_yticks(range(n_step))
+    ax.set_yticklabels([str(c) for c in step_ids])
+    ax.set_xlabel("nonstep cluster id")
+    ax.set_ylabel("step cluster id")
+    ax.set_title(f"Cross-group W cosine similarity (step × nonstep)\nthreshold={threshold}")
+
+    for row_idx, step_id in enumerate(step_ids):
+        for col_idx, nonstep_id in enumerate(nonstep_ids):
+            val = float(matrix.iat[row_idx, col_idx])
+            cell_row = pairwise_df[
+                (pairwise_df["step_cluster_id"] == step_id)
+                & (pairwise_df["nonstep_cluster_id"] == nonstep_id)
+            ]
+            is_assigned = bool(cell_row["selected_in_assignment"].iloc[0]) if not cell_row.empty and "selected_in_assignment" in cell_row.columns else False
+            passes = bool(cell_row["passes_threshold"].iloc[0]) if not cell_row.empty and "passes_threshold" in cell_row.columns else False
+
+            label = f"{val:.2f}"
+            if is_assigned and passes:
+                label += "\n★"
+            text_color = "white" if val > 0.6 else "black"
+            ax.text(col_idx, row_idx, label, ha="center", va="center", fontsize=9, color=text_color)
+
+            if is_assigned:
+                rect = Rectangle(
+                    (col_idx - 0.5, row_idx - 0.5), 1, 1,
+                    linewidth=2.5, edgecolor="black", facecolor="none",
+                )
+                ax.add_patch(rect)
+
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_normalized_figure_format(cfg), bbox_inches="tight")
+    plt.close(fig)
+
+
+def save_cross_group_matched_w(
+    step_df: pd.DataFrame,
+    nonstep_df: pd.DataFrame,
+    decision_df: pd.DataFrame,
+    muscle_names: list[str],
+    cfg: dict,
+    output_path: Path,
+) -> None:
+    """Render matched W bar charts for same_synergy pairs and group_specific clusters."""
+    import numpy as np
+
+    plt = _pyplot()
+    _configure_fonts()
+
+    step_color = "#5C7CFA"
+    nonstep_color = "#E64980"
+
+    matched = decision_df[decision_df["final_label"] == "same_synergy"].copy()
+    match_ids = sorted(matched["match_id"].dropna().unique())
+
+    group_specific = decision_df[decision_df["final_label"] == "group_specific_synergy"].copy()
+
+    panels: list[dict] = []
+    for mid in match_ids:
+        rows = matched[matched["match_id"] == mid]
+        step_row = rows[rows["group_id"] == "global_step"]
+        nonstep_row = rows[rows["group_id"] == "global_nonstep"]
+        if step_row.empty or nonstep_row.empty:
+            continue
+        s_cid = int(step_row["cluster_id"].iloc[0])
+        n_cid = int(nonstep_row["cluster_id"].iloc[0])
+        cos_val = float(step_row["assigned_cosine_similarity"].iloc[0])
+        panels.append({
+            "title": f"{mid} (cos={cos_val:.2f})",
+            "type": "matched",
+            "step_cluster_id": s_cid,
+            "nonstep_cluster_id": n_cid,
+        })
+
+    for _, row in group_specific.iterrows():
+        gid = row["group_id"]
+        cid = int(row["cluster_id"])
+        group_label = "step" if gid == "global_step" else "nonstep"
+        panels.append({
+            "title": f"group_specific: {group_label} cluster {cid}",
+            "type": "group_specific",
+            "group_id": gid,
+            "cluster_id": cid,
+        })
+
+    if not panels:
+        return
+
+    n_panels = len(panels)
+    fig, axes = plt.subplots(n_panels, 1, figsize=(10, 3.0 * n_panels), squeeze=False)
+
+    def _get_w_vector(df: pd.DataFrame, cluster_id: int, muscles: list[str]) -> list[float]:
+        vec_cols = [c for c in df.columns if c not in ("group_id", "cluster_id")]
+        row = df[df["cluster_id"] == cluster_id]
+        if row.empty:
+            return [0.0] * len(muscles)
+        return [float(row[m].iloc[0]) if m in row.columns else 0.0 for m in muscles]
+
+    x = np.arange(len(muscle_names))
+    bar_width = 0.35
+
+    for idx, panel in enumerate(panels):
+        ax = axes[idx, 0]
+        if panel["type"] == "matched":
+            step_vals = _get_w_vector(step_df, panel["step_cluster_id"], muscle_names)
+            nonstep_vals = _get_w_vector(nonstep_df, panel["nonstep_cluster_id"], muscle_names)
+            ax.bar(x - bar_width / 2, step_vals, bar_width, color=step_color, label="step")
+            ax.bar(x + bar_width / 2, nonstep_vals, bar_width, color=nonstep_color, label="nonstep")
+            ax.legend(fontsize=8)
+        else:
+            gid = panel["group_id"]
+            cid = panel["cluster_id"]
+            source_df = step_df if gid == "global_step" else nonstep_df
+            color = step_color if gid == "global_step" else nonstep_color
+            vals = _get_w_vector(source_df, cid, muscle_names)
+            ax.bar(x, vals, bar_width * 2, color=color)
+        ax.set_xticks(x)
+        ax.set_xticklabels(muscle_names, rotation=45, ha="right")
+        ax.set_ylabel("W weight (L2-norm)")
+        ax.set_title(panel["title"], fontsize=11)
+
+    fig.suptitle("Cross-group matched W profiles", fontsize=13, fontweight="bold")
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_normalized_figure_format(cfg), bbox_inches="tight")
+    plt.close(fig)
+
+
+def save_cross_group_decision_summary(
+    decision_df: pd.DataFrame,
+    threshold: float,
+    cfg: dict,
+    output_path: Path,
+) -> None:
+    """Render a horizontal stacked bar chart summarizing cluster decisions."""
+    plt = _pyplot()
+    _configure_fonts()
+
+    same_color = "#2F9E44"
+    specific_color = "#868E96"
+
+    groups = ["step", "nonstep"]
+    same_counts = []
+    specific_counts = []
+    for g in groups:
+        gid = f"global_{g}"
+        subset = decision_df[decision_df["group_id"] == gid]
+        same_counts.append(int((subset["final_label"] == "same_synergy").sum()))
+        specific_counts.append(int((subset["final_label"] == "group_specific_synergy").sum()))
+
+    fig, ax = plt.subplots(figsize=(8, 3))
+    y_pos = range(len(groups))
+    ax.barh(y_pos, same_counts, color=same_color, label="same_synergy")
+    ax.barh(y_pos, specific_counts, left=same_counts, color=specific_color, label="group_specific_synergy")
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(groups)
+    ax.set_xlabel("Number of clusters")
+    ax.set_title(f"Cross-group cluster decision summary (threshold={threshold})")
+    ax.legend(loc="lower right", fontsize=9)
+
+    for i, (s, g) in enumerate(zip(same_counts, specific_counts)):
+        total = s + g
+        if s > 0:
+            ax.text(s / 2, i, str(s), ha="center", va="center", fontsize=10, fontweight="bold", color="white")
+        if g > 0:
+            ax.text(s + g / 2, i, str(g), ha="center", va="center", fontsize=10, fontweight="bold", color="white")
+
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_normalized_figure_format(cfg), bbox_inches="tight")
+    plt.close(fig)
+
+
 def save_subject_cluster_figure(
     subject_id: str,
     rep_w: pd.DataFrame,

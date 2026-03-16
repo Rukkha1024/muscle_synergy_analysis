@@ -28,7 +28,14 @@ from .excel_results import (
     validate_results_interpretation_workbook,
     write_results_interpretation_workbook,
 )
-from .figures import figure_suffix, save_group_cluster_figure, save_trial_nmf_figure
+from .figures import (
+    figure_suffix,
+    save_cross_group_decision_summary,
+    save_cross_group_heatmap,
+    save_cross_group_matched_w,
+    save_group_cluster_figure,
+    save_trial_nmf_figure,
+)
 
 
 def summarize_group_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -55,6 +62,7 @@ def _cross_group_similarity_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
         "output_pairwise_csv": bool(raw_cfg.get("output_pairwise_csv", True)),
         "output_cluster_decision_csv": bool(raw_cfg.get("output_cluster_decision_csv", True)),
         "output_excel_sheets": bool(raw_cfg.get("output_excel_sheets", True)),
+        "output_figures": bool(raw_cfg.get("output_figures", True)),
     }
 
 
@@ -252,6 +260,35 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
             decision_path = output_dir / "cross_group_w_cluster_decision.csv"
             _write_csv(decision_df, decision_path)
             context["artifacts"]["cross_group_cluster_decision_path"] = str(decision_path)
+        if cross_group_cfg["output_figures"]:
+            cross_group_figure_paths: list[str] = []
+            heatmap_path = figure_dir / f"cross_group_cosine_heatmap{figure_ext}"
+            save_cross_group_heatmap(
+                pairwise_df=pairwise_output_df,
+                threshold=cross_group_cfg["threshold"],
+                cfg=cfg,
+                output_path=heatmap_path,
+            )
+            cross_group_figure_paths.append(str(heatmap_path))
+            matched_w_path = figure_dir / f"cross_group_matched_w{figure_ext}"
+            save_cross_group_matched_w(
+                step_df=step_df,
+                nonstep_df=nonstep_df,
+                decision_df=decision_df,
+                muscle_names=muscle_names,
+                cfg=cfg,
+                output_path=matched_w_path,
+            )
+            cross_group_figure_paths.append(str(matched_w_path))
+            decision_summary_path = figure_dir / f"cross_group_decision_summary{figure_ext}"
+            save_cross_group_decision_summary(
+                decision_df=decision_df,
+                threshold=cross_group_cfg["threshold"],
+                cfg=cfg,
+                output_path=decision_summary_path,
+            )
+            cross_group_figure_paths.append(str(decision_summary_path))
+            context["artifacts"]["cross_group_figure_paths"] = cross_group_figure_paths
 
     workbook_path = write_clustering_audit_workbook(
         output_dir / "clustering_audit.xlsx",

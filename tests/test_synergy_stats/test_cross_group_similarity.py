@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
 
 import pandas as pd
 
@@ -12,6 +13,11 @@ from src.synergy_stats.cross_group_similarity import (
     build_cluster_w_matrix,
     compute_pairwise_cosine,
     solve_assignment,
+)
+from src.synergy_stats.figures import (
+    save_cross_group_decision_summary,
+    save_cross_group_heatmap,
+    save_cross_group_matched_w,
 )
 
 
@@ -98,3 +104,69 @@ def test_cross_group_similarity_preserves_best_partner_for_unmatched_rectangular
     assert pd.isna(unmatched_row["assigned_cosine_similarity"])
     assert unmatched_row["best_partner_cluster_id"] == 0
     assert math.isclose(float(unmatched_row["best_partner_cosine_similarity"]), 0.8, rel_tol=1e-9)
+
+
+_FIGURE_CFG = {"figures": {"format": "png", "dpi": 72}}
+
+
+def _build_figure_data(
+    step_vectors: list[tuple[float, float]],
+    nonstep_vectors: list[tuple[float, float]],
+    threshold: float,
+):
+    rep_w = _representative_w_rows(step_vectors, nonstep_vectors)
+    step_df, nonstep_df = build_cluster_w_matrix(rep_w, ["M1", "M2"])
+    pairwise_df = compute_pairwise_cosine(step_df, nonstep_df)
+    assigned_df = solve_assignment(pairwise_df)
+    annotated_pairwise_df = annotate_pairwise_assignment(pairwise_df, assigned_df, threshold)
+    decision_df = build_cluster_decision(step_df, nonstep_df, pairwise_df, assigned_df, threshold)
+    return step_df, nonstep_df, annotated_pairwise_df, decision_df
+
+
+def test_save_cross_group_heatmap_creates_file(tmp_path: Path) -> None:
+    _, _, pairwise_df, _ = _build_figure_data(
+        step_vectors=[(1.0, 0.0), (0.0, 1.0)],
+        nonstep_vectors=[(0.95, 0.05), (0.05, 0.95)],
+        threshold=0.8,
+    )
+    out = tmp_path / "heatmap.png"
+    save_cross_group_heatmap(pairwise_df, 0.8, _FIGURE_CFG, out)
+    assert out.exists()
+    assert out.stat().st_size > 0
+
+
+def test_save_cross_group_matched_w_creates_file(tmp_path: Path) -> None:
+    step_df, nonstep_df, _, decision_df = _build_figure_data(
+        step_vectors=[(1.0, 0.0), (0.0, 1.0)],
+        nonstep_vectors=[(0.95, 0.05), (0.05, 0.95)],
+        threshold=0.8,
+    )
+    out = tmp_path / "matched_w.png"
+    save_cross_group_matched_w(step_df, nonstep_df, decision_df, ["M1", "M2"], _FIGURE_CFG, out)
+    assert out.exists()
+    assert out.stat().st_size > 0
+
+
+def test_save_cross_group_decision_summary_creates_file(tmp_path: Path) -> None:
+    _, _, _, decision_df = _build_figure_data(
+        step_vectors=[(1.0, 0.0), (0.0, 1.0), (0.8, 0.6)],
+        nonstep_vectors=[(1.0, 0.0), (0.0, 1.0)],
+        threshold=0.8,
+    )
+    out = tmp_path / "decision.png"
+    save_cross_group_decision_summary(decision_df, 0.8, _FIGURE_CFG, out)
+    assert out.exists()
+    assert out.stat().st_size > 0
+
+
+def test_save_cross_group_matched_w_handles_mixed_decisions(tmp_path: Path) -> None:
+    """Matched W figure should handle both same_synergy and group_specific clusters."""
+    step_df, nonstep_df, _, decision_df = _build_figure_data(
+        step_vectors=[(1.0, 0.0), (0.0, 1.0), (0.8, 0.6)],
+        nonstep_vectors=[(1.0, 0.0), (0.0, 1.0)],
+        threshold=0.8,
+    )
+    out = tmp_path / "matched_mixed.png"
+    save_cross_group_matched_w(step_df, nonstep_df, decision_df, ["M1", "M2"], _FIGURE_CFG, out)
+    assert out.exists()
+    assert out.stat().st_size > 0

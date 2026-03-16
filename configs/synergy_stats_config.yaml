@@ -45,6 +45,7 @@ cross_group_w_similarity:
   output_pairwise_csv: true
   output_cluster_decision_csv: true
   output_excel_sheets: true
+  output_figures: true
 
 figures:
   format: "png"
