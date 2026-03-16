@@ -9,7 +9,9 @@ matching (gap13 duplicate-exclusion rerun), this script:
    permutation) to identify time regions where step/nonstep activations
    significantly differ.
 3. Applies BH-FDR correction across the 11 pairs.
-4. Generates one figure per pair showing mean±SD overlays and SPM{t} curves.
+4. Generates two summary figures:
+   - Grid overview (4×3): H mean±SD overlay + SPM{t} per pair
+   - Significance map: horizontal bars colored only at significant time regions
 """
 
 from __future__ import annotations
@@ -208,77 +210,170 @@ def extract_cluster_pvalue(ti) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Figure
+# Figures
 # ---------------------------------------------------------------------------
-def save_pair_figure(
-    match_id: str,
-    step_h: np.ndarray,
-    nonstep_h: np.ndarray,
-    ti_param,
-    ti_nonparam,
-    step_cluster: int,
-    nonstep_cluster: int,
-    fdr_sig_param: bool,
-    fdr_sig_nonparam: bool,
+def save_summary_grid_figure(
+    results: list[dict],
+    reject_nonparam: np.ndarray,
+    pcorr_nonparam: np.ndarray,
     outdir: Path,
 ) -> Path:
-    """Create 2×2 figure for one matched pair and save to disk."""
-    fig, axes = plt.subplots(2, 2, figsize=(14, 8))
+    """4×3 grid: each subplot shows H mean±SD overlay + SPM{t} twin-axis."""
+    from matplotlib.patches import Patch
+
+    n = len(results)
+    fig, axes = plt.subplots(4, 3, figsize=(16, 14))
+    axes_flat = axes.flatten()
     x = np.arange(N_FRAMES)
 
-    for row, (ti, label, fdr_sig) in enumerate(
-        [
-            (ti_param, "Parametric (Welch)", fdr_sig_param),
-            (ti_nonparam, "Nonparametric (perm)", fdr_sig_nonparam),
-        ]
-    ):
-        ax_mean = axes[row, 0]
-        ax_spm = axes[row, 1]
+    for i, r in enumerate(results):
+        ax = axes_flat[i]
+        ti = r["ti_nonparam"]
+        sh, nh = r["step_h"], r["nonstep_h"]
 
-        # Left: mean ± SD overlay
-        for mat, color, grp in [
-            (step_h, STEP_COLOR, f"step (n={step_h.shape[0]})"),
-            (nonstep_h, NONSTEP_COLOR, f"nonstep (n={nonstep_h.shape[0]})"),
+        # H mean ± SD
+        for mat, color, lbl in [
+            (sh, STEP_COLOR, "step" if i == 0 else None),
+            (nh, NONSTEP_COLOR, "nonstep" if i == 0 else None),
         ]:
             m = mat.mean(axis=0)
             s = mat.std(axis=0, ddof=1)
-            ax_mean.plot(x, m, color=color, label=grp, linewidth=1.5)
-            ax_mean.fill_between(x, m - s, m + s, color=color, alpha=0.2)
-        ax_mean.set_ylabel("H (activation)")
-        ax_mean.set_xlabel("Normalized time (%)")
-        ax_mean.legend(fontsize=8)
-        ax_mean.set_title(f"{label} — Mean ± SD")
+            ax.plot(x, m, color=color, linewidth=1.2, label=lbl)
+            ax.fill_between(x, m - s, m + s, color=color, alpha=0.15)
 
-        # Right: SPM{t} curve + threshold + shading
-        t_stat = ti.z if hasattr(ti, "z") else ti.z
-        ax_spm.plot(x, t_stat, color="black", linewidth=1.2)
-        thr = ti.zstar
-        ax_spm.axhline(thr, color="red", linestyle="--", linewidth=0.8, label=f"threshold={thr:.2f}")
-        ax_spm.axhline(-thr, color="red", linestyle="--", linewidth=0.8)
+        # SPM{t} on twin axis
+        ax2 = ax.twinx()
+        ax2.plot(x, ti.z, color="#888888", linewidth=0.8, alpha=0.7)
+        ax2.axhline(ti.zstar, color="red", linestyle="--", linewidth=0.6, alpha=0.5)
+        ax2.axhline(-ti.zstar, color="red", linestyle="--", linewidth=0.6, alpha=0.5)
+        for cl in (ti.clusters if hasattr(ti, "clusters") else []):
+            s_idx = int(np.floor(cl.endpoints[0]))
+            e_idx = min(int(np.ceil(cl.endpoints[1])), N_FRAMES - 1)
+            ax2.axvspan(s_idx, e_idx, color="gold", alpha=0.4, zorder=0)
+        ax2.set_ylabel("SPM{t}", fontsize=7, color="#888888")
+        ax2.tick_params(axis="y", labelsize=6, colors="#888888")
 
-        clusters = ti.clusters if hasattr(ti, "clusters") else []
-        for cl in clusters:
-            idx_start = int(np.floor(cl.endpoints[0]))
-            idx_end = int(np.ceil(cl.endpoints[1]))
-            idx_end = min(idx_end, N_FRAMES - 1)
-            ax_spm.axvspan(idx_start, idx_end, color="gold", alpha=0.35)
+        # Title
+        p_raw = r["p_nonparam"]
+        p_corr = pcorr_nonparam[i]
+        sig = reject_nonparam[i]
+        sig_mark = " ***" if sig else ""
+        title = (
+            f"{r['match_id']}\n"
+            f"step c{r['step_cluster']}(n={sh.shape[0]}) ↔ "
+            f"nonstep c{r['nonstep_cluster']}(n={nh.shape[0]})\n"
+            f"p={p_raw:.4f} → FDR={p_corr:.4f}{sig_mark}"
+        )
+        ax.set_title(
+            title, fontsize=8,
+            fontweight="bold" if sig else "normal",
+            color="red" if sig else "black",
+        )
+        if sig:
+            for spine in ax.spines.values():
+                spine.set_edgecolor("red")
+                spine.set_linewidth(2)
 
-        ax_spm.set_ylabel("SPM{t}")
-        ax_spm.set_xlabel("Normalized time (%)")
-        ax_spm.legend(fontsize=8, loc="upper right")
+        ax.tick_params(axis="both", labelsize=6)
+        ax.set_xlim(0, 99)
+        if i >= 9:
+            ax.set_xlabel("Normalized time (%)", fontsize=7)
 
-        sig_label = "Sig (BH-FDR)" if fdr_sig else "n.s. (BH-FDR)"
-        ax_spm.set_title(f"{label} — SPM{{t}}  [{sig_label}]")
+    # Hide unused subplots
+    for j in range(n, len(axes_flat)):
+        axes_flat[j].set_visible(False)
 
+    axes_flat[0].legend(fontsize=7, loc="upper left")
     fig.suptitle(
-        f"{match_id}   |   step cluster {step_cluster} ↔ nonstep cluster {nonstep_cluster}",
-        fontsize=12,
-        fontweight="bold",
+        "SPM 1D H-curve comparison summary\n"
+        "(nonparametric permutation, BH-FDR corrected)",
+        fontsize=13, fontweight="bold",
     )
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.tight_layout(rect=[0, 0, 1, 0.94])
 
     outdir.mkdir(parents=True, exist_ok=True)
-    out_path = outdir / f"spm1d_h_pair_{match_id}.png"
+    out_path = outdir / "spm1d_h_summary.png"
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return out_path
+
+
+def save_significance_map_figure(
+    results: list[dict],
+    reject_param: np.ndarray,
+    pcorr_param: np.ndarray,
+    reject_nonparam: np.ndarray,
+    pcorr_nonparam: np.ndarray,
+    outdir: Path,
+) -> Path:
+    """Horizontal-bar significance map: colored only where significant."""
+    from matplotlib.patches import Patch
+
+    n = len(results)
+    row_h = 0.5
+    fig_h = n * row_h + 2.0
+    fig, ax = plt.subplots(figsize=(12, fig_h))
+
+    y_labels = []
+    for i, r in enumerate(results):
+        y = n - 1 - i
+        label = (
+            f"{r['match_id']}  "
+            f"(step c{r['step_cluster']} n={r['step_h'].shape[0]} ↔ "
+            f"nonstep c{r['nonstep_cluster']} n={r['nonstep_h'].shape[0]})"
+        )
+        y_labels.append(label)
+
+        # Background bar
+        ax.barh(y, N_FRAMES, left=0, height=0.7,
+                color="#F0F0F0", edgecolor="#CCCCCC", linewidth=0.5)
+
+        # Parametric sig clusters (upper half)
+        ti_p = r["ti_param"]
+        if ti_p is not None:
+            for cl in (ti_p.clusters if hasattr(ti_p, "clusters") else []):
+                s, e = cl.endpoints
+                ax.barh(y + 0.17, e - s, left=s, height=0.3,
+                        color=STEP_COLOR, alpha=0.8, linewidth=0)
+
+        # Nonparametric sig clusters (lower half)
+        ti_np = r["ti_nonparam"]
+        if ti_np is not None:
+            for cl in (ti_np.clusters if hasattr(ti_np, "clusters") else []):
+                s, e = cl.endpoints
+                ax.barh(y - 0.17, e - s, left=s, height=0.3,
+                        color=NONSTEP_COLOR, alpha=0.8, linewidth=0)
+
+        # p-value annotation on right
+        p_raw = r["p_nonparam"]
+        p_corr = pcorr_nonparam[i]
+        if p_raw < 1.0:
+            sig_txt = f"p={p_raw:.4f} (FDR={p_corr:.3f})"
+            color = "red" if reject_nonparam[i] else "#666666"
+        else:
+            sig_txt = "n.s."
+            color = "#BBBBBB"
+        ax.text(N_FRAMES + 1, y, sig_txt, va="center", fontsize=8, color=color)
+
+    ax.set_yticks(range(n))
+    ax.set_yticklabels(reversed(y_labels), fontsize=8)
+    ax.set_xlim(0, N_FRAMES)
+    ax.set_xlabel("Normalized time (%)", fontsize=10)
+    ax.set_title(
+        "SPM 1D significance map: step vs nonstep H-curve\n"
+        "(blue=parametric, pink=nonparametric, α=0.05 uncorrected)",
+        fontsize=11, fontweight="bold",
+    )
+    legend_elements = [
+        Patch(facecolor=STEP_COLOR, alpha=0.8, label="Parametric (Welch) sig region"),
+        Patch(facecolor=NONSTEP_COLOR, alpha=0.8, label="Nonparametric (perm) sig region"),
+        Patch(facecolor="#F0F0F0", edgecolor="#CCCCCC", label="No significance"),
+    ]
+    ax.legend(handles=legend_elements, loc="lower right", fontsize=8)
+    fig.tight_layout()
+
+    outdir.mkdir(parents=True, exist_ok=True)
+    out_path = outdir / "spm1d_h_significance_map.png"
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return out_path
@@ -383,10 +478,6 @@ def main() -> None:
     p_param_arr = np.array([r["p_param"] for r in results])
     p_nonparam_arr = np.array([r["p_nonparam"] for r in results])
 
-    _, fdr_param, _, _ = multipletests(p_param_arr, alpha=ALPHA, method="fdr_bh")
-    _, fdr_nonparam, _, _ = multipletests(p_nonparam_arr, alpha=ALPHA, method="fdr_bh")
-
-    # multipletests returns (reject, pvals_corrected, ...) — fdr_* here is corrected p
     reject_param, pcorr_param, _, _ = multipletests(p_param_arr, alpha=ALPHA, method="fdr_bh")
     reject_nonparam, pcorr_nonparam, _, _ = multipletests(p_nonparam_arr, alpha=ALPHA, method="fdr_bh")
 
@@ -402,26 +493,17 @@ def main() -> None:
             f"{r['p_nonparam']:>8.4f} {pcorr_nonparam[i]:>9.4f} {sig_np:>6}"
         )
 
-    # Generate figures
+    # Generate summary figures
     fig_dir = args.artifact_dir / "figures"
     print(f"\n--- Generating figures → {fig_dir} ---")
-    for i, r in enumerate(results):
-        if r["ti_param"] is None:
-            print(f"  {r['match_id']}: skipped (insufficient data)")
-            continue
-        out = save_pair_figure(
-            match_id=r["match_id"],
-            step_h=r["step_h"],
-            nonstep_h=r["nonstep_h"],
-            ti_param=r["ti_param"],
-            ti_nonparam=r["ti_nonparam"],
-            step_cluster=r["step_cluster"],
-            nonstep_cluster=r["nonstep_cluster"],
-            fdr_sig_param=reject_param[i],
-            fdr_sig_nonparam=reject_nonparam[i],
-            outdir=fig_dir,
-        )
-        print(f"  {r['match_id']}: {out.name}")
+
+    out1 = save_summary_grid_figure(results, reject_nonparam, pcorr_nonparam, fig_dir)
+    print(f"  {out1.name}")
+
+    out2 = save_significance_map_figure(
+        results, reject_param, pcorr_param, reject_nonparam, pcorr_nonparam, fig_dir,
+    )
+    print(f"  {out2.name}")
 
     print("\nDone.")
 

@@ -70,7 +70,8 @@ conda run --no-capture-output -n cuda python \
 - `figures/cross_group_decision_summary.png`
 - `md5_compare_vs_default_run_figures.csv`
 - `checksums.md5`
-- `figures/spm1d_h_pair_same_synergy_*.png` × 11 — SPM 1D H curve 비교 figure
+- `figures/spm1d_h_summary.png` — SPM 1D H curve 비교 grid overview (4×3)
+- `figures/spm1d_h_significance_map.png` — SPM 1D 유의 구간 map
 
 ## 이번 실행에서 바로 확인할 수 있는 결과
 
