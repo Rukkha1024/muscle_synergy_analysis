@@ -14,6 +14,15 @@ from typing import Any
 import pandas as pd
 
 from .clustering import build_group_exports
+from .cross_group_similarity import (
+    annotate_pairwise_assignment,
+    build_cluster_decision,
+    build_cluster_w_matrix,
+    build_cross_group_summary,
+    build_pairwise_matrix,
+    compute_pairwise_cosine,
+    solve_assignment,
+)
 from .excel_audit import validate_clustering_audit_workbook, write_clustering_audit_workbook
 from .excel_results import (
     validate_results_interpretation_workbook,
@@ -33,6 +42,20 @@ def summarize_subject_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
 
 def _write_csv(frame: pd.DataFrame, path: Path) -> None:
     frame.to_csv(path, index=False, encoding="utf-8-sig", float_format="%.10f")
+
+
+def _cross_group_similarity_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
+    raw_cfg = cfg.get("cross_group_w_similarity", {})
+    return {
+        "enabled": bool(raw_cfg.get("enabled", True)),
+        "metric": str(raw_cfg.get("metric", "cosine")).strip().lower() or "cosine",
+        "threshold": float(raw_cfg.get("threshold", 0.8)),
+        "assignment": str(raw_cfg.get("assignment", "linear_sum_assignment")).strip().lower()
+        or "linear_sum_assignment",
+        "output_pairwise_csv": bool(raw_cfg.get("output_pairwise_csv", True)),
+        "output_cluster_decision_csv": bool(raw_cfg.get("output_cluster_decision_csv", True)),
+        "output_excel_sheets": bool(raw_cfg.get("output_excel_sheets", True)),
+    }
 
 
 def _format_filename_value(value: Any) -> str:
@@ -185,6 +208,51 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     final_parquet_path = Path(runtime_cfg["final_parquet_path"])
     final_parquet_path.parent.mkdir(parents=True, exist_ok=True)
     final_parquet_frame.to_parquet(final_parquet_path, index=False)
+
+    cross_group_cfg = _cross_group_similarity_cfg(cfg)
+    cross_group_artifacts: dict[str, pd.DataFrame] = {}
+    if cross_group_cfg["enabled"]:
+        if cross_group_cfg["metric"] != "cosine":
+            raise ValueError(f"Unsupported cross_group_w_similarity.metric: {cross_group_cfg['metric']}")
+        if cross_group_cfg["assignment"] != "linear_sum_assignment":
+            raise ValueError(
+                f"Unsupported cross_group_w_similarity.assignment: {cross_group_cfg['assignment']}"
+            )
+        step_df, nonstep_df = build_cluster_w_matrix(aggregate_frames["rep_W"], muscle_names)
+        pairwise_df = compute_pairwise_cosine(step_df, nonstep_df)
+        assigned_df = solve_assignment(pairwise_df)
+        pairwise_output_df = annotate_pairwise_assignment(
+            pairwise_df,
+            assigned_df,
+            cross_group_cfg["threshold"],
+        )
+        decision_df = build_cluster_decision(
+            step_df,
+            nonstep_df,
+            pairwise_df,
+            assigned_df,
+            cross_group_cfg["threshold"],
+        )
+        cross_group_artifacts = {
+            "cross_group_pairwise": pairwise_output_df,
+            "cross_group_matrix": build_pairwise_matrix(pairwise_df),
+            "cross_group_decision": decision_df,
+            "cross_group_summary": build_cross_group_summary(
+                step_df,
+                nonstep_df,
+                decision_df,
+                cross_group_cfg["threshold"],
+            ),
+        }
+        if cross_group_cfg["output_pairwise_csv"]:
+            pairwise_path = output_dir / "cross_group_w_pairwise_cosine.csv"
+            _write_csv(pairwise_output_df, pairwise_path)
+            context["artifacts"]["cross_group_pairwise_path"] = str(pairwise_path)
+        if cross_group_cfg["output_cluster_decision_csv"]:
+            decision_path = output_dir / "cross_group_w_cluster_decision.csv"
+            _write_csv(decision_df, decision_path)
+            context["artifacts"]["cross_group_cluster_decision_path"] = str(decision_path)
+
     workbook_path = write_clustering_audit_workbook(
         output_dir / "clustering_audit.xlsx",
         context["cluster_group_results"],
@@ -193,7 +261,14 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     interpretation_workbook_path = write_results_interpretation_workbook(
         output_dir / "results_interpretation.xlsx",
         summary_df,
-        aggregate_frames,
+        {
+            **aggregate_frames,
+            **(
+                cross_group_artifacts
+                if cross_group_cfg["enabled"] and cross_group_cfg["output_excel_sheets"]
+                else {}
+            ),
+        },
     )
     interpretation_workbook_validation = validate_results_interpretation_workbook(interpretation_workbook_path)
     logging.info("Saved clustering audit workbook to %s", workbook_path)

@@ -47,6 +47,8 @@ def test_fixture_run_writes_global_group_artifacts(
     trial_window_metadata = run_dir / "all_trial_window_metadata.csv"
     summary_path = run_dir / "final_summary.csv"
     interpretation_workbook = run_dir / "results_interpretation.xlsx"
+    cross_group_pairwise = run_dir / "cross_group_w_pairwise_cosine.csv"
+    cross_group_decision = run_dir / "cross_group_w_cluster_decision.csv"
     step_figure = run_dir / "figures" / "global_step_clusters.png"
     nonstep_figure = run_dir / "figures" / "global_nonstep_clusters.png"
     trial_figure_dir = run_dir / "figures" / "nmf_trials"
@@ -59,6 +61,8 @@ def test_fixture_run_writes_global_group_artifacts(
     assert summary_path.exists()
     assert trial_window_metadata.exists()
     assert interpretation_workbook.exists()
+    assert cross_group_pairwise.exists()
+    assert cross_group_decision.exists()
     assert step_figure.exists()
     assert nonstep_figure.exists()
     assert trial_figure_dir.exists()
@@ -124,7 +128,16 @@ def test_fixture_run_writes_global_group_artifacts(
 
     interpretation_book = load_workbook(interpretation_workbook)
     try:
-        assert {"summary", "trial_windows", "cluster_labels", "table_guide"}.issubset(
+        assert {
+            "summary",
+            "trial_windows",
+            "cluster_labels",
+            "cross_group_pairwise",
+            "cross_group_matrix",
+            "cross_group_decision",
+            "cross_group_summary",
+            "table_guide",
+        }.issubset(
             set(interpretation_book.sheetnames)
         )
     finally:

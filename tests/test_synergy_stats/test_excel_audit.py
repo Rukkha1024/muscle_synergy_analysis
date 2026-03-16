@@ -334,12 +334,181 @@ def test_export_results_records_clustering_audit_workbook_path(tmp_path: Path, m
             "representative_H",
             "minimal_W",
             "minimal_H",
+            "cross_group_pairwise",
+            "cross_group_matrix",
+            "cross_group_decision",
+            "cross_group_summary",
             "table_guide",
         ]
         assert interpretation_book["trial_windows"]["A2"].value == "[핵심 컬럼]"
         assert interpretation_book["trial_windows"]["A7"].value == "[예시]"
         assert interpretation_book["table_guide"]["A2"].value == "[핵심 컬럼]"
         assert set(interpretation_book["table_guide"].tables.keys()) == {"tbl_table_guide"}
+    finally:
+        interpretation_book.close()
+
+
+def test_export_results_skips_optional_cross_group_workbook_sheets_when_disabled(tmp_path: Path, monkeypatch) -> None:
+    """Cross-group workbook sheets should be omitted when output_excel_sheets is disabled."""
+    import src.synergy_stats.artifacts as artifacts_module
+
+    feature_rows = []
+    w_muscle = np.array([[1.0, 0.0], [0.0, 1.0], [0.5, 0.5]], dtype=np.float32)
+    h_time = np.tile(np.array([[1.0, 0.5]], dtype=np.float32), (6, 1))
+    for group_id, subject in (("global_step", "S01"), ("global_nonstep", "S02")):
+        step_class = "step" if group_id == "global_step" else "nonstep"
+        feature_rows.append(
+            SubjectFeatureResult(
+                subject=subject,
+                velocity=1,
+                trial_num=1,
+                bundle=SimpleNamespace(
+                    W_muscle=w_muscle,
+                    H_time=h_time,
+                    meta={
+                        "analysis_selected_group": True,
+                        "analysis_step_class": step_class,
+                        "analysis_is_step": group_id == "global_step",
+                        "analysis_is_nonstep": group_id == "global_nonstep",
+                    },
+                ),
+            )
+        )
+
+    cluster_result = {
+        "status": "success",
+        "n_clusters": 2,
+        "labels": np.array([0, 1], dtype=np.int32),
+        "inertia": 0.1,
+        "duplicate_trials": [],
+        "algorithm_used": "mock_kmeans",
+        "selection_method": "gap_statistic",
+        "selection_status": "success_gap_unique",
+        "duplicate_resolution": "none",
+        "require_zero_duplicate_solution": True,
+        "k_lb": 2,
+        "k_gap_raw": 2,
+        "k_selected": 2,
+        "k_min_unique": 2,
+        "repeats": 1,
+        "gap_ref_n": 2,
+        "gap_ref_restarts": 1,
+        "uniqueness_candidate_restarts": 1,
+        "gap_by_k": {2: 1.0},
+        "gap_sd_by_k": {2: 0.1},
+        "observed_objective_by_k": {2: 0.1},
+        "feasible_objective_by_k": {2: 0.1},
+        "duplicate_trial_count_by_k": {2: 0},
+        "duplicate_trial_evidence_by_k": {2: []},
+        "sample_map": [
+            {
+                "group_id": "global_step",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "component_index": 0,
+                "trial_key": ("S01", 1, 1),
+                "trial_id": "S01_v1_T1",
+            },
+            {
+                "group_id": "global_step",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "component_index": 1,
+                "trial_key": ("S01", 1, 1),
+                "trial_id": "S01_v1_T1",
+            },
+        ],
+    }
+
+    def _fake_group_figure(*args, **kwargs):
+        output_path = kwargs["output_path"]
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"figure")
+
+    def _fake_trial_figure(*args, **kwargs):
+        output_path = kwargs["output_path"]
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"trial-figure")
+
+    monkeypatch.setattr(artifacts_module, "save_group_cluster_figure", _fake_group_figure)
+    monkeypatch.setattr(artifacts_module, "save_trial_nmf_figure", _fake_trial_figure)
+
+    context = {
+        "config": {
+            "runtime": {
+                "output_dir": str(tmp_path / "run_output"),
+                "final_parquet_path": str(tmp_path / "final.parquet"),
+            },
+            "muscles": {"names": ["M1", "M2", "M3"]},
+            "synergy_clustering": {
+                "representative": {"h_output_interpolation": {"target_windows": 10}}
+            },
+            "cross_group_w_similarity": {
+                "enabled": True,
+                "metric": "cosine",
+                "threshold": 0.8,
+                "assignment": "linear_sum_assignment",
+                "output_pairwise_csv": True,
+                "output_cluster_decision_csv": True,
+                "output_excel_sheets": False,
+            },
+            "figures": {"format": "png", "dpi": 150, "overview_columns": 2},
+        },
+        "feature_rows": feature_rows,
+        "cluster_group_results": {
+            "global_step": {
+                "group_id": "global_step",
+                "feature_rows": [feature_rows[0]],
+                "cluster_result": cluster_result,
+            },
+            "global_nonstep": {
+                "group_id": "global_nonstep",
+                "feature_rows": [feature_rows[1]],
+                "cluster_result": {
+                    **cluster_result,
+                    "sample_map": [
+                        {
+                            "group_id": "global_nonstep",
+                            "subject": "S02",
+                            "velocity": 1,
+                            "trial_num": 1,
+                            "component_index": 0,
+                            "trial_key": ("S02", 1, 1),
+                            "trial_id": "S02_v1_T1",
+                        },
+                        {
+                            "group_id": "global_nonstep",
+                            "subject": "S02",
+                            "velocity": 1,
+                            "trial_num": 1,
+                            "component_index": 1,
+                            "trial_key": ("S02", 1, 1),
+                            "trial_id": "S02_v1_T1",
+                        },
+                    ],
+                },
+            },
+        },
+        "artifacts": {"steps": []},
+    }
+
+    updated = export_results(context)
+
+    interpretation_path = Path(updated["artifacts"]["results_interpretation_workbook_path"])
+    pairwise_path = Path(updated["artifacts"]["cross_group_pairwise_path"])
+    decision_path = Path(updated["artifacts"]["cross_group_cluster_decision_path"])
+    assert interpretation_path.exists()
+    assert pairwise_path.exists()
+    assert decision_path.exists()
+
+    interpretation_book = load_workbook(interpretation_path)
+    try:
+        assert "cross_group_pairwise" not in interpretation_book.sheetnames
+        assert "cross_group_matrix" not in interpretation_book.sheetnames
+        assert "cross_group_decision" not in interpretation_book.sheetnames
+        assert "cross_group_summary" not in interpretation_book.sheetnames
     finally:
         interpretation_book.close()
 

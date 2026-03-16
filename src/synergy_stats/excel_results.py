@@ -33,6 +33,7 @@ class ResultSheetConfig:
     column_help: tuple[str, ...]
     example_lines: tuple[str, ...]
     notes: str = ""
+    optional: bool = False
 
 
 RESULT_SHEET_CONFIGS = (
@@ -179,6 +180,79 @@ RESULT_SHEET_CONFIGS = (
             "trial 안 여러 component를 비교하면 activation timing 차이를 해석할 수 있습니다.",
         ),
         notes="trial 단위 activation time profile 해석용 표입니다.",
+    ),
+    ResultSheetConfig(
+        source_key="cross_group_pairwise",
+        sheet_name="cross_group_pairwise",
+        table_name="tbl_cross_group_pairwise",
+        description="step cluster와 nonstep cluster의 모든 representative W cosine 조합을 한 번씩 기록한 표입니다.",
+        key_columns="step_cluster_id, nonstep_cluster_id, cosine_similarity, selected_in_assignment, passes_threshold, match_id",
+        column_help=(
+            "step_cluster_id: step 쪽 대표 cluster 번호입니다.",
+            "nonstep_cluster_id: nonstep 쪽 대표 cluster 번호입니다.",
+            "cosine_similarity: 두 representative W 패턴의 cosine similarity 입니다.",
+            "selected_in_assignment / passes_threshold / match_id: 최종 1:1 assignment 채택 여부와 same_synergy 인정 여부를 함께 보여줍니다.",
+        ),
+        example_lines=(
+            "예를 들어 selected_in_assignment=True 이고 passes_threshold=True 이면, 해당 step-nonstep 조합은 최종 same_synergy match로 수용된 것입니다.",
+            "selected_in_assignment=True 이지만 passes_threshold=False 이면, assignment는 되었지만 최종 해석은 group_specific_synergy 입니다.",
+        ),
+        notes="pairwise 조합 전체를 확인할 때 쓰는 기준 표입니다.",
+        optional=True,
+    ),
+    ResultSheetConfig(
+        source_key="cross_group_matrix",
+        sheet_name="cross_group_matrix",
+        table_name="tbl_cross_group_matrix",
+        description="행=step cluster, 열=nonstep cluster 인 cosine similarity matrix view입니다.",
+        key_columns="step_cluster_id, nonstep_cluster_<id>",
+        column_help=(
+            "step_cluster_id: 행 기준이 되는 step cluster 번호입니다.",
+            "nonstep_cluster_<id>: 각 열은 해당 nonstep cluster와의 cosine similarity를 뜻합니다.",
+        ),
+        example_lines=(
+            "예를 들어 step_cluster_id=1 행에서 가장 큰 값을 가진 열이 그 step cluster의 최고 유사 nonstep 후보입니다.",
+            "assignment 결과와 다를 수 있으므로 최종 해석은 cross_group_decision 시트를 함께 확인합니다.",
+        ),
+        notes="전체 유사도 구조를 한눈에 볼 때 사용합니다.",
+        optional=True,
+    ),
+    ResultSheetConfig(
+        source_key="cross_group_decision",
+        sheet_name="cross_group_decision",
+        table_name="tbl_cross_group_decision",
+        description="cluster당 정확히 1행으로 최종 same_synergy / group_specific_synergy 판정을 기록한 표입니다.",
+        key_columns="group_id, cluster_id, final_label, match_id, assigned_partner_cluster_id, assigned_cosine_similarity, best_partner_cluster_id, best_partner_cosine_similarity",
+        column_help=(
+            "final_label: 최종 해석 라벨이며 same_synergy 또는 group_specific_synergy 만 허용됩니다.",
+            "assigned_partner_cluster_id / assigned_cosine_similarity: Hungarian assignment 결과를 그대로 보존합니다.",
+            "best_partner_cluster_id / best_partner_cosine_similarity: threshold 미통과 또는 미배정 cluster도 최대 cosine 정보를 잃지 않게 남깁니다.",
+        ),
+        example_lines=(
+            "예를 들어 final_label=same_synergy 이고 match_id가 채워져 있으면, 그 cluster는 반대 그룹 cluster와 같은 synergy family로 해석합니다.",
+            "final_label=group_specific_synergy 이더라도 assigned_cosine_similarity 또는 best_partner_cosine_similarity 를 보고 얼마나 가까웠는지 확인할 수 있습니다.",
+        ),
+        notes="최종 biological interpretation은 이 시트를 기준으로 읽습니다.",
+        optional=True,
+    ),
+    ResultSheetConfig(
+        source_key="cross_group_summary",
+        sheet_name="cross_group_summary",
+        table_name="tbl_cross_group_summary",
+        description="cross-group representative W 비교 결과를 한 줄 요약으로 보여주는 표입니다.",
+        key_columns="step_cluster_count, nonstep_cluster_count, accepted_same_synergy_match_count, group_specific_step_cluster_count, group_specific_nonstep_cluster_count, threshold",
+        column_help=(
+            "step_cluster_count / nonstep_cluster_count: 비교에 참여한 cluster 수입니다.",
+            "accepted_same_synergy_match_count: threshold를 통과해 수용된 same_synergy match 개수입니다.",
+            "group_specific_step_cluster_count / group_specific_nonstep_cluster_count: 최종 group_specific_synergy 로 남은 cluster 수입니다.",
+            "threshold: same_synergy 인정에 사용한 cosine 기준값입니다.",
+        ),
+        example_lines=(
+            "예를 들어 accepted_same_synergy_match_count=2 이면, step-nonstep 사이에서 2개의 대표 synergy family가 공유되었다는 뜻입니다.",
+            "group_specific_step_cluster_count 가 크면, step 전략에만 남는 representative W 패턴이 상대적으로 많다고 해석할 수 있습니다.",
+        ),
+        notes="먼저 전체 개요를 보고 세부 시트로 내려갈 때 사용합니다.",
+        optional=True,
     ),
 )
 
@@ -332,6 +406,14 @@ def _sheet_frames(summary_frame: pd.DataFrame, aggregate_frames: dict[str, pd.Da
     return {"summary": summary_frame, **aggregate_frames}
 
 
+def _active_result_sheet_configs(frames: dict[str, pd.DataFrame]) -> tuple[ResultSheetConfig, ...]:
+    return tuple(
+        config
+        for config in RESULT_SHEET_CONFIGS
+        if not config.optional or config.source_key in frames
+    )
+
+
 def write_results_interpretation_workbook(
     path: Path,
     summary_frame: pd.DataFrame,
@@ -339,11 +421,12 @@ def write_results_interpretation_workbook(
 ) -> Path:
     """Write a run-level interpretation workbook and validate it after reopening."""
     frames = _sheet_frames(summary_frame, aggregate_frames)
+    active_configs = _active_result_sheet_configs(frames)
     workbook = Workbook()
     table_info: list[dict[str, str]] = []
     guide_sheet = None
 
-    for index, config in enumerate(RESULT_SHEET_CONFIGS):
+    for index, config in enumerate(active_configs):
         raw_frame = frames.get(config.source_key, pd.DataFrame())
         frame = _placeholder_frame(raw_frame, f"No rows were exported for {config.sheet_name}.")
         sheet = workbook.active if index == 0 else workbook.create_sheet(config.sheet_name)
@@ -410,8 +493,9 @@ def write_results_interpretation_workbook(
 
 def validate_results_interpretation_workbook(path: Path) -> dict[str, Any]:
     """Reopen the workbook and confirm every interpretation sheet is present and documented."""
-    expected_sheets = {config.sheet_name for config in RESULT_SHEET_CONFIGS} | {GUIDE_SHEET_CONFIG.sheet_name}
-    expected_tables = {config.sheet_name: {config.table_name} for config in RESULT_SHEET_CONFIGS}
+    required_configs = tuple(config for config in RESULT_SHEET_CONFIGS if not config.optional)
+    expected_sheets = {config.sheet_name for config in required_configs} | {GUIDE_SHEET_CONFIG.sheet_name}
+    expected_tables = {config.sheet_name: {config.table_name} for config in required_configs}
     expected_tables[GUIDE_SHEET_CONFIG.sheet_name] = {GUIDE_SHEET_CONFIG.table_name}
     issues = {"errors": [], "blanks": [], "tables": []}
     workbook = load_workbook(path)
