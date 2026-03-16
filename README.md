@@ -301,6 +301,15 @@ conda run -n cuda python main.py \
   --overwrite
 ```
 
+기존 run 디렉터리의 figure만 다시 만들고 싶다면 아래 명령을 사용한다.
+
+```bash
+conda run -n cuda python scripts/emg/06_render_figures_only.py \
+  --run-dir outputs/runs/default_run
+```
+
+이 명령은 해당 run 디렉터리의 `figures/` 트리를 기본적으로 덮어쓴다. 필요한 figure source CSV(`all_representative_W_posthoc.csv`, `all_minimal_units_W.csv`, `cross_group_w_cluster_decision.csv` 등)가 하나라도 없으면 즉시 실패하며, curated non-figure 산출물은 다시 계산하지 않는다.
+
 ## 10. 현재 범위와 제한
 
 - 기본 mixed selection은 `mixed == 1`, 총 4 trial, step 2회, nonstep 2회, 선택된 step trial의 실제 `step_onset` complete, subject당 comparison velocity 1개 조건을 요구한다.

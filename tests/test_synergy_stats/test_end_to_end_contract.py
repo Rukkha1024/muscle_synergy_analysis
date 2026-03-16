@@ -49,6 +49,10 @@ def test_fixture_run_writes_global_group_artifacts(
     interpretation_workbook = run_dir / "results_interpretation.xlsx"
     cross_group_pairwise = run_dir / "cross_group_w_pairwise_cosine.csv"
     cross_group_decision = run_dir / "cross_group_w_cluster_decision.csv"
+    cross_group_heatmap = run_dir / "figures" / "cross_group_cosine_heatmap.png"
+    cross_group_matched_w = run_dir / "figures" / "cross_group_matched_w.png"
+    cross_group_matched_h = run_dir / "figures" / "cross_group_matched_h.png"
+    cross_group_decision_summary = run_dir / "figures" / "cross_group_decision_summary.png"
     step_figure = run_dir / "figures" / "global_step_clusters.png"
     nonstep_figure = run_dir / "figures" / "global_nonstep_clusters.png"
     trial_figure_dir = run_dir / "figures" / "nmf_trials"
@@ -63,6 +67,10 @@ def test_fixture_run_writes_global_group_artifacts(
     assert interpretation_workbook.exists()
     assert cross_group_pairwise.exists()
     assert cross_group_decision.exists()
+    assert cross_group_heatmap.exists()
+    assert cross_group_matched_w.exists()
+    assert cross_group_matched_h.exists()
+    assert cross_group_decision_summary.exists()
     assert step_figure.exists()
     assert nonstep_figure.exists()
     assert trial_figure_dir.exists()

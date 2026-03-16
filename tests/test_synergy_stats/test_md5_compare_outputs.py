@@ -69,3 +69,28 @@ def test_md5_compare_fails_when_same_stable_file_is_missing_from_both_sides(
     )
     assert result.returncode == 1
     assert f"MISSING {missing_path}" in result.stdout
+
+
+def test_md5_compare_ignores_figure_only_differences(repo_root: Path, tmp_path: Path) -> None:
+    """Figure-only rerenders should not affect the curated stable MD5 comparison."""
+    md5_module = _load_md5_module(repo_root)
+    base_dir = tmp_path / "base"
+    new_dir = tmp_path / "new"
+    _write_stable_tree(base_dir, md5_module.STABLE_RELATIVE_PATHS)
+    _write_stable_tree(new_dir, md5_module.STABLE_RELATIVE_PATHS)
+    (base_dir / "figures").mkdir(parents=True, exist_ok=True)
+    (new_dir / "figures").mkdir(parents=True, exist_ok=True)
+    (base_dir / "figures" / "global_step_clusters.png").write_text("old-figure\n", encoding="utf-8-sig")
+    (new_dir / "figures" / "global_step_clusters.png").write_text("new-figure\n", encoding="utf-8-sig")
+
+    result = repo_python(
+        repo_root,
+        "scripts/emg/99_md5_compare_outputs.py",
+        "--base",
+        str(base_dir),
+        "--new",
+        str(new_dir),
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "MD5 comparison passed for curated stable files." in result.stdout

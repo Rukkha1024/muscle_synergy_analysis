@@ -247,18 +247,21 @@ def test_export_results_records_clustering_audit_workbook_path(tmp_path: Path, m
         ],
     }
 
-    def _fake_group_figure(*args, **kwargs):
-        output_path = kwargs["output_path"]
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(b"figure")
+    def _fake_render_figures_from_run_dir(run_dir: Path, cfg: dict) -> dict[str, list[str]]:
+        figure_dir = run_dir / "figures"
+        trial_dir = figure_dir / "nmf_trials"
+        trial_dir.mkdir(parents=True, exist_ok=True)
+        group_paths = [figure_dir / "global_step_clusters.png", figure_dir / "global_nonstep_clusters.png"]
+        trial_paths = [trial_dir / "S01_v1_T1_step_nmf.png", trial_dir / "S02_v1_T1_nonstep_nmf.png"]
+        for path in [*group_paths, *trial_paths]:
+            path.write_bytes(b"figure")
+        return {
+            "group_figure_paths": [str(path) for path in group_paths],
+            "trial_figure_paths": [str(path) for path in trial_paths],
+            "cross_group_figure_paths": [],
+        }
 
-    def _fake_trial_figure(*args, **kwargs):
-        output_path = kwargs["output_path"]
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(b"trial-figure")
-
-    monkeypatch.setattr(artifacts_module, "save_group_cluster_figure", _fake_group_figure)
-    monkeypatch.setattr(artifacts_module, "save_trial_nmf_figure", _fake_trial_figure)
+    monkeypatch.setattr(artifacts_module, "render_figures_from_run_dir", _fake_render_figures_from_run_dir)
 
     context = {
         "config": {
@@ -422,18 +425,27 @@ def test_export_results_skips_optional_cross_group_workbook_sheets_when_disabled
         ],
     }
 
-    def _fake_group_figure(*args, **kwargs):
-        output_path = kwargs["output_path"]
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(b"figure")
+    def _fake_render_figures_from_run_dir(run_dir: Path, cfg: dict) -> dict[str, list[str]]:
+        figure_dir = run_dir / "figures"
+        trial_dir = figure_dir / "nmf_trials"
+        trial_dir.mkdir(parents=True, exist_ok=True)
+        group_paths = [figure_dir / "global_step_clusters.png", figure_dir / "global_nonstep_clusters.png"]
+        trial_paths = [trial_dir / "S01_v1_T1_step_nmf.png", trial_dir / "S02_v1_T1_nonstep_nmf.png"]
+        cross_paths = [
+            figure_dir / "cross_group_cosine_heatmap.png",
+            figure_dir / "cross_group_matched_w.png",
+            figure_dir / "cross_group_matched_h.png",
+            figure_dir / "cross_group_decision_summary.png",
+        ]
+        for path in [*group_paths, *trial_paths, *cross_paths]:
+            path.write_bytes(b"figure")
+        return {
+            "group_figure_paths": [str(path) for path in group_paths],
+            "trial_figure_paths": [str(path) for path in trial_paths],
+            "cross_group_figure_paths": [str(path) for path in cross_paths],
+        }
 
-    def _fake_trial_figure(*args, **kwargs):
-        output_path = kwargs["output_path"]
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(b"trial-figure")
-
-    monkeypatch.setattr(artifacts_module, "save_group_cluster_figure", _fake_group_figure)
-    monkeypatch.setattr(artifacts_module, "save_trial_nmf_figure", _fake_trial_figure)
+    monkeypatch.setattr(artifacts_module, "render_figures_from_run_dir", _fake_render_figures_from_run_dir)
 
     context = {
         "config": {
@@ -587,18 +599,21 @@ def test_validate_results_interpretation_workbook_catches_error_tokens(tmp_path:
         ],
     }
 
-    def _fake_group_figure(*args, **kwargs):
-        output_path = kwargs["output_path"]
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(b"figure")
+    def _fake_render_figures_from_run_dir(run_dir: Path, cfg: dict) -> dict[str, list[str]]:
+        figure_dir = run_dir / "figures"
+        trial_dir = figure_dir / "nmf_trials"
+        trial_dir.mkdir(parents=True, exist_ok=True)
+        group_paths = [figure_dir / "global_step_clusters.png", figure_dir / "global_nonstep_clusters.png"]
+        trial_paths = [trial_dir / "S01_v1_T1_step_nmf.png", trial_dir / "S02_v1_T1_nonstep_nmf.png"]
+        for path in [*group_paths, *trial_paths]:
+            path.write_bytes(b"figure")
+        return {
+            "group_figure_paths": [str(path) for path in group_paths],
+            "trial_figure_paths": [str(path) for path in trial_paths],
+            "cross_group_figure_paths": [],
+        }
 
-    def _fake_trial_figure(*args, **kwargs):
-        output_path = kwargs["output_path"]
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(b"trial-figure")
-
-    monkeypatch.setattr(artifacts_module, "save_group_cluster_figure", _fake_group_figure)
-    monkeypatch.setattr(artifacts_module, "save_trial_nmf_figure", _fake_trial_figure)
+    monkeypatch.setattr(artifacts_module, "render_figures_from_run_dir", _fake_render_figures_from_run_dir)
 
     context = {
         "config": {
