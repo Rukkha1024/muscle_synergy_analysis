@@ -88,6 +88,17 @@ conda run -n module python analysis/pooled_shared_specific_synergy/analyze_poole
   --uniqueness-candidate-restarts 80
 ```
 
+## 주요 Figure 설명
+
+| Figure | 설명 |
+| --- | --- |
+| `pooled_clusters.png` | pooled centroid별 대표 `W`(bar)와 `H`(time series)를 한눈에 보여준다. 공통 cluster vocabulary 파악용. |
+| `step_vs_nonstep_W.png` | 같은 cluster 안에서 step-only / nonstep-only sub-centroid `W`를 나란히 비교한다. 근육 구성이 조건 간 공유되는지 조건 특이적인지 판별할 수 있다. |
+| `step_vs_nonstep_H.png` | 같은 cluster 안에서 step / nonstep 대표 activation `H`를 겹쳐 그린다. `W`가 유사해도 시간 프로파일(타이밍·크기)이 다른 경우를 확인할 수 있다. |
+| `occupancy_summary.png` | cluster별 raw member count와 subject-normalized occupancy를 분리 표시한다. 특정 피험자가 cluster를 과도 점유하는 편향을 식별할 수 있다. |
+| `k_selection_diagnostic.png` | gap statistic 추천값과 zero-duplicate feasibility rule이 최종 `K`를 어떻게 결정했는지 보여준다. |
+| `subcentroid_similarity_heatmap.png` | step sub-centroid와 nonstep sub-centroid 간 cross-cluster cosine similarity를 heatmap으로 요약한다. 대각선(same cluster) 및 비대각선(cross cluster) 매칭을 한눈에 확인할 수 있다. |
+
 ## 해석 메모
 
 이 분석은 **pipeline 대체가 아니라 analysis-only validation/interpretation layer**다. baseline output을 덮어쓰지 않으며, 결과 해석도 항상 `outputs/runs/default_run/`과 분리해서 본다.
