@@ -28,14 +28,6 @@ synergy_clustering:
   representative:
     h_output_interpolation:
       target_windows: 100
-cross_group_w_similarity:
-  enabled: true
-  metric: cosine
-  threshold: 0.8
-  assignment: linear_sum_assignment
-  output_pairwise_csv: true
-  output_cluster_decision_csv: true
-  output_excel_sheets: true
 figures:
   format: png
   dpi: 120
