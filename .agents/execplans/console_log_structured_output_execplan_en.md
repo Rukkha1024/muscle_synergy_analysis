@@ -16,12 +16,12 @@ After this change, `python main.py --overwrite --out outputs/runs/console_log_st
 - [x] (2026-03-16 09:40Z) Reviewed the current logging calls in `main.py` and `scripts/emg/01_load_emg_table.py` through `scripts/emg/05_export_artifacts.py`.
 - [x] (2026-03-16 09:50Z) Confirmed that `scripts/emg/06_render_figures_only.py` exists as a separate utility CLI and is not part of the main pipeline run.
 - [x] (2026-03-16 10:00Z) Identified reusable metadata already present in `bundle.meta`, `cluster_result`, and exported artifact paths, so the feature can remain logging-only.
-- [ ] Capture a clean baseline run in a dedicated output directory before editing code.
-- [ ] Create `src/emg_pipeline/log_utils.py` with shared formatting helpers for banners and key-value sections.
-- [ ] Update `main.py` so step banners and completion timing derive from `STEP_FILES`.
-- [ ] Replace one-line step summaries in `scripts/emg/01_load_emg_table.py` through `scripts/emg/05_export_artifacts.py` with structured sections.
-- [ ] Re-run the pipeline into a second clean output directory and compare stable outputs with `scripts/emg/99_md5_compare_outputs.py`.
-- [ ] Update this English plan and the Korean companion plan with the final implementation evidence, decisions, and outcomes.
+- [x] (2026-03-16 11:52Z) Captured the clean baseline run at `outputs/runs/console_log_baseline` with the pre-change short-form console logging.
+- [x] (2026-03-16 11:55Z) Added `src/emg_pipeline/log_utils.py` and updated `main.py` to emit dynamic step banners plus per-step elapsed-time lines.
+- [x] (2026-03-16 11:58Z) Replaced the one-line summaries in `scripts/emg/01_load_emg_table.py` through `scripts/emg/05_export_artifacts.py` with structured sections.
+- [x] (2026-03-16 12:15Z) Re-ran the pipeline at `outputs/runs/console_log_structured` and confirmed the structured sections appear in `logs/run.log`.
+- [x] (2026-03-16 12:16Z) Ran `scripts/emg/99_md5_compare_outputs.py` and confirmed `MD5 comparison passed for curated stable files.`.
+- [x] (2026-03-16 12:20Z) Updated this English plan and the Korean companion plan with implementation evidence, final decisions, and retrospective notes.
 
 ## Surprises & Discoveries
 
@@ -39,6 +39,15 @@ After this change, `python main.py --overwrite --out outputs/runs/console_log_st
 
 - Observation: Step 5 already emits workbook-path and workbook-validation logs from library code inside `src/synergy_stats/artifacts.py`.
   Evidence: `export_results()` logs workbook save locations and validation summaries before returning control to `scripts/emg/05_export_artifacts.py`.
+
+- Observation: The repository's documented runtime environment is `conda run -n cuda python ...`, not bare `python`.
+  Evidence: The first baseline attempt with `python main.py ...` failed because `python` was not on PATH, while the `conda run -n cuda python ...` commands succeeded for both baseline and structured runs.
+
+- Observation: The run directory itself contains 10 CSV files after export, because the cross-group similarity stage writes two additional CSVs beyond the eight curated stable files.
+  Evidence: `outputs/runs/console_log_structured` contains the eight stable CSVs plus `cross_group_w_pairwise_cosine.csv` and `cross_group_w_cluster_decision.csv`.
+
+- Observation: The run-specific export directory contains zero parquet files; the single parquet artifact is written to `outputs/final.parquet` outside the run directory.
+  Evidence: `src/emg_pipeline/config.py` sets `runtime.final_parquet_path` to `outputs/final.parquet`, and the implemented Step 5 summary counts that artifact explicitly so the visible parquet total is `1`.
 
 ## Decision Log
 
@@ -70,9 +79,17 @@ After this change, `python main.py --overwrite --out outputs/runs/console_log_st
   Rationale: The comparator already encodes the stable artifact set and produces a clearer pass/fail result for a logging-only change.
   Date/Author: 2026-03-16 / Codex
 
+- Decision: Keep the Step 5 CSV count tied to the actual run directory contents, even though the curated MD5 comparator tracks only eight stable CSVs.
+  Rationale: The structured export summary is intended to show what the run created for a human operator, not just the subset used for MD5 comparison.
+  Date/Author: 2026-03-16 / Codex
+
+- Decision: Count the final parquet artifact in the Step 5 summary even though it is written outside the run directory.
+  Rationale: Users expect the export summary to mention the final parquet artifact, and the current pipeline writes exactly one parquet file at `outputs/final.parquet`.
+  Date/Author: 2026-03-16 / Codex
+
 ## Outcomes & Retrospective
 
-Implementation has not started yet. This revision corrects the ExecPlan so it matches the current repository state and gives an implementer a reproducible baseline-and-compare workflow.
+Implementation is complete. The pipeline now prints five explicit step banners, structured summaries for Steps 1 through 5, and per-step elapsed times while preserving the existing numerical behavior. The final validation matched the baseline stable outputs byte-for-byte, so the feature delivered better run-time visibility without changing the curated exported artifacts.
 
 ## Context and Orientation
 
@@ -141,7 +158,7 @@ Working directory:
 
 Create the baseline run before editing:
 
-    python main.py --overwrite --out outputs/runs/console_log_baseline
+    conda run -n cuda python main.py --overwrite --out outputs/runs/console_log_baseline
 
 Expected behavior:
 
@@ -161,35 +178,34 @@ Implement the logging helper and script updates in this order:
 
 Run the modified pipeline into a separate clean output directory:
 
-    python main.py --overwrite --out outputs/runs/console_log_structured
+    conda run -n cuda python main.py --overwrite --out outputs/runs/console_log_structured
 
-Expected visible console shape:
+Observed visible console shape from the completed structured run:
 
-    2026-03-16 18:00:00,000 INFO root: Loaded config from configs/global_config.yaml
-    2026-03-16 18:00:00,001 INFO root: Run output directory: outputs/runs/console_log_structured
-    2026-03-16 18:00:00,002 INFO root:
-    2026-03-16 18:00:00,002 INFO root: ══════════════════════════════════════════════════════════
-    2026-03-16 18:00:00,002 INFO root:   Step 1/5 : Load EMG Table
-    2026-03-16 18:00:00,002 INFO root: ══════════════════════════════════════════════════════════
-    2026-03-16 18:00:01,500 INFO root: [EMG Data]
-    2026-03-16 18:00:01,500 INFO root:         Rows             : 474500
-    2026-03-16 18:00:01,500 INFO root:         Columns          : 83
-    2026-03-16 18:00:01,500 INFO root:         Subjects         : 5 (A, B, C, ...)
-    2026-03-16 18:00:01,501 INFO root: [Event Metadata]
-    2026-03-16 18:00:01,501 INFO root:         Selected trials  : 125 (step=63, nonstep=62)
-    2026-03-16 18:00:01,501 INFO root: Step 1 done (1.50s)
+    2026-03-16 20:55:26,537 INFO root:
+    2026-03-16 20:55:26,537 INFO root: ══════════════════════════════════════════════════════════
+    2026-03-16 20:55:26,537 INFO root:   Step 1/5 : Load EMG Table
+    2026-03-16 20:55:26,538 INFO root: ══════════════════════════════════════════════════════════
+    2026-03-16 20:55:28,247 INFO root: [EMG Data]
+    2026-03-16 20:55:28,248 INFO root:         Rows            : 474500
+    2026-03-16 20:55:28,248 INFO root:         Columns         : 83
+    2026-03-16 20:55:28,248 INFO root:         Subjects        : 24 (가윤호, 강비은, 권유영, 김민정, 김서하, 김우연, ...)
+    2026-03-16 20:55:28,248 INFO root: [Event Metadata]
+    2026-03-16 20:55:28,248 INFO root:         Selected trials      : 125
+    2026-03-16 20:55:28,248 INFO root:         Selected step        : 53
+    2026-03-16 20:55:28,249 INFO root: Step 1 done (1.72s)
     ...
-    2026-03-16 18:07:30,000 INFO root: [Export Summary]
-    2026-03-16 18:07:30,000 INFO root:         CSV files        : 8
-    2026-03-16 18:07:30,000 INFO root:         Excel workbooks  : 2
-    2026-03-16 18:07:30,000 INFO root:         Parquet files    : 1
-    2026-03-16 18:07:30,000 INFO root:         Figures          : 131
-    2026-03-16 18:07:30,000 INFO root: Step 5 done (120.00s)
-    2026-03-16 18:07:30,001 INFO root: Pipeline completed successfully.
+    2026-03-16 21:15:37,935 INFO root: [Export Summary]
+    2026-03-16 21:15:37,935 INFO root:         CSV files        : 10
+    2026-03-16 21:15:37,935 INFO root:         Excel workbooks  : 2
+    2026-03-16 21:15:37,936 INFO root:         Parquet files    : 1
+    2026-03-16 21:15:37,936 INFO root:         Figures          : 131
+    2026-03-16 21:15:37,936 INFO root: Step 5 done (133.09s)
+    2026-03-16 21:15:37,936 INFO root: Pipeline completed successfully.
 
 Compare stable outputs after the implementation:
 
-    python scripts/emg/99_md5_compare_outputs.py \
+    conda run -n cuda python scripts/emg/99_md5_compare_outputs.py \
         --base outputs/runs/console_log_baseline \
         --new outputs/runs/console_log_structured
 
@@ -203,7 +219,7 @@ If the MD5 comparison reports `MISSING` or `DIFF`, stop and inspect the modified
 
 The change is accepted when all of the following are true.
 
-Running `python main.py --overwrite --out outputs/runs/console_log_structured` succeeds without changing the numerical behavior of the pipeline. The console shows five step banners, one for each file in `STEP_FILES`, and each banner uses the current `len(STEP_FILES)` total so the visible output reads `Step 1/5` through `Step 5/5` in the current repository state.
+Running `conda run -n cuda python main.py --overwrite --out outputs/runs/console_log_structured` succeeds without changing the numerical behavior of the pipeline. The console shows five step banners, one for each file in `STEP_FILES`, and each banner uses the current `len(STEP_FILES)` total so the visible output reads `Step 1/5` through `Step 5/5` in the current repository state.
 
 Step 1 logs a structured EMG data summary and a structured event metadata summary. Step 2 logs a structured trial-extraction summary. Step 3 logs a structured NMF runtime summary and a structured NMF aggregate summary. Step 4 logs a structured clustering runtime summary and one structured result section per global group. Step 5 logs a structured export summary after `export_results(context)` finishes. The existing workbook save/validation logs emitted from `src/synergy_stats/artifacts.py` still appear.
 
@@ -211,11 +227,11 @@ The run log at `outputs/runs/console_log_structured/logs/run.log` contains the s
 
 The command
 
-    python scripts/emg/99_md5_compare_outputs.py \
+    conda run -n cuda python scripts/emg/99_md5_compare_outputs.py \
         --base outputs/runs/console_log_baseline \
         --new outputs/runs/console_log_structured
 
-prints `MD5 comparison passed for curated stable files.`. This is the proof that the logging enhancement did not alter the stable pipeline artifacts.
+prints `MD5 comparison passed for curated stable files.`. This is the proof that the logging enhancement did not alter the stable pipeline artifacts. In the completed implementation, that command did print the expected success line.
 
 ## Idempotence and Recovery
 
@@ -251,21 +267,22 @@ The workbook-path and workbook-validation logs from `src/synergy_stats/artifacts
 
 Create `src/emg_pipeline/log_utils.py` with functions equivalent to the following signatures:
 
-    def step_banner(step_num: int, total_steps: int, title: str) -> None:
+    def log_step_banner(step_num: int, total_steps: int, title: str) -> None:
         """Log a blank line plus a divider/title/divider banner."""
 
-    def log_section(header: str, pairs: list[tuple[str, object]]) -> None:
+    def log_kv_section(header: str, pairs: list[tuple[str, object]]) -> None:
         """Log one section header and aligned key-value rows."""
 
-    def step_done(step_num: int, elapsed_seconds: float) -> None:
-        """Log a one-line step completion summary."""
+    def compact_list(values: Iterable[object], *, limit: int = 6) -> str:
+        """Format a short comma-separated preview for subject, velocity, or backend lists."""
 
-`main.py` must import `step_banner` and `step_done`, compute `total_steps = len(STEP_FILES)`, and map each step path in `STEP_FILES` to a visible title.
+`main.py` must import `log_step_banner`, compute `total_steps = len(STEP_FILES)`, map each step path in `STEP_FILES` to a visible title, and log the completion line directly after measuring elapsed wall-clock time.
 
-Each step script from `scripts/emg/01_load_emg_table.py` through `scripts/emg/05_export_artifacts.py` must import and use `log_section`. The helper should accept values that are already formatted as strings or can be converted with `str()`. The helper does not need to know pandas internals or configuration details.
+Each step script from `scripts/emg/01_load_emg_table.py` through `scripts/emg/05_export_artifacts.py` must import and use `log_kv_section`. The helper should accept values that are already formatted as strings or can be converted with `str()`. The helper does not need to know pandas internals or configuration details.
 
 No new third-party dependencies are required. Use the existing standard-library `logging` module plus already-installed project dependencies such as pandas, NumPy, and `collections.Counter` where those are useful for formatting summary statistics.
 
 ## Revision Note
 
 2026-03-16: Rewrote this ExecPlan to match the current 5-step pipeline, removed the stale Step 6/posthoc references, synchronized the intended scope with the Korean companion plan, and replaced the weak two-file hash check with the repository's curated MD5 comparison workflow.
+2026-03-16: Updated the living sections after implementation, recorded the successful baseline/structured runs and MD5 validation, switched the documented commands to `conda run -n cuda python ...`, and aligned the interface notes with the actual helper names used in code.

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import logging
+import math
 
 from src.synergy_stats import cluster_feature_group
 from src.synergy_stats.clustering import describe_clustering_runtime
+from src.emg_pipeline.log_utils import format_float, log_kv_section
 
 
 def _meta_flag(meta: dict, key: str) -> bool:
@@ -25,13 +26,15 @@ def _meta_flag(meta: dict, key: str) -> bool:
 def run(context: dict) -> dict:
     cfg = context["config"]
     runtime = describe_clustering_runtime(cfg["synergy_clustering"])
-    logging.info(
-        "Clustering runtime algorithm=%s torch_device=%s torch_dtype=%s restart_batch_size=%s gap_reference_batch_size=%s",
-        runtime["algorithm"],
-        runtime["torch_device"] or "n/a",
-        runtime["torch_dtype"] or "n/a",
-        runtime["torch_restart_batch_size"],
-        runtime["gap_reference_batch_size"],
+    log_kv_section(
+        "Clustering Runtime",
+        [
+            ("Algorithm", runtime["algorithm"]),
+            ("Torch device", runtime["torch_device"] or "n/a"),
+            ("Torch dtype", runtime["torch_dtype"] or "n/a"),
+            ("Restart batch size", runtime["torch_restart_batch_size"]),
+            ("Gap ref batch size", runtime["gap_reference_batch_size"]),
+        ],
     )
     # Grouping is intentionally fixed to global step vs nonstep.
     if "grouping" in cfg.get("synergy_clustering", {}):
@@ -70,13 +73,22 @@ def run(context: dict) -> dict:
         if cluster_result.get("status") != "success":
             reason = cluster_result.get("reason", "Unknown clustering failure.")
             raise RuntimeError(f"Clustering failed for {group_id}: {reason}")
-        logging.info(
-            "Clustering result group=%s algorithm_used=%s torch_device=%s torch_dtype=%s selection_status=%s",
-            group_id,
-            cluster_result.get("algorithm_used", ""),
-            cluster_result.get("torch_device", "") or "n/a",
-            cluster_result.get("torch_dtype", "") or "n/a",
-            cluster_result.get("selection_status", ""),
+        inertia = cluster_result.get("inertia")
+        inertia_display = (
+            format_float(inertia, digits=6)
+            if inertia is not None and not (isinstance(inertia, float) and math.isnan(inertia))
+            else "n/a"
+        )
+        log_kv_section(
+            f"Cluster Result: {group_id}",
+            [
+                ("K gap raw", cluster_result.get("k_gap_raw", "n/a")),
+                ("K selected", cluster_result.get("k_selected", "n/a")),
+                ("Selection status", cluster_result.get("selection_status", "n/a")),
+                ("Duplicate trials", len(cluster_result.get("duplicate_trials", []))),
+                ("Inertia", inertia_display),
+                ("Algorithm used", cluster_result.get("algorithm_used", "n/a")),
+            ],
         )
         cluster_group_results[group_id] = {
             "group_id": group_id,
@@ -84,5 +96,4 @@ def run(context: dict) -> dict:
             "cluster_result": cluster_result,
         }
     context["cluster_group_results"] = cluster_group_results
-    logging.info("Clustered synergies for %s global groups.", len(cluster_group_results))
     return context

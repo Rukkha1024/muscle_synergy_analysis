@@ -12,6 +12,7 @@ import importlib.util
 import logging
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ from src.emg_pipeline.config import (
     prepare_runtime_paths,
     write_run_manifest,
 )
+from src.emg_pipeline.log_utils import log_step_banner
 
 
 STEP_FILES = [
@@ -30,6 +32,14 @@ STEP_FILES = [
     "scripts/emg/04_cluster_synergies.py",
     "scripts/emg/05_export_artifacts.py",
 ]
+
+STEP_TITLES = {
+    "scripts/emg/01_load_emg_table.py": "Load EMG Table",
+    "scripts/emg/02_extract_trials.py": "Extract Trials",
+    "scripts/emg/03_extract_synergy_nmf.py": "Extract Synergy (NMF)",
+    "scripts/emg/04_cluster_synergies.py": "Cluster Synergies",
+    "scripts/emg/05_export_artifacts.py": "Export Artifacts",
+}
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -98,12 +108,17 @@ def main() -> int:
         "config": cfg,
         "artifacts": {"steps": []},
     }
-    for step_file in STEP_FILES:
+    total_steps = len(STEP_FILES)
+    for step_index, step_file in enumerate(STEP_FILES, start=1):
         step_path = Path(step_file)
         run_step = _load_step(step_path)
-        logging.info("Running step: %s", step_file)
+        step_title = STEP_TITLES.get(step_file, step_path.stem)
+        log_step_banner(step_index, total_steps, step_title)
+        started_at = time.perf_counter()
         context = run_step(context)
+        elapsed_sec = time.perf_counter() - started_at
         context["artifacts"]["steps"].append(step_file)
+        logging.info("Step %s done (%.2fs)", step_index, elapsed_sec)
         if cfg["runtime"].get("dry_run") and step_file == STEP_FILES[0]:
             logging.info("Dry run requested; stopping after input validation.")
             break
