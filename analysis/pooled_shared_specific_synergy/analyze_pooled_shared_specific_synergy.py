@@ -784,13 +784,21 @@ def generate_figures(outdir: Path, artifacts: dict[str, Any], cfg: dict[str, Any
         ax.axis("on")
         step_mean, step_sd, step_n = _series_from_rep_h(rep_h_pdf, cluster_id, "step")
         non_mean, non_sd, non_n = _series_from_rep_h(rep_h_pdf, cluster_id, "nonstep")
+        mean_y_collections: list[np.ndarray] = []
         if step_mean.size:
             ax.plot(x_axis, step_mean, color="#5C7CFA", linewidth=2.0, label="step")
             ax.fill_between(x_axis, step_mean - step_sd, step_mean + step_sd, color="#5C7CFA", alpha=0.2)
+            mean_y_collections.append(step_mean)
         if non_mean.size:
             ax.plot(x_axis, non_mean, color="#E64980", linewidth=2.0, linestyle="--", label="nonstep")
             ax.fill_between(x_axis, non_mean - non_sd, non_mean + non_sd, color="#E64980", alpha=0.2)
+            mean_y_collections.append(non_mean)
         ax.set_xlim(0.0, 100.0)
+        if mean_y_collections:
+            all_y = np.concatenate(mean_y_collections)
+            ymin, ymax = float(np.nanmin(all_y)), float(np.nanmax(all_y))
+            margin = (ymax - ymin) * 0.05 if ymax > ymin else 0.1
+            ax.set_ylim(ymin - margin, ymax + margin)
         ax.set_title(f"cluster {cluster_id} | step n={step_n}, nonstep n={non_n}", fontsize=10)
         ax.set_xlabel("Normalized window (%)")
         ax.set_ylabel("Activation")

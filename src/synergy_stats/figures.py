@@ -477,6 +477,7 @@ def save_cross_group_matched_h(
 
     for idx, panel in enumerate(panels):
         ax = axes[idx, 0]
+        mean_y_collections: list[np.ndarray] = []
         if panel["type"] == "matched":
             # Step
             x_s, mean_s, std_s = _compute_trial_stats(trial_h, "global_step", panel["step_cluster_id"])
@@ -485,6 +486,7 @@ def save_cross_group_matched_h(
             x_rep_s, y_rep_s = _rep_h_curve(rep_h_step, panel["step_cluster_id"])
             if len(x_rep_s) > 0:
                 ax.plot(x_rep_s, y_rep_s, color=step_color, linewidth=2.5, label="step")
+                mean_y_collections.append(y_rep_s)
             # Nonstep
             x_n, mean_n, std_n = _compute_trial_stats(trial_h, "global_nonstep", panel["nonstep_cluster_id"])
             if len(x_n) > 0:
@@ -492,6 +494,7 @@ def save_cross_group_matched_h(
             x_rep_n, y_rep_n = _rep_h_curve(rep_h_nonstep, panel["nonstep_cluster_id"])
             if len(x_rep_n) > 0:
                 ax.plot(x_rep_n, y_rep_n, color=nonstep_color, linewidth=2.5, label="nonstep")
+                mean_y_collections.append(y_rep_n)
             ax.legend(fontsize=8, loc="upper right")
         else:
             gid = panel["group_id"]
@@ -505,10 +508,16 @@ def save_cross_group_matched_h(
             x_rep, y_rep = _rep_h_curve(rep_df, cid)
             if len(x_rep) > 0:
                 ax.plot(x_rep, y_rep, color=color, linewidth=2.5, label="mean")
+                mean_y_collections.append(y_rep)
             if ax.get_legend_handles_labels()[1]:
                 ax.legend(fontsize=8, loc="upper right")
 
         ax.set_xlim(0.0, 100.0)
+        if mean_y_collections:
+            all_y = np.concatenate(mean_y_collections)
+            ymin, ymax = float(np.nanmin(all_y)), float(np.nanmax(all_y))
+            margin = (ymax - ymin) * 0.05 if ymax > ymin else 0.1
+            ax.set_ylim(ymin - margin, ymax + margin)
         ax.set_ylabel("Activation")
         ax.set_xlabel("Normalized window (%)")
         ax.set_title(panel["title"], fontsize=11)

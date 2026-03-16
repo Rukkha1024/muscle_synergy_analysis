@@ -232,6 +232,7 @@ def save_summary_grid_figure(
         sh, nh = r["step_h"], r["nonstep_h"]
 
         # H mean ± SD
+        mean_y_collections: list[np.ndarray] = []
         for mat, color, lbl in [
             (sh, STEP_COLOR, "step" if i == 0 else None),
             (nh, NONSTEP_COLOR, "nonstep" if i == 0 else None),
@@ -240,6 +241,12 @@ def save_summary_grid_figure(
             s = mat.std(axis=0, ddof=1)
             ax.plot(x, m, color=color, linewidth=1.2, label=lbl)
             ax.fill_between(x, m - s, m + s, color=color, alpha=0.15)
+            mean_y_collections.append(m)
+        if mean_y_collections:
+            all_y = np.concatenate(mean_y_collections)
+            ymin, ymax = float(np.nanmin(all_y)), float(np.nanmax(all_y))
+            margin = (ymax - ymin) * 0.05 if ymax > ymin else 0.1
+            ax.set_ylim(ymin - margin, ymax + margin)
 
         # SPM{t} on twin axis
         ax2 = ax.twinx()
