@@ -383,6 +383,143 @@ def save_cross_group_matched_w(
     plt.close(fig)
 
 
+def save_cross_group_matched_h(
+    rep_h_step: pd.DataFrame,
+    rep_h_nonstep: pd.DataFrame,
+    minimal_h: pd.DataFrame,
+    labels: pd.DataFrame,
+    decision_df: pd.DataFrame,
+    cfg: dict,
+    output_path: Path,
+) -> None:
+    """Render matched H time-series for same_synergy pairs and group_specific clusters."""
+    import numpy as np
+
+    plt = _pyplot()
+    _configure_fonts()
+
+    step_color = "#5C7CFA"
+    nonstep_color = "#E64980"
+
+    matched = decision_df[decision_df["final_label"] == "same_synergy"].copy()
+    match_ids = sorted(matched["match_id"].dropna().unique())
+
+    group_specific = decision_df[decision_df["final_label"] == "group_specific_synergy"].copy()
+
+    panels: list[dict] = []
+    for mid in match_ids:
+        rows = matched[matched["match_id"] == mid]
+        step_row = rows[rows["group_id"] == "global_step"]
+        nonstep_row = rows[rows["group_id"] == "global_nonstep"]
+        if step_row.empty or nonstep_row.empty:
+            continue
+        s_cid = int(step_row["cluster_id"].iloc[0])
+        n_cid = int(nonstep_row["cluster_id"].iloc[0])
+        cos_val = float(step_row["assigned_cosine_similarity"].iloc[0])
+        panels.append({
+            "title": f"{mid} (cos={cos_val:.2f})",
+            "type": "matched",
+            "step_cluster_id": s_cid,
+            "nonstep_cluster_id": n_cid,
+        })
+
+    for _, row in group_specific.iterrows():
+        gid = row["group_id"]
+        cid = int(row["cluster_id"])
+        group_label = "step" if gid == "global_step" else "nonstep"
+        panels.append({
+            "title": f"group_specific: {group_label} cluster {cid}",
+            "type": "group_specific",
+            "group_id": gid,
+            "cluster_id": cid,
+        })
+
+    if not panels:
+        return
+
+    # Join labels with minimal_h to get per-trial H curves with cluster assignments
+    trial_h = minimal_h.merge(
+        labels[["group_id", "trial_id", "component_index", "cluster_id"]],
+        on=["group_id", "trial_id", "component_index"],
+        how="inner",
+    )
+
+    def _compute_trial_stats(
+        df: pd.DataFrame, group_id: str, cluster_id: int,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Return (x_pct, mean, std) for all trials in a cluster."""
+        subset = df[(df["group_id"] == group_id) & (df["cluster_id"] == cluster_id)]
+        if subset.empty:
+            return np.array([]), np.array([]), np.array([])
+        pivot = subset.pivot_table(
+            index=["trial_id", "component_index"],
+            columns="frame_idx",
+            values="h_value",
+            aggfunc="first",
+        )
+        vals = pivot.to_numpy(dtype=float)
+        frames = np.array(sorted(pivot.columns), dtype=float)
+        x_pct = 100.0 * frames / frames.max() if len(frames) > 1 and frames.max() > 0 else frames
+        mean = np.nanmean(vals, axis=0)
+        std = np.nanstd(vals, axis=0)
+        return x_pct, mean, std
+
+    def _rep_h_curve(rep_df: pd.DataFrame, cluster_id: int) -> tuple[np.ndarray, np.ndarray]:
+        subset = rep_df[rep_df["cluster_id"] == cluster_id].sort_values("frame_idx")
+        if subset.empty:
+            return np.array([]), np.array([])
+        frames = subset["frame_idx"].to_numpy(dtype=float)
+        x_pct = 100.0 * frames / frames.max() if len(frames) > 1 and frames.max() > 0 else frames
+        return x_pct, subset["h_value"].to_numpy(dtype=float)
+
+    n_panels = len(panels)
+    fig, axes = plt.subplots(n_panels, 1, figsize=(10, 3.5 * n_panels), squeeze=False)
+
+    for idx, panel in enumerate(panels):
+        ax = axes[idx, 0]
+        if panel["type"] == "matched":
+            # Step
+            x_s, mean_s, std_s = _compute_trial_stats(trial_h, "global_step", panel["step_cluster_id"])
+            if len(x_s) > 0:
+                ax.fill_between(x_s, mean_s - std_s, mean_s + std_s, color=step_color, alpha=0.2)
+            x_rep_s, y_rep_s = _rep_h_curve(rep_h_step, panel["step_cluster_id"])
+            if len(x_rep_s) > 0:
+                ax.plot(x_rep_s, y_rep_s, color=step_color, linewidth=2.5, label="step")
+            # Nonstep
+            x_n, mean_n, std_n = _compute_trial_stats(trial_h, "global_nonstep", panel["nonstep_cluster_id"])
+            if len(x_n) > 0:
+                ax.fill_between(x_n, mean_n - std_n, mean_n + std_n, color=nonstep_color, alpha=0.2)
+            x_rep_n, y_rep_n = _rep_h_curve(rep_h_nonstep, panel["nonstep_cluster_id"])
+            if len(x_rep_n) > 0:
+                ax.plot(x_rep_n, y_rep_n, color=nonstep_color, linewidth=2.5, label="nonstep")
+            ax.legend(fontsize=8, loc="upper right")
+        else:
+            gid = panel["group_id"]
+            cid = panel["cluster_id"]
+            color = step_color if gid == "global_step" else nonstep_color
+            rep_df = rep_h_step if gid == "global_step" else rep_h_nonstep
+            x_t, mean_t, std_t = _compute_trial_stats(trial_h, gid, cid)
+            if len(x_t) > 0:
+                ax.fill_between(x_t, mean_t - std_t, mean_t + std_t, color=color, alpha=0.2,
+                                label=r"mean $\pm$ SD")
+            x_rep, y_rep = _rep_h_curve(rep_df, cid)
+            if len(x_rep) > 0:
+                ax.plot(x_rep, y_rep, color=color, linewidth=2.5, label="mean")
+            if ax.get_legend_handles_labels()[1]:
+                ax.legend(fontsize=8, loc="upper right")
+
+        ax.set_xlim(0.0, 100.0)
+        ax.set_ylabel("Activation")
+        ax.set_xlabel("Normalized window (%)")
+        ax.set_title(panel["title"], fontsize=11)
+
+    fig.suptitle("Cross-group matched H profiles", fontsize=13, fontweight="bold")
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_normalized_figure_format(cfg), bbox_inches="tight")
+    plt.close(fig)
+
+
 def save_cross_group_decision_summary(
     decision_df: pd.DataFrame,
     threshold: float,

@@ -17,6 +17,7 @@ from src.synergy_stats.cross_group_similarity import (
 from src.synergy_stats.figures import (
     save_cross_group_decision_summary,
     save_cross_group_heatmap,
+    save_cross_group_matched_h,
     save_cross_group_matched_w,
 )
 
@@ -168,5 +169,76 @@ def test_save_cross_group_matched_w_handles_mixed_decisions(tmp_path: Path) -> N
     )
     out = tmp_path / "matched_mixed.png"
     save_cross_group_matched_w(step_df, nonstep_df, decision_df, ["M1", "M2"], _FIGURE_CFG, out)
+    assert out.exists()
+    assert out.stat().st_size > 0
+
+
+def _build_fake_h_data(
+    n_frames: int = 10,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Build fake rep_H, minimal_H, and labels for cross-group matched H tests."""
+    import numpy as np
+
+    rng = np.random.default_rng(42)
+    rep_h_rows = []
+    minimal_h_rows = []
+    label_rows = []
+
+    for group_id, cluster_ids, n_trials in [
+        ("global_step", [0, 1], 3),
+        ("global_nonstep", [0, 1], 3),
+    ]:
+        for cid in cluster_ids:
+            base = rng.random(n_frames)
+            for fi in range(n_frames):
+                rep_h_rows.append({
+                    "group_id": group_id,
+                    "cluster_id": cid,
+                    "frame_idx": fi,
+                    "h_value": float(base[fi]),
+                })
+            for t in range(n_trials):
+                trial_id = f"S{t}_v1_T0"
+                comp_idx = cid
+                label_rows.append({
+                    "group_id": group_id,
+                    "trial_id": trial_id,
+                    "component_index": comp_idx,
+                    "cluster_id": cid,
+                })
+                curve = base + rng.normal(0, 0.1, n_frames)
+                for fi in range(n_frames):
+                    minimal_h_rows.append({
+                        "group_id": group_id,
+                        "trial_id": trial_id,
+                        "component_index": comp_idx,
+                        "frame_idx": fi,
+                        "h_value": float(curve[fi]),
+                    })
+
+    rep_h = pd.DataFrame(rep_h_rows)
+    minimal_h = pd.DataFrame(minimal_h_rows)
+    labels = pd.DataFrame(label_rows)
+    return rep_h, minimal_h, labels
+
+
+def test_save_cross_group_matched_h_creates_file(tmp_path: Path) -> None:
+    """Matched H figure should be created with same_synergy and group_specific panels."""
+    _, _, _, decision_df = _build_figure_data(
+        step_vectors=[(1.0, 0.0), (0.0, 1.0), (0.8, 0.6)],
+        nonstep_vectors=[(1.0, 0.0), (0.0, 1.0)],
+        threshold=0.8,
+    )
+    rep_h, minimal_h, labels = _build_fake_h_data()
+    out = tmp_path / "matched_h.png"
+    save_cross_group_matched_h(
+        rep_h_step=rep_h[rep_h["group_id"] == "global_step"],
+        rep_h_nonstep=rep_h[rep_h["group_id"] == "global_nonstep"],
+        minimal_h=minimal_h,
+        labels=labels,
+        decision_df=decision_df,
+        cfg=_FIGURE_CFG,
+        output_path=out,
+    )
     assert out.exists()
     assert out.stat().st_size > 0

@@ -32,6 +32,7 @@ from .figures import (
     figure_suffix,
     save_cross_group_decision_summary,
     save_cross_group_heatmap,
+    save_cross_group_matched_h,
     save_cross_group_matched_w,
     save_group_cluster_figure,
     save_trial_nmf_figure,
@@ -280,6 +281,19 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
                 output_path=matched_w_path,
             )
             cross_group_figure_paths.append(str(matched_w_path))
+            matched_h_path = figure_dir / f"cross_group_matched_h{figure_ext}"
+            save_cross_group_matched_h(
+                rep_h_step=aggregate_frames["rep_H_long"][
+                    aggregate_frames["rep_H_long"]["group_id"] == "global_step"],
+                rep_h_nonstep=aggregate_frames["rep_H_long"][
+                    aggregate_frames["rep_H_long"]["group_id"] == "global_nonstep"],
+                minimal_h=aggregate_frames["minimal_H_long"],
+                labels=aggregate_frames["labels"],
+                decision_df=decision_df,
+                cfg=cfg,
+                output_path=matched_h_path,
+            )
+            cross_group_figure_paths.append(str(matched_h_path))
             decision_summary_path = figure_dir / f"cross_group_decision_summary{figure_ext}"
             save_cross_group_decision_summary(
                 decision_df=decision_df,
