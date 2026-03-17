@@ -80,6 +80,57 @@ def test_build_audit_tables_returns_selection_and_duplicate_frames() -> None:
     assert len(frames["duplicate_cluster_detail"]) == 4
 
 
+def test_build_audit_tables_handles_mixed_trial_num_types_across_modes() -> None:
+    """Duplicate audit rows should support numeric and concatenated trial ids together."""
+    cluster_group_results = _mock_cluster_group_results()
+    cluster_group_results["concatenated::global_step"] = {
+        "group_id": "global_step",
+        "aggregation_mode": "concatenated",
+        "cluster_result": {
+            "selection_status": "success_gap_unique",
+            "k_gap_raw": 4,
+            "k_selected": 4,
+            "k_min_unique": 4,
+            "gap_by_k": {4: 1.3},
+            "gap_sd_by_k": {4: 0.1},
+            "observed_objective_by_k": {4: 40.0},
+            "feasible_objective_by_k": {4: 40.0},
+            "duplicate_trial_count_by_k": {4: 1},
+            "duplicate_trial_evidence_by_k": {
+                4: [
+                    {
+                        "subject": "S03",
+                        "velocity": 1,
+                        "trial_num": "concat_step",
+                        "trial_id": "S03_v1_Tconcat_step",
+                        "trial_key": ("S03", 1, "concat_step"),
+                        "n_synergies_in_trial": 4,
+                        "duplicate_cluster_labels": [0],
+                        "duplicate_component_indexes": [0, 2],
+                        "duplicate_cluster_count": 1,
+                        "duplicate_component_count": 2,
+                        "duplicate_cluster_details": [
+                            {"cluster_id": 0, "component_indexes": [0, 2], "component_count": 2},
+                        ],
+                    }
+                ]
+            },
+        },
+    }
+
+    frames = build_audit_tables(cluster_group_results)
+
+    assert list(frames["duplicate_trial_summary"]["trial_num"]) == ["2", "2", "concat_step"]
+    assert list(frames["duplicate_cluster_detail"]["trial_num"]) == [
+        "2",
+        "2",
+        "2",
+        "2",
+        "concat_step",
+    ]
+    assert set(frames["duplicate_trial_summary"]["aggregation_mode"]) == {"concatenated", None}
+
+
 def test_write_clustering_audit_workbook_creates_expected_sheets_and_tables(tmp_path: Path) -> None:
     """Workbook export should include guide text, expected sheets, and Excel tables."""
     output_path = tmp_path / "clustering_audit.xlsx"

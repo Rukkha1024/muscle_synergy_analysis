@@ -90,6 +90,11 @@ def _scalar_or_blank(value: Any) -> Any:
     return value
 
 
+def _text_or_blank(value: Any) -> str:
+    scalar = _scalar_or_blank(value)
+    return "" if scalar == "" else str(scalar)
+
+
 def _flag_summary_text(group_id: str, k_gap_raw: int, k_selected: int, duplicate_count_at_gap_raw: int) -> str:
     if duplicate_count_at_gap_raw == 0 and k_gap_raw == k_selected:
         return (
@@ -184,7 +189,7 @@ def build_audit_tables(cluster_group_results: dict[str, dict[str, Any]]) -> dict
                     "k": int(k),
                     "subject": trial_row["subject"],
                     "velocity": trial_row["velocity"],
-                    "trial_num": trial_row["trial_num"],
+                    "trial_num": _text_or_blank(trial_row["trial_num"]),
                     "trial_id": trial_row["trial_id"],
                     "n_synergies_in_trial": int(trial_row["n_synergies_in_trial"]),
                     "duplicate_cluster_labels_json": _json_text(trial_row["duplicate_cluster_labels"]),
@@ -203,7 +208,7 @@ def build_audit_tables(cluster_group_results: dict[str, dict[str, Any]]) -> dict
                         "k": int(k),
                         "subject": trial_row["subject"],
                         "velocity": trial_row["velocity"],
-                        "trial_num": trial_row["trial_num"],
+                        "trial_num": _text_or_blank(trial_row["trial_num"]),
                         "trial_id": trial_row["trial_id"],
                         "cluster_id": int(cluster_detail["cluster_id"]),
                         "component_indexes_json": _json_text(cluster_detail["component_indexes"]),
