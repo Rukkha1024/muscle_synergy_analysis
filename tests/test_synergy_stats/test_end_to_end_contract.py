@@ -14,19 +14,13 @@ import yaml
 from tests.helpers import read_final_parquet, repo_python
 
 
-def test_both_mode_writes_trialwise_and_concatenated_outputs(
-    repo_root: Path,
+def _write_mode_test_configs(
     fixture_bundle: dict[str, object],
     tmp_path: Path,
-) -> None:
-    """A both-mode run should emit mode bundles plus combined root artifacts."""
-
-    main_path = repo_root / "main.py"
-    if not main_path.exists():
-        pytest.xfail("main.py is not implemented yet; end-to-end contract is staged.")
-
-    run_dir = tmp_path / "fixture_run"
-    synergy_cfg_path = tmp_path / "synergy_stats_test.yaml"
+    *,
+    mode: str,
+) -> tuple[Path, Path]:
+    synergy_cfg_path = tmp_path / f"synergy_stats_{mode}.yaml"
     synergy_cfg_path.write_text(
         "\n".join(
             [
@@ -40,7 +34,7 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
                 "      max_iter: 1000",
                 "      tol: 0.0001",
                 "synergy_analysis:",
-                "  mode: both",
+                f"  mode: {mode}",
                 "synergy_clustering:",
                 "  algorithm: sklearn_kmeans",
                 "  selection_method: gap_statistic",
@@ -65,8 +59,11 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
         + "\n",
         encoding="utf-8-sig",
     )
-    fixture_global_cfg = yaml.safe_load(Path(fixture_bundle["global_config"]).read_text(encoding="utf-8-sig"))
-    event_xlsm_path = tmp_path / "perturb_inform_equal_length.xlsm"
+
+    fixture_global_cfg = yaml.safe_load(
+        Path(fixture_bundle["global_config"]).read_text(encoding="utf-8-sig")
+    )
+    event_xlsm_path = tmp_path / f"perturb_inform_equal_length_{mode}.xlsm"
     workbook = load_workbook(Path(fixture_bundle["xlsm"]))
     try:
         sheet = workbook["platform"]
@@ -80,24 +77,59 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
         workbook.save(event_xlsm_path)
     finally:
         workbook.close()
+
     fixture_global_cfg["input"]["event_xlsm_path"] = str(event_xlsm_path)
     fixture_global_cfg["configs"]["synergy_stats"] = str(synergy_cfg_path)
-    global_cfg_path = tmp_path / "global_config.yaml"
+    global_cfg_path = tmp_path / f"global_config_{mode}.yaml"
     global_cfg_path.write_text(
         yaml.safe_dump(fixture_global_cfg, sort_keys=False, allow_unicode=True),
         encoding="utf-8-sig",
     )
+    return synergy_cfg_path, global_cfg_path
+
+
+def _run_fixture_mode(
+    repo_root: Path,
+    fixture_bundle: dict[str, object],
+    tmp_path: Path,
+    *,
+    mode: str,
+    run_name: str,
+):
+    _, global_cfg_path = _write_mode_test_configs(fixture_bundle, tmp_path, mode=mode)
+    run_dir = tmp_path / run_name
     result = repo_python(
         repo_root,
         "main.py",
         "--config",
         str(global_cfg_path),
         "--mode",
-        "both",
+        mode,
         "--out",
         str(run_dir),
         "--overwrite",
         timeout=180,
+    )
+    return run_dir, result
+
+
+def test_both_mode_writes_trialwise_and_concatenated_outputs(
+    repo_root: Path,
+    fixture_bundle: dict[str, object],
+    tmp_path: Path,
+) -> None:
+    """A both-mode run should emit mode bundles plus combined root artifacts."""
+
+    main_path = repo_root / "main.py"
+    if not main_path.exists():
+        pytest.xfail("main.py is not implemented yet; end-to-end contract is staged.")
+
+    run_dir, result = _run_fixture_mode(
+        repo_root,
+        fixture_bundle,
+        tmp_path,
+        mode="both",
+        run_name="fixture_run",
     )
     if result.returncode != 0:
         pytest.fail(
@@ -115,12 +147,14 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
     summary_path = run_dir / "final_summary.csv"
     interpretation_workbook = run_dir / "results_interpretation.xlsx"
     audit_workbook = run_dir / "clustering_audit.xlsx"
+    root_source_trial_windows_path = run_dir / "all_concatenated_source_trial_windows.csv"
 
     assert manifest_path.exists()
     assert methods_manifest_path.exists()
     assert summary_path.exists()
     assert interpretation_workbook.exists()
     assert audit_workbook.exists()
+    assert root_source_trial_windows_path.exists()
     assert combined_final_parquet.exists()
     assert final_parquet_alias.exists()
     assert final_trialwise_alias.exists()
@@ -178,6 +212,10 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
         assert (mode_dir / "all_minimal_units_W.csv").exists()
         assert (mode_dir / "all_minimal_units_H_long.csv").exists()
         assert (mode_dir / "all_trial_window_metadata.csv").exists()
+        if mode == "concatenated":
+            assert (mode_dir / "all_concatenated_source_trial_windows.csv").exists()
+        else:
+            assert not (mode_dir / "all_concatenated_source_trial_windows.csv").exists()
         assert (mode_dir / "clustering_audit.xlsx").exists()
         assert (mode_dir / "results_interpretation.xlsx").exists()
         assert (mode_dir / "cross_group_w_pairwise_cosine.csv").exists()
@@ -197,6 +235,21 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
     assert set(concatenated_labels["trial_num"].unique().to_list()) == {"concat_step", "concat_nonstep"}
     assert set(concatenated_labels["aggregation_mode"].unique().to_list()) == {"concatenated"}
 
+    root_source_trial_windows = pl.read_csv(root_source_trial_windows_path, encoding="utf8-lossy")
+    assert root_source_trial_windows.height > 0
+    assert set(root_source_trial_windows["aggregation_mode"].unique().to_list()) == {"concatenated"}
+    assert {
+        "analysis_unit_id",
+        "trial_num",
+        "source_trial_num",
+        "analysis_window_source",
+        "analysis_window_start",
+        "analysis_window_end",
+        "analysis_window_length",
+        "analysis_window_is_surrogate",
+    }.issubset(set(root_source_trial_windows.columns))
+    assert root_source_trial_windows.group_by("analysis_unit_id").len()["len"].max() >= 2
+
     root_book = load_workbook(interpretation_workbook)
     try:
         assert {
@@ -213,3 +266,31 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
         assert "cross_group_pairwise" not in root_book.sheetnames
     finally:
         root_book.close()
+
+
+def test_trialwise_only_run_does_not_write_concatenated_source_trial_manifest(
+    repo_root: Path,
+    fixture_bundle: dict[str, object],
+    tmp_path: Path,
+) -> None:
+    """A trialwise-only run should not emit the concatenated-only provenance file."""
+    main_path = repo_root / "main.py"
+    if not main_path.exists():
+        pytest.xfail("main.py is not implemented yet; end-to-end contract is staged.")
+
+    run_dir, result = _run_fixture_mode(
+        repo_root,
+        fixture_bundle,
+        tmp_path,
+        mode="trialwise",
+        run_name="fixture_run_trialwise_only",
+    )
+    if result.returncode != 0:
+        pytest.fail(
+            "Fixture run failed.\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+
+    assert not (run_dir / "all_concatenated_source_trial_windows.csv").exists()
+    assert not (run_dir / "trialwise" / "all_concatenated_source_trial_windows.csv").exists()

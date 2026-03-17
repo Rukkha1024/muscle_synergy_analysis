@@ -114,3 +114,72 @@ def test_build_concatenated_feature_rows_creates_subject_level_units(monkeypatch
 
     assert nonstep_row.bundle.meta["analysis_step_class"] == "nonstep"
     assert nonstep_row.bundle.meta["source_trial_nums_csv"] == "2"
+
+
+def test_build_concatenated_feature_rows_preserves_source_trial_details(monkeypatch) -> None:
+    """Concatenated rows should keep one provenance payload per source trial."""
+
+    def _fake_extract_trial_features(x_trial, _cfg):
+        n_frames = int(np.asarray(x_trial).shape[0])
+        return FeatureBundle(
+            W_muscle=np.array([[1.0], [0.0]], dtype=np.float32),
+            H_time=np.arange(1, n_frames + 1, dtype=np.float32).reshape(-1, 1),
+            meta={"status": "ok", "n_components": 1, "vaf": 0.95},
+        )
+
+    monkeypatch.setattr(concatenated_module, "extract_trial_features", _fake_extract_trial_features)
+
+    def _trial(
+        trial_num: int,
+        step_class: str,
+        window_start: float,
+        window_end: float,
+        window_length: int,
+        is_surrogate: bool,
+    ) -> TrialRecord:
+        return TrialRecord(
+            key=("S01", 1, trial_num),
+            frame=pd.DataFrame(
+                {
+                    "TA": [0.1, 0.2],
+                    "MG": [0.3, 0.4],
+                }
+            ),
+            onset_device=0,
+            offset_device=1,
+            onset_column="platform_onset",
+            offset_column="analysis_window_end",
+            metadata={
+                "analysis_selected_group": True,
+                "analysis_step_class": step_class,
+                "analysis_is_step": step_class == "step",
+                "analysis_is_nonstep": step_class == "nonstep",
+                "analysis_window_source": "actual_step_onset" if not is_surrogate else "subject_mean_step_onset",
+                "analysis_window_start": window_start,
+                "analysis_window_end": window_end,
+                "analysis_window_duration_device_frames": window_length,
+                "analysis_window_is_surrogate": is_surrogate,
+            },
+        )
+
+    rows = build_concatenated_feature_rows(
+        trial_records=[
+            _trial(1, "step", 100.0, 180.0, 80, False),
+            _trial(3, "step", 105.0, 185.0, 80, False),
+        ],
+        muscle_names=["TA", "MG"],
+        cfg={},
+    )
+
+    step_row = next(row for row in rows if row.trial_num == "concat_step")
+    source_trial_details = step_row.bundle.meta["source_trial_details"]
+
+    assert len(source_trial_details) == 2
+    assert source_trial_details[0]["source_trial_num"] == 1
+    assert source_trial_details[0]["source_trial_order"] == 1
+    assert source_trial_details[0]["analysis_window_start"] == 100.0
+    assert source_trial_details[0]["analysis_window_end"] == 180.0
+    assert source_trial_details[0]["analysis_window_length"] == 80
+    assert bool(source_trial_details[0]["analysis_window_is_surrogate"]) is False
+    assert source_trial_details[1]["source_trial_num"] == 3
+    assert source_trial_details[1]["source_trial_order"] == 2

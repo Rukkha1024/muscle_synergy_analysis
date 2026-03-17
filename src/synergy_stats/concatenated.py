@@ -42,6 +42,24 @@ def _meta_flag(value: Any) -> bool:
     return bool(value)
 
 
+def _source_trial_detail(trial: TrialRecord, source_trial_order: int, step_class: str) -> dict[str, Any]:
+    """Copy one source trial's window provenance into export-ready metadata."""
+    metadata = trial.metadata
+    return {
+        "source_trial_num": trial.key[2],
+        "source_trial_order": int(source_trial_order),
+        "source_step_class": step_class,
+        "analysis_window_source": metadata.get("analysis_window_source"),
+        "analysis_window_start": metadata.get("analysis_window_start"),
+        "analysis_window_end": metadata.get("analysis_window_end"),
+        "analysis_window_length": metadata.get(
+            "analysis_window_duration_device_frames",
+            metadata.get("analysis_window_length"),
+        ),
+        "analysis_window_is_surrogate": metadata.get("analysis_window_is_surrogate"),
+    }
+
+
 def split_and_average_h_by_trial(
     concatenated_h: np.ndarray,
     segment_lengths: list[int],
@@ -104,6 +122,10 @@ def build_concatenated_feature_rows(
         key=lambda item: (_sort_key(item[0][0]), _sort_key(item[0][1]), item[0][2]),
     ):
         ordered_trials = sorted(trials, key=lambda trial: _sort_key(trial.key[2]))
+        source_trial_details = [
+            _source_trial_detail(trial, source_trial_order=index + 1, step_class=step_class)
+            for index, trial in enumerate(ordered_trials)
+        ]
         segment_lengths = [len(trial.frame.index) for trial in ordered_trials]
         matrices = [
             trial.frame[muscle_names].to_numpy(dtype=np.float32, copy=True)
@@ -128,6 +150,7 @@ def build_concatenated_feature_rows(
                 "analysis_unit_id": analysis_unit_id,
                 "source_trial_nums_csv": source_trial_nums_csv,
                 "analysis_source_trial_count": len(ordered_trials),
+                "source_trial_details": source_trial_details,
                 "analysis_h_alignment_method": (
                     "equal_length_average"
                     if len(set(segment_lengths)) == 1

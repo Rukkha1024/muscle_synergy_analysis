@@ -44,6 +44,8 @@ AGGREGATE_NAME_MAP = {
     "trial_windows": "all_trial_window_metadata.csv",
 }
 
+CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME = "all_concatenated_source_trial_windows.csv"
+
 
 def summarize_group_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
     return pd.DataFrame(group_rows)
@@ -187,6 +189,7 @@ def _write_mode_exports(
     figure_ext = figure_suffix(cfg)
 
     all_frames = {key: [] for key in AGGREGATE_NAME_MAP}
+    source_trial_window_frames: list[pd.DataFrame] = []
     group_summaries = []
     for group_id in ("global_step", "global_nonstep"):
         payload = cluster_group_results[group_id]
@@ -201,6 +204,9 @@ def _write_mode_exports(
             frame = exports.get(key, pd.DataFrame())
             if not frame.empty:
                 all_frames[key].append(_with_mode_column(frame, mode))
+        source_trial_window_frame = exports.get("source_trial_windows", pd.DataFrame())
+        if not source_trial_window_frame.empty:
+            source_trial_window_frames.append(_with_mode_column(source_trial_window_frame, mode))
         group_summaries.append(
             {
                 "aggregation_mode": mode,
@@ -227,12 +233,19 @@ def _write_mode_exports(
 
     aggregate_frames: dict[str, pd.DataFrame] = {}
     final_parquet_frame = pd.DataFrame()
+    source_trial_windows_frame = pd.DataFrame()
     for key, filename in AGGREGATE_NAME_MAP.items():
         frame = _concat_frames_union(all_frames[key])
         aggregate_frames[key] = frame
         _write_csv(frame, mode_output_dir / filename)
         if key == "minimal_W":
             final_parquet_frame = frame
+    source_trial_windows_frame = _concat_frames_union(source_trial_window_frames)
+    if not source_trial_windows_frame.empty:
+        _write_csv(
+            source_trial_windows_frame,
+            mode_output_dir / CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME,
+        )
 
     mode_final_parquet_path = mode_output_dir / "final.parquet"
     mode_final_parquet_path.parent.mkdir(parents=True, exist_ok=True)
@@ -277,6 +290,7 @@ def _write_mode_exports(
         "final_parquet_frame": final_parquet_frame,
         "final_parquet_path": mode_final_parquet_path,
         "final_alias_path": final_alias_path,
+        "source_trial_windows_frame": source_trial_windows_frame,
         "clustering_audit_workbook_path": workbook_path,
         "clustering_audit_workbook_validation": workbook_validation,
         "results_interpretation_workbook_path": interpretation_workbook_path,
@@ -322,6 +336,11 @@ def _write_analysis_methods_manifest(
                 "output_dir": str(exports["output_dir"]),
                 "final_parquet_path": str(exports["final_parquet_path"]),
                 "final_alias_path": str(exports["final_alias_path"]),
+                "concatenated_source_trial_windows_path": (
+                    str(exports["output_dir"] / CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME)
+                    if not exports.get("source_trial_windows_frame", pd.DataFrame()).empty
+                    else ""
+                ),
                 "clustering_audit_workbook_path": str(exports["clustering_audit_workbook_path"]),
                 "results_interpretation_workbook_path": str(exports["results_interpretation_workbook_path"]),
             }
@@ -368,6 +387,14 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         _write_csv(frame, root_output_dir / filename)
         if key == "minimal_W":
             combined_final_parquet_frame = frame
+    combined_source_trial_windows_frame = _concat_frames_union(
+        [exports.get("source_trial_windows_frame", pd.DataFrame()) for exports in mode_exports.values()]
+    )
+    if not combined_source_trial_windows_frame.empty:
+        _write_csv(
+            combined_source_trial_windows_frame,
+            root_output_dir / CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME,
+        )
 
     combined_final_parquet_path = Path(
         runtime_cfg.get("combined_final_parquet_path")
@@ -423,6 +450,10 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     context["artifacts"]["summary_path"] = str(root_output_dir / "final_summary.csv")
     context["artifacts"]["combined_final_parquet_path"] = str(combined_final_parquet_path)
     context["artifacts"]["final_parquet_path"] = str(final_parquet_alias_path)
+    if not combined_source_trial_windows_frame.empty:
+        context["artifacts"]["concatenated_source_trial_windows_path"] = str(
+            root_output_dir / CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME
+        )
     context["artifacts"]["final_parquet_alias_paths"] = {
         mode: str(mode_alias_paths.get(mode, root_output_dir / f"final_{mode}.parquet"))
         for mode in analysis_modes

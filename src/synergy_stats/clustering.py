@@ -270,6 +270,45 @@ def _stack_weight_vectors(
     return np.stack(stacked, axis=0), sample_map
 
 
+def _build_source_trial_window_rows(
+    group_id: str,
+    feature_rows: list[SubjectFeatureResult],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in feature_rows:
+        meta = _scalar_metadata(item.bundle.meta)
+        if str(meta.get("aggregation_mode", "")).strip().lower() != "concatenated":
+            continue
+        analysis_unit_id = meta.get("analysis_unit_id", "")
+        source_trial_details = item.bundle.meta.get("source_trial_details", [])
+        if not isinstance(source_trial_details, list):
+            continue
+        for detail in source_trial_details:
+            if not isinstance(detail, dict):
+                continue
+            rows.append(
+                {
+                    "group_id": group_id,
+                    "subject": item.subject,
+                    "velocity": item.velocity,
+                    "trial_num": item.trial_num,
+                    "analysis_unit_id": analysis_unit_id,
+                    "aggregation_mode": meta.get("aggregation_mode", "concatenated"),
+                    "analysis_source_trial_count": meta.get("analysis_source_trial_count"),
+                    "source_trial_nums_csv": meta.get("source_trial_nums_csv", ""),
+                    "source_trial_num": detail.get("source_trial_num"),
+                    "source_trial_order": detail.get("source_trial_order"),
+                    "source_step_class": detail.get("source_step_class"),
+                    "analysis_window_source": detail.get("analysis_window_source"),
+                    "analysis_window_start": detail.get("analysis_window_start"),
+                    "analysis_window_end": detail.get("analysis_window_end"),
+                    "analysis_window_length": detail.get("analysis_window_length"),
+                    "analysis_window_is_surrogate": detail.get("analysis_window_is_surrogate"),
+                }
+            )
+    return rows
+
+
 def _duplicate_trials(sample_map: list[dict[str, Any]], labels: np.ndarray) -> list[tuple[Any, Any, Any]]:
     grouped: dict[tuple[Any, Any, Any], list[int]] = defaultdict(list)
     for label, sample in zip(labels.tolist(), sample_map):
@@ -790,6 +829,8 @@ def _scalar_metadata(meta: dict[str, Any]) -> dict[str, Any]:
     for key, value in meta.items():
         if key in excluded:
             continue
+        if isinstance(value, (list, dict, tuple, set)):
+            continue
         if isinstance(value, (str, int, float, bool, np.integer, np.floating, np.bool_)) or pd.isna(value):
             exported[key] = value
     return exported
@@ -862,6 +903,7 @@ def build_group_exports(
     minimal_w_rows = []
     minimal_h_rows = []
     trial_window_rows = []
+    source_trial_window_rows = _build_source_trial_window_rows(group_id, feature_rows)
 
     for item in feature_rows:
         W = item.bundle.W_muscle
@@ -953,4 +995,5 @@ def build_group_exports(
         "minimal_W": pd.DataFrame(minimal_w_rows),
         "minimal_H_long": pd.DataFrame(minimal_h_rows),
         "trial_windows": pd.DataFrame(trial_window_rows).drop_duplicates(),
+        "source_trial_windows": pd.DataFrame(source_trial_window_rows).drop_duplicates(),
     }
