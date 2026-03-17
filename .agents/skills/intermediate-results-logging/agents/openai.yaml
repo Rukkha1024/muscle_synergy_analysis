@@ -1,4 +1,4 @@
 interface:
   display_name: "Intermediate Results Logging"
-  short_description: "Add structured intermediate-result logs to analysis pipelines"
-  default_prompt: "Use $intermediate-results-logging to add concise, structured intermediate-result logs to my analysis pipeline without changing its computational behavior."
+  short_description: "Add structured intermediate-result logs to analysis pipelines, using Rich by default for non-trivial Python console output"
+  default_prompt: "Use $intermediate-results-logging to add concise, structured intermediate-result logs to my analysis pipeline without changing its computational behavior, and pair it with $python-rich-console for most non-trivial human-facing Python scripts."

@@ -17,6 +17,22 @@ Expose meaningful intermediate results while a data workflow runs. Keep the comp
 - Keep the signal high. Do not dump full tables, per-row values, or large object reprs.
 - Validate that added logs did not change the workflow outputs.
 
+## Rich Integration
+
+When the target is a Python script with human-facing console output, use `python-rich-console` as the default companion skill.
+
+- For most non-trivial Python scripts, prefer Rich-based console output over raw `print()` formatting.
+- Reach for `Console`, `Table`, `Panel`, `track`, or `RichHandler` before inventing custom spacing or ASCII layouts for human-facing console summaries.
+- Keep the same logging contract: one visible line at a time, high-signal summaries, and behavior-preserving changes.
+- Treat very small one-off scripts as the exception, not the default.
+- Keep file logs and grep-oriented timestamped logs line-based even when the interactive console view uses Rich renderables.
+
+Skip or soften the Rich requirement only when:
+- the script is truly tiny and throwaway
+- stdout must remain machine-readable or is parsed by another program
+- the user explicitly asks for plain-text-only output
+- the runtime environment cannot support Rich cleanly
+
 ## Workflow
 
 1. Identify the execution path.
@@ -26,7 +42,7 @@ Expose meaningful intermediate results while a data workflow runs. Keep the comp
    Pick a small set of metrics that answer: "Did this step run?", "Did it process the expected amount of data?", and "Did it produce plausible intermediate results?"
 
 3. Add a consistent structure.
-   Use step banners for major phases, section headers for step-local summaries, and aligned key-value rows for metrics. If several files need the same formatting, add a tiny shared helper instead of repeating formatting code.
+   Use step banners for major phases, section headers for step-local summaries, and aligned key-value rows for metrics. In Python scripts, prefer Rich primitives for this structure. If several files need the same formatting, add a tiny shared helper instead of repeating formatting code.
 
 4. Log intermediate results, not implementation noise.
    Report the values that explain the analysis state. Avoid debug traces unless the user asked for diagnostics.

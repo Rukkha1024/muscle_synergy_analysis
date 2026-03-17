@@ -1,0 +1,82 @@
+[
+  {
+    "query": "파이썬 CLI 결과를 터미널 표로 보기 좋게 바꿔줘",
+    "should_trigger": true
+  },
+  {
+    "query": "이 print() 많은 파이썬 스크립트를 콘솔 친화적으로 리팩터링해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "argparse 앱에 진행률 바와 성공/실패 패널을 넣고 싶어",
+    "should_trigger": true
+  },
+  {
+    "query": "logging 출력이 너무 밋밋해. 터미널 로그를 읽기 좋게 만들어줘",
+    "should_trigger": true
+  },
+  {
+    "query": "예외 traceback에서 로컬 변수까지 보이게 해줘",
+    "should_trigger": true
+  },
+  {
+    "query": "README 일부를 커맨드라인 help처럼 터미널에 예쁘게 렌더링하고 싶어",
+    "should_trigger": true
+  },
+  {
+    "query": "배치 작업 루프에 progress bar를 달아줘",
+    "should_trigger": true
+  },
+  {
+    "query": "기본 출력은 사람이 보기 좋게 하고, --json 모드는 그대로 유지하고 싶어",
+    "should_trigger": true
+  },
+  {
+    "query": "Create a Python command-line report with panels, markdown, and a summary table",
+    "should_trigger": true
+  },
+  {
+    "query": "Save my terminal report as HTML and SVG from Python",
+    "should_trigger": true
+  },
+  {
+    "query": "FastAPI 응답 JSON 스키마를 설계해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "React 웹 대시보드에 카드와 표를 만들어줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Tkinter GUI 스타일을 손봐줘",
+    "should_trigger": false
+  },
+  {
+    "query": "API 응답 바디는 순수 JSON이어야 해. 포맷을 바꾸지 마",
+    "should_trigger": false
+  },
+  {
+    "query": "브라우저에서 마크다운을 렌더링하는 컴포넌트를 만들어줘",
+    "should_trigger": false
+  },
+  {
+    "query": "Textual 전체 앱 아키텍처를 설계해줘",
+    "should_trigger": false
+  },
+  {
+    "query": "PostgreSQL 쿼리 성능 튜닝 도와줘",
+    "should_trigger": false
+  },
+  {
+    "query": "CSS로 표 스타일만 잡아줘",
+    "should_trigger": false
+  },
+  {
+    "query": "쉘 파이프라인 grep/awk 정리해줘. 파이썬 코드는 없어",
+    "should_trigger": false
+  },
+  {
+    "query": "SIEM 파서가 읽는 로그 포맷이라 plain text 그대로 유지해야 해",
+    "should_trigger": false
+  }
+]
