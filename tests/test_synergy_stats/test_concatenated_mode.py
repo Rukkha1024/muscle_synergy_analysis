@@ -39,11 +39,28 @@ def test_concatenated_h_is_split_by_trial_and_averaged() -> None:
     assert np.allclose(averaged, expected)
 
 
-def test_split_and_average_h_rejects_mismatched_segment_lengths() -> None:
-    """Concatenated H must not be silently reinterpolated inside one analysis unit."""
-    concatenated_h = np.ones((5, 2), dtype=np.float32)
-    with pytest.raises(ValueError, match="equal resampled trial lengths"):
-        split_and_average_h_by_trial(concatenated_h, [2, 3])
+def test_split_and_average_h_interpolates_mismatched_segment_lengths() -> None:
+    """Concatenated H should align unequal segments onto a common trial grid."""
+    concatenated_h = np.array(
+        [
+            [1.0],
+            [3.0],
+            [2.0],
+            [4.0],
+            [6.0],
+        ],
+        dtype=np.float32,
+    )
+    averaged = split_and_average_h_by_trial(concatenated_h, [2, 3])
+    expected = np.array(
+        [
+            [1.5],
+            [3.0],
+            [4.5],
+        ],
+        dtype=np.float32,
+    )
+    assert np.allclose(averaged, expected)
 
 
 def test_build_concatenated_feature_rows_creates_subject_level_units(monkeypatch) -> None:

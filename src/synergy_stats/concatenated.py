@@ -54,8 +54,6 @@ def split_and_average_h_by_trial(
         raise ValueError("segment_lengths must contain at least one trial length.")
     if any(int(length) <= 0 for length in segment_lengths):
         raise ValueError("segment_lengths must contain only positive lengths.")
-    if len(set(int(length) for length in segment_lengths)) != 1:
-        raise ValueError("Concatenated analysis units require equal resampled trial lengths.")
     total_length = sum(int(length) for length in segment_lengths)
     if total_length != int(h_matrix.shape[0]):
         raise ValueError(
@@ -68,7 +66,21 @@ def split_and_average_h_by_trial(
         next_cursor = cursor + int(length)
         segments.append(h_matrix[cursor:next_cursor, :])
         cursor = next_cursor
-    return np.mean(np.stack(segments, axis=0), axis=0).astype(np.float32)
+    unique_lengths = {int(length) for length in segment_lengths}
+    if len(unique_lengths) == 1:
+        return np.mean(np.stack(segments, axis=0), axis=0).astype(np.float32)
+
+    target_length = max(unique_lengths)
+    aligned_segments = []
+    x_new = np.linspace(0.0, 1.0, target_length)
+    for segment in segments:
+        x_old = np.linspace(0.0, 1.0, segment.shape[0])
+        aligned_columns = [
+            np.interp(x_new, x_old, segment[:, component_index]).astype(np.float32)
+            for component_index in range(segment.shape[1])
+        ]
+        aligned_segments.append(np.stack(aligned_columns, axis=1))
+    return np.mean(np.stack(aligned_segments, axis=0), axis=0).astype(np.float32)
 
 
 def build_concatenated_feature_rows(
@@ -116,6 +128,11 @@ def build_concatenated_feature_rows(
                 "analysis_unit_id": analysis_unit_id,
                 "source_trial_nums_csv": source_trial_nums_csv,
                 "analysis_source_trial_count": len(ordered_trials),
+                "analysis_h_alignment_method": (
+                    "equal_length_average"
+                    if len(set(segment_lengths)) == 1
+                    else "interpolated_to_max_length"
+                ),
                 "analysis_selected_group": True,
                 "analysis_is_step": step_class == "step",
                 "analysis_is_nonstep": step_class == "nonstep",
