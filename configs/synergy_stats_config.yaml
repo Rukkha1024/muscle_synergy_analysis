@@ -1,6 +1,8 @@
 ﻿muscles:
   names: ["TA", "EHL", "MG", "SOL", "PL", "RF", "VL", "ST", "RA", "EO", "IO", "SCM", "GM", "ESC", "EST", "ESL"]
 
+synergy_analysis:
+  mode: "both"
 
 feature_extractor:
   type: "nmf"

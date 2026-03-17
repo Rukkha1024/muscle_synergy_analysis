@@ -56,18 +56,22 @@ def apply_cli_overrides(
     parquet_path: str | None,
     meta_xlsm_path: str | None,
     output_dir: str | None,
+    mode: str | None,
     dry_run: bool,
     overwrite: bool,
 ) -> dict[str, Any]:
     updated = deepcopy(cfg)
     updated.setdefault("input", {})
     updated.setdefault("runtime", {})
+    updated.setdefault("synergy_analysis", {})
     if parquet_path:
         updated["input"]["emg_parquet_path"] = parquet_path
     if meta_xlsm_path:
         updated["input"]["event_xlsm_path"] = meta_xlsm_path
     if output_dir:
         updated["runtime"]["output_dir"] = output_dir
+    if mode:
+        updated["synergy_analysis"]["mode"] = mode
     if dry_run:
         updated["runtime"]["dry_run"] = True
     if overwrite:
@@ -80,12 +84,19 @@ def prepare_runtime_paths(cfg: dict[str, Any], repo_root: Path) -> dict[str, Any
     output_dir = Path(runtime_cfg.get("output_dir", "outputs/runs/default_run"))
     if not output_dir.is_absolute():
         output_dir = repo_root / output_dir
+    outputs_dir = repo_root / "outputs"
     run_id = output_dir.name
     runtime_cfg["run_id"] = run_id
     runtime_cfg["output_dir"] = str(output_dir)
     runtime_cfg["manifest_path"] = str(output_dir / "run_manifest.json")
     runtime_cfg["log_path"] = str(output_dir / "logs" / "run.log")
-    runtime_cfg["final_parquet_path"] = str(repo_root / "outputs" / "final.parquet")
+    runtime_cfg["combined_final_parquet_path"] = str(output_dir / "final.parquet")
+    runtime_cfg["final_parquet_path"] = str(outputs_dir / "final.parquet")
+    runtime_cfg["final_parquet_alias_paths"] = {
+        "trialwise": str(outputs_dir / "final_trialwise.parquet"),
+        "concatenated": str(outputs_dir / "final_concatenated.parquet"),
+    }
+    runtime_cfg["analysis_methods_manifest_path"] = str(output_dir / "analysis_methods_manifest.json")
     return cfg
 
 
@@ -120,6 +131,11 @@ def write_run_manifest(cfg: dict[str, Any]) -> Path:
         "config_sha256": stable_config_hash(cfg),
         "runtime_seed": int(cfg.get("runtime", {}).get("seed", 42)),
         "run_id": cfg["runtime"]["run_id"],
+        "selected_mode": cfg.get("synergy_analysis", {}).get("mode", "trialwise"),
+        "analysis_modes": list(cfg.get("runtime", {}).get("analysis_modes", [])),
+        "combined_final_parquet_path": cfg.get("runtime", {}).get("combined_final_parquet_path", ""),
+        "final_parquet_path": cfg.get("runtime", {}).get("final_parquet_path", ""),
+        "final_parquet_alias_paths": cfg.get("runtime", {}).get("final_parquet_alias_paths", {}),
     }
     with manifest_path.open("w", encoding="utf-8-sig") as handle:
         json.dump(manifest, handle, ensure_ascii=False, indent=2)

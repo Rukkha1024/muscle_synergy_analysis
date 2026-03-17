@@ -253,6 +253,34 @@ def test_cluster_stage_rejects_legacy_grouping_key(repo_root) -> None:
         run_stage(context)
 
 
+def test_cluster_stage_clusters_concatenated_mode_without_special_case(repo_root) -> None:
+    """Concatenated rows should use the normal global clustering path."""
+    run_stage = _load_cluster_stage_run(repo_root)
+    _, _, feature_rows = _make_feature_rows("step")
+    _, _, nonstep_rows = _make_feature_rows("nonstep")
+    context = {
+        "config": {
+            "synergy_clustering": {
+                **_cluster_cfg(max_clusters=4, max_iter=20, repeats=4, gap_ref_n=2, gap_ref_restarts=1),
+            }
+        },
+        "analysis_modes": ["concatenated"],
+        "analysis_mode_feature_rows": {
+            "concatenated": feature_rows + nonstep_rows,
+        },
+    }
+
+    updated = run_stage(context)
+
+    assert "analysis_mode_cluster_group_results" in updated
+    assert "concatenated" in updated["analysis_mode_cluster_group_results"]
+    assert set(updated["analysis_mode_cluster_group_results"]["concatenated"]) == {
+        "global_step",
+        "global_nonstep",
+    }
+    assert updated["analysis_mode_cluster_group_results"]["concatenated"]["global_step"]["cluster_result"]["status"] == "success"
+
+
 def test_cluster_intra_subject_compatibility_wrapper_still_returns_success() -> None:
     """The public compatibility wrapper should remain callable for legacy imports."""
     try:

@@ -116,6 +116,13 @@ def build_audit_tables(cluster_group_results: dict[str, dict[str, Any]]) -> dict
 
     for group_id, payload in cluster_group_results.items():
         cluster_result = payload["cluster_result"]
+        payload_group_id = str(payload.get("group_id", group_id))
+        aggregation_mode = payload.get("aggregation_mode", "")
+        summary_group_id = (
+            f"{aggregation_mode}/{payload_group_id}"
+            if aggregation_mode
+            else payload_group_id
+        )
         gap_by_k = {int(key): float(value) for key, value in cluster_result.get("gap_by_k", {}).items()}
         gap_sd_by_k = {int(key): float(value) for key, value in cluster_result.get("gap_sd_by_k", {}).items()}
         observed_objective_by_k = {
@@ -136,73 +143,77 @@ def build_audit_tables(cluster_group_results: dict[str, dict[str, Any]]) -> dict
         )
         duplicate_count_at_gap_raw = int(duplicate_trial_count_by_k.get(k_gap_raw, 0))
         duplicate_count_at_selected = int(duplicate_trial_count_by_k.get(k_selected, 0))
-        selection_rows.append(
-            {
-                "group_id": group_id,
-                "selection_status": cluster_result.get("selection_status", ""),
-                "k_gap_raw": k_gap_raw,
-                "k_selected": k_selected,
-                "k_min_unique": k_min_unique,
-                "duplicate_trial_count_at_gap_raw": duplicate_count_at_gap_raw,
-                "duplicate_trial_count_at_selected_k": duplicate_count_at_selected,
-                "summary_text": _flag_summary_text(
-                    group_id,
-                    k_gap_raw,
-                    k_selected,
-                    duplicate_count_at_gap_raw,
-                ),
-            }
-        )
+        selection_row = {
+            "group_id": payload_group_id,
+            "selection_status": cluster_result.get("selection_status", ""),
+            "k_gap_raw": k_gap_raw,
+            "k_selected": k_selected,
+            "k_min_unique": k_min_unique,
+            "duplicate_trial_count_at_gap_raw": duplicate_count_at_gap_raw,
+            "duplicate_trial_count_at_selected_k": duplicate_count_at_selected,
+            "summary_text": _flag_summary_text(
+                summary_group_id,
+                k_gap_raw,
+                k_selected,
+                duplicate_count_at_gap_raw,
+            ),
+        }
+        if aggregation_mode:
+            selection_row["aggregation_mode"] = aggregation_mode
+        selection_rows.append(selection_row)
 
         for k in sorted(gap_by_k):
-            k_rows.append(
-                {
-                    "group_id": group_id,
+            k_row = {
+                "group_id": payload_group_id,
+                "k": int(k),
+                "gap": gap_by_k.get(k, ""),
+                "gap_sd": gap_sd_by_k.get(k, ""),
+                "observed_objective": observed_objective_by_k.get(k, ""),
+                "feasible_objective": _scalar_or_blank(feasible_objective_by_k.get(k, "")),
+                "duplicate_trial_count": duplicate_trial_count_by_k.get(k, 0),
+                "is_gap_raw_k": k == k_gap_raw,
+                "is_selected_k": k == k_selected,
+                "is_first_zero_duplicate_k": k_min_unique != "" and k == k_min_unique,
+            }
+            if aggregation_mode:
+                k_row["aggregation_mode"] = aggregation_mode
+            k_rows.append(k_row)
+            for trial_row in duplicate_trial_evidence_by_k.get(k, []):
+                duplicate_trial_row = {
+                    "group_id": payload_group_id,
                     "k": int(k),
-                    "gap": gap_by_k.get(k, ""),
-                    "gap_sd": gap_sd_by_k.get(k, ""),
-                    "observed_objective": observed_objective_by_k.get(k, ""),
-                    "feasible_objective": _scalar_or_blank(feasible_objective_by_k.get(k, "")),
-                    "duplicate_trial_count": duplicate_trial_count_by_k.get(k, 0),
+                    "subject": trial_row["subject"],
+                    "velocity": trial_row["velocity"],
+                    "trial_num": trial_row["trial_num"],
+                    "trial_id": trial_row["trial_id"],
+                    "n_synergies_in_trial": int(trial_row["n_synergies_in_trial"]),
+                    "duplicate_cluster_labels_json": _json_text(trial_row["duplicate_cluster_labels"]),
+                    "duplicate_component_indexes_json": _json_text(trial_row["duplicate_component_indexes"]),
+                    "duplicate_cluster_count": int(trial_row["duplicate_cluster_count"]),
+                    "duplicate_component_count": int(trial_row["duplicate_component_count"]),
                     "is_gap_raw_k": k == k_gap_raw,
                     "is_selected_k": k == k_selected,
-                    "is_first_zero_duplicate_k": k_min_unique != "" and k == k_min_unique,
                 }
-            )
-            for trial_row in duplicate_trial_evidence_by_k.get(k, []):
-                duplicate_trial_rows.append(
-                    {
-                        "group_id": group_id,
+                if aggregation_mode:
+                    duplicate_trial_row["aggregation_mode"] = aggregation_mode
+                duplicate_trial_rows.append(duplicate_trial_row)
+                for cluster_detail in trial_row["duplicate_cluster_details"]:
+                    duplicate_cluster_row = {
+                        "group_id": payload_group_id,
                         "k": int(k),
                         "subject": trial_row["subject"],
                         "velocity": trial_row["velocity"],
                         "trial_num": trial_row["trial_num"],
                         "trial_id": trial_row["trial_id"],
-                        "n_synergies_in_trial": int(trial_row["n_synergies_in_trial"]),
-                        "duplicate_cluster_labels_json": _json_text(trial_row["duplicate_cluster_labels"]),
-                        "duplicate_component_indexes_json": _json_text(trial_row["duplicate_component_indexes"]),
-                        "duplicate_cluster_count": int(trial_row["duplicate_cluster_count"]),
-                        "duplicate_component_count": int(trial_row["duplicate_component_count"]),
+                        "cluster_id": int(cluster_detail["cluster_id"]),
+                        "component_indexes_json": _json_text(cluster_detail["component_indexes"]),
+                        "component_count": int(cluster_detail["component_count"]),
                         "is_gap_raw_k": k == k_gap_raw,
                         "is_selected_k": k == k_selected,
                     }
-                )
-                for cluster_detail in trial_row["duplicate_cluster_details"]:
-                    duplicate_cluster_rows.append(
-                        {
-                            "group_id": group_id,
-                            "k": int(k),
-                            "subject": trial_row["subject"],
-                            "velocity": trial_row["velocity"],
-                            "trial_num": trial_row["trial_num"],
-                            "trial_id": trial_row["trial_id"],
-                            "cluster_id": int(cluster_detail["cluster_id"]),
-                            "component_indexes_json": _json_text(cluster_detail["component_indexes"]),
-                            "component_count": int(cluster_detail["component_count"]),
-                            "is_gap_raw_k": k == k_gap_raw,
-                            "is_selected_k": k == k_selected,
-                        }
-                    )
+                    if aggregation_mode:
+                        duplicate_cluster_row["aggregation_mode"] = aggregation_mode
+                    duplicate_cluster_rows.append(duplicate_cluster_row)
 
     selection_frame = _pl_to_pandas(pl.DataFrame(selection_rows))
     k_audit_frame = _pl_to_pandas(pl.DataFrame(k_rows))
@@ -294,7 +305,9 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
     duplicate_trial_frame = tables["duplicate_trial_summary"]
     duplicate_cluster_frame = tables["duplicate_cluster_detail"]
 
+    include_aggregation_mode = "aggregation_mode" in selection_frame.columns
     duplicate_trial_columns = [
+        * (["aggregation_mode"] if include_aggregation_mode else []),
         "group_id",
         "k",
         "subject",
@@ -310,6 +323,7 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
         "is_selected_k",
     ]
     duplicate_cluster_columns = [
+        * (["aggregation_mode"] if include_aggregation_mode else []),
         "group_id",
         "k",
         "subject",
@@ -368,7 +382,7 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
     ref, next_row = _write_table(
         summary_sheet,
         summary_placements[0],
-        text_columns={"group_id", "selection_status", "summary_text"},
+        text_columns={"aggregation_mode", "group_id", "selection_status", "summary_text"},
     )
     table_info.append(
         {
@@ -393,7 +407,7 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
     ref, _ = _write_table(
         summary_sheet,
         summary_placements[1],
-        text_columns={"group_id"},
+        text_columns={"aggregation_mode", "group_id"},
     )
     table_info.append(
         {
@@ -433,6 +447,7 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
         duplicates_sheet,
         duplicates_placements[0],
         text_columns={
+            "aggregation_mode",
             "group_id",
             "subject",
             "velocity",
@@ -466,6 +481,7 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
         duplicates_sheet,
         duplicates_placements[1],
         text_columns={
+            "aggregation_mode",
             "group_id",
             "subject",
             "velocity",

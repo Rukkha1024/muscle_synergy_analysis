@@ -23,6 +23,7 @@ from src.emg_pipeline.config import (
     write_run_manifest,
 )
 from src.emg_pipeline.log_utils import log_step_banner
+from src.synergy_stats.methods import normalize_analysis_mode, resolve_analysis_modes
 
 
 STEP_FILES = [
@@ -48,6 +49,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--parquet", default=None, help="Override `input.emg_parquet_path`.")
     parser.add_argument("--meta-xlsm", default=None, help="Override `input.event_xlsm_path`.")
     parser.add_argument("--out", default=None, help="Override `runtime.output_dir`.")
+    parser.add_argument(
+        "--mode",
+        choices=("trialwise", "concatenated", "both"),
+        default=None,
+        help="Override `synergy_analysis.mode`.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Validate config and inputs without running the full pipeline.")
     parser.add_argument("--overwrite", action="store_true", help="Remove an existing run directory before writing new outputs.")
     return parser
@@ -93,15 +100,20 @@ def main() -> int:
         parquet_path=args.parquet,
         meta_xlsm_path=args.meta_xlsm,
         output_dir=args.out,
+        mode=args.mode,
         dry_run=args.dry_run,
         overwrite=args.overwrite,
     )
     prepare_runtime_paths(cfg, repo_root=Path.cwd())
+    selected_mode = normalize_analysis_mode(cfg.get("synergy_analysis", {}).get("mode", "both"))
+    cfg.setdefault("synergy_analysis", {})["mode"] = selected_mode
+    cfg["runtime"]["analysis_modes"] = resolve_analysis_modes(selected_mode)
     _ensure_clean_output(cfg["runtime"])
     _configure_logging(Path(cfg["runtime"]["log_path"]))
 
     logging.info("Loaded config from %s", args.config)
     logging.info("Run output directory: %s", cfg["runtime"]["output_dir"])
+    logging.info("Analysis mode: %s -> %s", selected_mode, ", ".join(cfg["runtime"]["analysis_modes"]))
     write_run_manifest(cfg)
 
     context: dict[str, Any] = {
