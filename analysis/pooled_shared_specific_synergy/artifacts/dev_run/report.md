@@ -15,10 +15,10 @@ This analysis asks whether step and nonstep synergies occupy the same pooled clu
 
 - Selected trials were reconstructed from the event workbook and required to match baseline keys exactly (`n_trials=125`, `n_subjects=24`).
 - Trial-level NMF was re-extracted per selected trial with the pipeline-aligned VAF threshold rule (`VAF >= 0.90`).
-- Effective NMF backend: `sklearn_nmf`.
-- Effective clustering backend: `sklearn_kmeans`.
-- Pooled clustering used `k_lb=7`, `k_gap_raw=13`, and `k_selected=16` with a zero-duplicate constraint.
-- Final pooled component count: `486`.
+- Effective NMF backend: `torchnmf`.
+- Effective clustering backend: `torch_kmeans`.
+- Pooled clustering used `k_lb=7`, `k_gap_raw=16`, and `k_selected=17` with a zero-duplicate constraint.
+- Final pooled component count: `493`.
 
 ## Results
 
@@ -30,43 +30,45 @@ This analysis asks whether step and nonstep synergies occupy the same pooled clu
 
 | cluster_id | n_members_total | n_members_step | n_members_nonstep | subject_coverage_step | subject_coverage_nonstep | step_nonstep_subcentroid_cosine |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0 | 32 | 14 | 18 | 10 | 10 | 0.978 |
-| 1 | 22 | 9 | 13 | 6 | 8 | 0.968 |
-| 2 | 38 | 14 | 24 | 9 | 12 | 0.991 |
-| 3 | 21 | 8 | 13 | 6 | 7 | 0.975 |
-| 4 | 54 | 25 | 29 | 13 | 13 | 0.994 |
-| 5 | 27 | 16 | 11 | 11 | 9 | 0.949 |
-| 6 | 27 | 13 | 14 | 9 | 10 | 0.970 |
-| 7 | 29 | 9 | 20 | 5 | 13 | 0.985 |
-| 8 | 31 | 16 | 15 | 9 | 8 | 0.990 |
-| 9 | 34 | 22 | 12 | 14 | 7 | 0.955 |
-| 10 | 37 | 12 | 25 | 7 | 12 | 0.986 |
-| 11 | 23 | 13 | 10 | 9 | 6 | 0.867 |
-| 12 | 22 | 9 | 13 | 7 | 12 | 0.941 |
-| 13 | 24 | 13 | 11 | 7 | 8 | 0.957 |
-| 14 | 25 | 14 | 11 | 9 | 7 | 0.983 |
-| 15 | 40 | 19 | 21 | 12 | 12 | 0.998 |
+| 0 | 37 | 18 | 19 | 13 | 11 | 0.987 |
+| 1 | 35 | 17 | 18 | 10 | 11 | 0.987 |
+| 2 | 23 | 12 | 11 | 6 | 8 | 0.948 |
+| 3 | 22 | 14 | 8 | 11 | 7 | 0.970 |
+| 4 | 13 | 7 | 6 | 5 | 6 | 0.953 |
+| 5 | 44 | 17 | 27 | 9 | 11 | 0.992 |
+| 6 | 26 | 10 | 16 | 7 | 11 | 0.947 |
+| 7 | 21 | 9 | 12 | 8 | 8 | 0.986 |
+| 8 | 21 | 8 | 13 | 7 | 10 | 0.981 |
+| 9 | 36 | 26 | 10 | 15 | 6 | 0.967 |
+| 10 | 33 | 17 | 16 | 9 | 11 | 0.982 |
+| 11 | 26 | 9 | 17 | 5 | 13 | 0.988 |
+| 12 | 15 | 5 | 10 | 5 | 6 | 0.914 |
+| 13 | 63 | 23 | 40 | 11 | 18 | 0.995 |
+| 14 | 28 | 14 | 14 | 7 | 9 | 0.973 |
+| 15 | 18 | 7 | 11 | 6 | 7 | 0.973 |
+| 16 | 32 | 15 | 17 | 8 | 8 | 0.990 |
 
 ### High Sub-centroid Similarity Clusters
 
 | cluster_id | step_nonstep_subcentroid_cosine | n_members_step | n_members_nonstep |
 | --- | --- | --- | --- |
-| 15 | 0.998 | 19 | 21 |
-| 4 | 0.994 | 25 | 29 |
-| 2 | 0.991 | 14 | 24 |
-| 8 | 0.990 | 16 | 15 |
-| 10 | 0.986 | 12 | 25 |
-| 7 | 0.985 | 9 | 20 |
-| 14 | 0.983 | 14 | 11 |
-| 0 | 0.978 | 14 | 18 |
-| 3 | 0.975 | 8 | 13 |
-| 6 | 0.970 | 13 | 14 |
-| 1 | 0.968 | 9 | 13 |
-| 13 | 0.957 | 13 | 11 |
-| 9 | 0.955 | 22 | 12 |
-| 5 | 0.949 | 16 | 11 |
-| 12 | 0.941 | 9 | 13 |
-| 11 | 0.867 | 13 | 10 |
+| 13 | 0.995 | 23 | 40 |
+| 5 | 0.992 | 17 | 27 |
+| 16 | 0.990 | 15 | 17 |
+| 11 | 0.988 | 9 | 17 |
+| 0 | 0.987 | 18 | 19 |
+| 1 | 0.987 | 17 | 18 |
+| 7 | 0.986 | 9 | 12 |
+| 10 | 0.982 | 17 | 16 |
+| 8 | 0.981 | 8 | 13 |
+| 14 | 0.973 | 14 | 14 |
+| 15 | 0.973 | 7 | 11 |
+| 3 | 0.970 | 14 | 8 |
+| 9 | 0.967 | 26 | 10 |
+| 4 | 0.953 | 7 | 6 |
+| 2 | 0.948 | 12 | 11 |
+| 6 | 0.947 | 10 | 16 |
+| 12 | 0.914 | 5 | 10 |
 
 ## Figure Guide
 
