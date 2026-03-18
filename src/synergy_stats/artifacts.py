@@ -1,8 +1,8 @@
-"""Export parquet-first EMG synergy artifacts and Excel workbooks.
+"""Export single-parquet EMG artifacts and mode-specific workbooks.
 
-This module writes full frame bundles to parquet for each
-analysis mode and the combined run, then rebuilds the
-human-facing Excel workbooks from those saved frames.
+This module assembles all figure/workbook source frames,
+stores them in one parquet per analysis scope, and
+rebuilds mode-specific Excel outputs from those files.
 """
 
 from __future__ import annotations
@@ -33,43 +33,20 @@ from .excel_results import (
     validate_results_interpretation_workbook,
     write_results_interpretation_workbook,
 )
-from .figure_rerender import render_figures_from_run_dir
 from .figures import figure_suffix
 from .methods import primary_analysis_mode
-
-
-AGGREGATE_NAME_MAP = {
-    "metadata": "all_clustering_metadata.parquet",
-    "labels": "all_cluster_labels.parquet",
-    "rep_W": "all_representative_W_posthoc.parquet",
-    "rep_H_long": "all_representative_H_posthoc_long.parquet",
-    "minimal_W": "all_minimal_units_W.parquet",
-    "minimal_H_long": "all_minimal_units_H_long.parquet",
-    "trial_windows": "all_trial_window_metadata.parquet",
-}
-
-SUMMARY_FRAME_KEY = "final_summary"
-SOURCE_TRIAL_WINDOWS_FRAME_KEY = "source_trial_windows"
-POOLED_CLUSTER_STRATEGY_SUMMARY_KEY = "pooled_strategy_summary"
-POOLED_CLUSTER_STRATEGY_W_MEANS_KEY = "pooled_strategy_w_means"
-POOLED_CLUSTER_STRATEGY_H_MEANS_KEY = "pooled_strategy_h_means"
-
-PARQUET_FILENAME_MAP = {
-    **AGGREGATE_NAME_MAP,
-    SUMMARY_FRAME_KEY: "final_summary.parquet",
-    SOURCE_TRIAL_WINDOWS_FRAME_KEY: "all_concatenated_source_trial_windows.parquet",
-    POOLED_CLUSTER_STRATEGY_SUMMARY_KEY: "pooled_cluster_strategy_summary.parquet",
-    POOLED_CLUSTER_STRATEGY_W_MEANS_KEY: "pooled_cluster_strategy_W_means.parquet",
-    POOLED_CLUSTER_STRATEGY_H_MEANS_KEY: "pooled_cluster_strategy_H_means_long.parquet",
-    "cross_group_pairwise": "cross_group_pairwise.parquet",
-    "cross_group_matrix": "cross_group_matrix.parquet",
-    "cross_group_decision": "cross_group_decision.parquet",
-    "cross_group_summary": "cross_group_summary.parquet",
-    "audit_selection_summary": "audit_selection_summary.parquet",
-    "audit_k_audit": "audit_k_audit.parquet",
-    "audit_duplicate_trial_summary": "audit_duplicate_trial_summary.parquet",
-    "audit_duplicate_cluster_detail": "audit_duplicate_cluster_detail.parquet",
-}
+from .single_parquet import (
+    AGGREGATE_NAME_MAP,
+    POOLED_CLUSTER_STRATEGY_H_MEANS_KEY,
+    POOLED_CLUSTER_STRATEGY_SUMMARY_KEY,
+    POOLED_CLUSTER_STRATEGY_W_MEANS_KEY,
+    SOURCE_TRIAL_WINDOWS_FRAME_KEY,
+    SUMMARY_FRAME_KEY,
+    load_single_parquet_bundle,
+    prepare_parquet_frame,
+    resolve_single_parquet_path,
+    write_single_parquet_bundle,
+)
 
 
 def summarize_group_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -79,13 +56,6 @@ def summarize_group_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
 def summarize_subject_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
     """Compatibility alias retained for older imports."""
     return summarize_group_results(group_rows)
-
-
-def _save_parquet(frame: pd.DataFrame, path: Path) -> None:
-    if frame.empty:
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    _prepare_parquet_frame(frame).to_parquet(path, index=False)
 
 
 def _cross_group_similarity_cfg(cfg: dict[str, Any]) -> dict[str, Any]:
@@ -134,27 +104,6 @@ def _with_mode_column(frame: pd.DataFrame, mode: str) -> pd.DataFrame:
     updated = frame.copy()
     updated["aggregation_mode"] = mode
     return updated
-
-
-def _prepare_parquet_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    if frame.empty:
-        return frame
-    prepared = frame.copy()
-    for column_name in ("aggregation_mode", "group_id", "subject", "trial_num", "analysis_unit_id", "source_trial_nums_csv"):
-        if column_name in prepared.columns:
-            prepared[column_name] = prepared[column_name].astype(str)
-    return prepared
-
-
-def _parquet_dir(output_dir: Path) -> Path:
-    return output_dir / "parquet"
-
-
-def _load_named_parquet(frame_key: str, parquet_dir: Path) -> pd.DataFrame:
-    path = parquet_dir / PARQUET_FILENAME_MAP[frame_key]
-    if not path.exists():
-        return pd.DataFrame()
-    return pd.read_parquet(path)
 
 
 def _audit_tables_from_bundle(bundle: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
@@ -213,25 +162,6 @@ def _build_export_bundle(
     }
 
 
-def _save_export_bundle(bundle: dict[str, pd.DataFrame], parquet_dir: Path) -> dict[str, Path]:
-    saved_paths: dict[str, Path] = {}
-    for frame_key, filename in PARQUET_FILENAME_MAP.items():
-        frame = bundle.get(frame_key, pd.DataFrame())
-        if frame.empty:
-            continue
-        path = parquet_dir / filename
-        _save_parquet(frame, path)
-        saved_paths[frame_key] = path
-    return saved_paths
-
-
-def _load_parquet_bundle(parquet_dir: Path) -> dict[str, pd.DataFrame]:
-    return {
-        frame_key: _load_named_parquet(frame_key, parquet_dir)
-        for frame_key in PARQUET_FILENAME_MAP
-    }
-
-
 def _write_workbooks_from_bundle(bundle: dict[str, pd.DataFrame], output_dir: Path) -> dict[str, Any]:
     workbook_path = write_clustering_audit_workbook_from_frames(
         output_dir / "clustering_audit.xlsx",
@@ -254,12 +184,12 @@ def _write_workbooks_from_bundle(bundle: dict[str, pd.DataFrame], output_dir: Pa
     }
 
 
-def _discover_parquet_modes(run_dir: Path) -> list[str]:
-    return sorted(
-        child.name
-        for child in run_dir.iterdir()
-        if child.is_dir() and (_parquet_dir(child)).exists()
-    )
+def _discover_mode_dirs(run_dir: Path) -> list[str]:
+    return [
+        mode
+        for mode in ("trialwise", "concatenated")
+        if (run_dir / mode).is_dir()
+    ]
 
 
 def _present_group_ids(frame: pd.DataFrame) -> list[str]:
@@ -516,13 +446,10 @@ def _write_mode_exports(
     summary_df = summarize_group_results(group_summaries)
 
     aggregate_frames: dict[str, pd.DataFrame] = {}
-    final_parquet_frame = pd.DataFrame()
     source_trial_windows_frame = pd.DataFrame()
     for key in AGGREGATE_NAME_MAP:
         frame = _concat_frames_union(all_frames[key])
         aggregate_frames[key] = frame
-        if key == "minimal_W":
-            final_parquet_frame = frame
     source_trial_windows_frame = _concat_frames_union(source_trial_window_frames)
     pooled_strategy_summary_frame = _build_pooled_cluster_strategy_summary(aggregate_frames["labels"])
     if not pooled_strategy_summary_frame.empty:
@@ -539,12 +466,6 @@ def _write_mode_exports(
     )
     if not pooled_strategy_h_means.empty:
         pooled_strategy_h_means = _with_mode_column(pooled_strategy_h_means, mode)
-
-    mode_final_parquet_path = mode_output_dir / "final.parquet"
-    mode_final_parquet_path.parent.mkdir(parents=True, exist_ok=True)
-    _prepare_parquet_frame(final_parquet_frame).to_parquet(mode_final_parquet_path, index=False)
-    final_alias_path.parent.mkdir(parents=True, exist_ok=True)
-    _prepare_parquet_frame(final_parquet_frame).to_parquet(final_alias_path, index=False)
 
     cross_group_cfg = _cross_group_similarity_cfg(cfg)
     cross_group_artifacts = _build_cross_group_artifacts(
@@ -563,25 +484,20 @@ def _write_mode_exports(
         cross_group_artifacts=cross_group_artifacts,
         audit_tables=audit_tables,
     )
-    parquet_dir = _parquet_dir(mode_output_dir)
-    saved_parquet_paths = _save_export_bundle(export_bundle, parquet_dir)
-    workbook_exports = _write_workbooks_from_bundle(
-        {
-            **export_bundle,
-            **(
-                {}
-                if cross_group_cfg["enabled"] and cross_group_cfg["output_excel_sheets"]
-                else {
-                    "cross_group_pairwise": pd.DataFrame(),
-                    "cross_group_matrix": pd.DataFrame(),
-                    "cross_group_decision": pd.DataFrame(),
-                    "cross_group_summary": pd.DataFrame(),
-                }
-            ),
-        },
-        mode_output_dir,
+    final_alias_path = final_alias_path.resolve()
+    write_single_parquet_bundle(export_bundle, final_alias_path)
+    workbook_exports = _write_mode_workbooks_from_source(
+        mode_output_dir=mode_output_dir,
+        cfg=cfg,
+        mode=mode,
+        source_path=final_alias_path,
     )
-    rendered_figures = render_figures_from_run_dir(mode_output_dir, cfg)
+    rendered_figures = _write_mode_figures_from_source(
+        mode_output_dir=mode_output_dir,
+        cfg=cfg,
+        mode=mode,
+        source_path=final_alias_path,
+    )
     logging.info("Saved %s mode artifacts to %s", mode, mode_output_dir)
 
     return {
@@ -592,10 +508,6 @@ def _write_mode_exports(
         "cross_group_artifacts": cross_group_artifacts,
         "audit_tables": audit_tables,
         "export_bundle": export_bundle,
-        "parquet_dir": parquet_dir,
-        "saved_parquet_paths": saved_parquet_paths,
-        "final_parquet_frame": final_parquet_frame,
-        "final_parquet_path": mode_final_parquet_path,
         "final_alias_path": final_alias_path,
         "source_trial_windows_frame": source_trial_windows_frame,
         "pooled_strategy_summary_frame": pooled_strategy_summary_frame,
@@ -641,13 +553,7 @@ def _write_analysis_methods_manifest(
         "modes": {
             mode: {
                 "output_dir": str(exports["output_dir"]),
-                "final_parquet_path": str(exports["final_parquet_path"]),
                 "final_alias_path": str(exports["final_alias_path"]),
-                "concatenated_source_trial_windows_path": (
-                    str(_parquet_dir(exports["output_dir"]) / PARQUET_FILENAME_MAP[SOURCE_TRIAL_WINDOWS_FRAME_KEY])
-                    if not exports.get("source_trial_windows_frame", pd.DataFrame()).empty
-                    else ""
-                ),
                 "clustering_audit_workbook_path": str(exports["clustering_audit_workbook_path"]),
                 "results_interpretation_workbook_path": str(exports["results_interpretation_workbook_path"]),
             }
@@ -659,21 +565,56 @@ def _write_analysis_methods_manifest(
     return manifest_path
 
 
-def export_from_parquet(run_dir: Path) -> dict[str, Any]:
-    """Rebuild Excel workbooks from saved parquet bundles in one run directory."""
+def _bundle_for_mode_workbooks(bundle: dict[str, pd.DataFrame], cfg: dict[str, Any]) -> dict[str, pd.DataFrame]:
+    cross_group_cfg = _cross_group_similarity_cfg(cfg)
+    if not (cross_group_cfg["enabled"] and cross_group_cfg["output_excel_sheets"]):
+        return {
+            **bundle,
+            "cross_group_pairwise": pd.DataFrame(),
+            "cross_group_matrix": pd.DataFrame(),
+            "cross_group_decision": pd.DataFrame(),
+            "cross_group_summary": pd.DataFrame(),
+        }
+    return bundle
+
+
+def _write_mode_workbooks_from_source(
+    *,
+    mode_output_dir: Path,
+    cfg: dict[str, Any],
+    mode: str,
+    source_path: Path | None = None,
+) -> dict[str, Any]:
+    bundle = load_single_parquet_bundle(source_path or resolve_single_parquet_path(cfg, mode))
+    return _write_workbooks_from_bundle(_bundle_for_mode_workbooks(bundle, cfg), mode_output_dir)
+
+
+def _write_mode_figures_from_source(
+    *,
+    mode_output_dir: Path,
+    cfg: dict[str, Any],
+    mode: str,
+    source_path: Path | None = None,
+) -> dict[str, list[str]]:
+    from .figure_rerender import render_figures_from_run_dir
+
+    return render_figures_from_run_dir(
+        mode_output_dir,
+        cfg,
+        source_parquet_path=source_path or resolve_single_parquet_path(cfg, mode),
+    )
+
+
+def export_from_parquet(run_dir: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Rebuild mode workbooks from saved single parquet files."""
     run_dir = Path(run_dir).resolve()
-    rebuilt: dict[str, Any] = {"root": None, "modes": {}}
-    for mode in _discover_parquet_modes(run_dir):
+    rebuilt: dict[str, Any] = {"modes": {}}
+    for mode in _discover_mode_dirs(run_dir):
         mode_dir = run_dir / mode
-        rebuilt["modes"][mode] = _write_workbooks_from_bundle(
-            _load_parquet_bundle(_parquet_dir(mode_dir)),
-            mode_dir,
-        )
-    root_parquet_dir = _parquet_dir(run_dir)
-    if root_parquet_dir.exists():
-        rebuilt["root"] = _write_workbooks_from_bundle(
-            _load_parquet_bundle(root_parquet_dir),
-            run_dir,
+        rebuilt["modes"][mode] = _write_mode_workbooks_from_source(
+            mode_output_dir=mode_dir,
+            cfg=cfg,
+            mode=mode,
         )
     return rebuilt
 
@@ -687,8 +628,8 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     analysis_modes, analysis_mode_cluster_group_results = _ensure_mode_context(context)
     alias_cfg = runtime_cfg.get("final_parquet_alias_paths", {})
     mode_alias_paths = {
-        "trialwise": Path(alias_cfg.get("trialwise", runtime_cfg.get("final_parquet_path", root_output_dir / "final.parquet"))),
-        "concatenated": Path(alias_cfg.get("concatenated", root_output_dir / "final_concatenated.parquet")),
+        "trialwise": Path(alias_cfg.get("trialwise", runtime_cfg.get("final_parquet_path", root_output_dir / "final.parquet"))).resolve(),
+        "concatenated": Path(alias_cfg.get("concatenated", root_output_dir / "final_concatenated.parquet")).resolve(),
     }
     mode_exports = {}
     for mode in analysis_modes:
@@ -705,12 +646,9 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     combined_summary = _concat_frames_union([exports["summary"] for exports in mode_exports.values()])
 
     combined_frames: dict[str, pd.DataFrame] = {}
-    combined_final_parquet_frame = pd.DataFrame()
     for key in AGGREGATE_NAME_MAP:
         frame = _concat_frames_union([exports["aggregate_frames"][key] for exports in mode_exports.values()])
         combined_frames[key] = frame
-        if key == "minimal_W":
-            combined_final_parquet_frame = frame
     combined_source_trial_windows_frame = _concat_frames_union(
         [exports.get("source_trial_windows_frame", pd.DataFrame()) for exports in mode_exports.values()]
     )
@@ -723,19 +661,6 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     combined_pooled_strategy_h_means = _concat_frames_union(
         [exports.get("pooled_strategy_h_means_frame", pd.DataFrame()) for exports in mode_exports.values()]
     )
-
-    combined_final_parquet_path = Path(
-        runtime_cfg.get("combined_final_parquet_path")
-        or (root_output_dir / "final.parquet")
-    )
-    combined_final_parquet_path.parent.mkdir(parents=True, exist_ok=True)
-    _prepare_parquet_frame(combined_final_parquet_frame).to_parquet(combined_final_parquet_path, index=False)
-    final_parquet_alias_path = Path(
-        runtime_cfg.get("final_parquet_path")
-        or (root_output_dir / "final.parquet")
-    )
-    final_parquet_alias_path.parent.mkdir(parents=True, exist_ok=True)
-    _prepare_parquet_frame(combined_final_parquet_frame).to_parquet(final_parquet_alias_path, index=False)
 
     root_cross_group_artifacts: dict[str, pd.DataFrame] = {}
     if len(analysis_modes) == 1 and cross_group_cfg["enabled"]:
@@ -753,24 +678,8 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         cross_group_artifacts=root_cross_group_artifacts,
         audit_tables=combined_audit_tables,
     )
-    root_parquet_dir = _parquet_dir(root_output_dir)
-    saved_parquet_paths = _save_export_bundle(export_bundle, root_parquet_dir)
-    workbook_exports = _write_workbooks_from_bundle(
-        {
-            **export_bundle,
-            **(
-                {}
-                if len(analysis_modes) == 1 and cross_group_cfg["output_excel_sheets"]
-                else {
-                    "cross_group_pairwise": pd.DataFrame(),
-                    "cross_group_matrix": pd.DataFrame(),
-                    "cross_group_decision": pd.DataFrame(),
-                    "cross_group_summary": pd.DataFrame(),
-                }
-            ),
-        },
-        root_output_dir,
-    )
+    combined_final_parquet_path = resolve_single_parquet_path(cfg)
+    write_single_parquet_bundle(export_bundle, combined_final_parquet_path)
     analysis_methods_manifest_path = _write_analysis_methods_manifest(
         cfg=cfg,
         analysis_modes=analysis_modes,
@@ -778,21 +687,16 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         combined_final_parquet_path=combined_final_parquet_path,
     )
 
-    context["artifacts"]["summary_path"] = str(root_parquet_dir / PARQUET_FILENAME_MAP[SUMMARY_FRAME_KEY])
     context["artifacts"]["combined_final_parquet_path"] = str(combined_final_parquet_path)
-    context["artifacts"]["final_parquet_path"] = str(final_parquet_alias_path)
+    context["artifacts"]["final_parquet_path"] = str(combined_final_parquet_path)
     if not combined_source_trial_windows_frame.empty:
-        context["artifacts"]["concatenated_source_trial_windows_path"] = str(
-            root_parquet_dir / PARQUET_FILENAME_MAP[SOURCE_TRIAL_WINDOWS_FRAME_KEY]
-        )
+        context["artifacts"]["concatenated_source_trial_windows_path"] = str(combined_final_parquet_path)
     if not combined_pooled_strategy_summary.empty:
-        context["artifacts"]["pooled_cluster_strategy_summary_path"] = str(
-            root_parquet_dir / PARQUET_FILENAME_MAP[POOLED_CLUSTER_STRATEGY_SUMMARY_KEY]
-        )
-    if "cross_group_pairwise" in saved_parquet_paths:
-        context["artifacts"]["cross_group_pairwise_path"] = str(saved_parquet_paths["cross_group_pairwise"])
-    if "cross_group_decision" in saved_parquet_paths:
-        context["artifacts"]["cross_group_cluster_decision_path"] = str(saved_parquet_paths["cross_group_decision"])
+        context["artifacts"]["pooled_cluster_strategy_summary_path"] = str(combined_final_parquet_path)
+    if not export_bundle.get("cross_group_pairwise", pd.DataFrame()).empty:
+        context["artifacts"]["cross_group_pairwise_path"] = str(combined_final_parquet_path)
+    if not export_bundle.get("cross_group_decision", pd.DataFrame()).empty:
+        context["artifacts"]["cross_group_cluster_decision_path"] = str(combined_final_parquet_path)
     context["artifacts"]["final_parquet_alias_paths"] = {
         mode: str(mode_alias_paths.get(mode, root_output_dir / f"final_{mode}.parquet"))
         for mode in analysis_modes
@@ -801,11 +705,32 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         mode: str(exports["output_dir"]) for mode, exports in mode_exports.items()
     }
     context["artifacts"]["analysis_methods_manifest_path"] = str(analysis_methods_manifest_path)
-    context["artifacts"]["parquet_dir"] = str(root_parquet_dir)
-    context["artifacts"]["clustering_audit_workbook_path"] = str(workbook_exports["clustering_audit_workbook_path"])
-    context["artifacts"]["clustering_audit_workbook_validation"] = workbook_exports["clustering_audit_workbook_validation"]
-    context["artifacts"]["results_interpretation_workbook_path"] = str(workbook_exports["results_interpretation_workbook_path"])
-    context["artifacts"]["results_interpretation_workbook_validation"] = workbook_exports["results_interpretation_workbook_validation"]
+    context["artifacts"]["mode_clustering_audit_workbook_paths"] = {
+        mode: str(exports["clustering_audit_workbook_path"]) for mode, exports in mode_exports.items()
+    }
+    context["artifacts"]["mode_clustering_audit_workbook_validation"] = {
+        mode: exports["clustering_audit_workbook_validation"] for mode, exports in mode_exports.items()
+    }
+    context["artifacts"]["mode_results_interpretation_workbook_paths"] = {
+        mode: str(exports["results_interpretation_workbook_path"]) for mode, exports in mode_exports.items()
+    }
+    context["artifacts"]["mode_results_interpretation_workbook_validation"] = {
+        mode: exports["results_interpretation_workbook_validation"] for mode, exports in mode_exports.items()
+    }
+    if len(analysis_modes) == 1:
+        mode = analysis_modes[0]
+        context["artifacts"]["clustering_audit_workbook_path"] = str(
+            mode_exports[mode]["clustering_audit_workbook_path"]
+        )
+        context["artifacts"]["clustering_audit_workbook_validation"] = mode_exports[mode][
+            "clustering_audit_workbook_validation"
+        ]
+        context["artifacts"]["results_interpretation_workbook_path"] = str(
+            mode_exports[mode]["results_interpretation_workbook_path"]
+        )
+        context["artifacts"]["results_interpretation_workbook_validation"] = mode_exports[mode][
+            "results_interpretation_workbook_validation"
+        ]
     context["artifacts"]["group_figure_paths"] = [
         path
         for exports in mode_exports.values()

@@ -55,7 +55,7 @@ def test_md5_compare_fails_when_same_stable_file_is_missing_from_both_sides(
     new_dir = tmp_path / "new"
     _write_stable_tree(base_dir, md5_module.STABLE_RELATIVE_PATHS)
     _write_stable_tree(new_dir, md5_module.STABLE_RELATIVE_PATHS)
-    missing_path = "parquet/all_cluster_labels.parquet"
+    missing_path = "final.parquet"
     (base_dir / missing_path).unlink()
     (new_dir / missing_path).unlink()
 
@@ -78,10 +78,10 @@ def test_md5_compare_ignores_figure_only_differences(repo_root: Path, tmp_path: 
     new_dir = tmp_path / "new"
     _write_stable_tree(base_dir, md5_module.STABLE_RELATIVE_PATHS)
     _write_stable_tree(new_dir, md5_module.STABLE_RELATIVE_PATHS)
-    (base_dir / "figures").mkdir(parents=True, exist_ok=True)
-    (new_dir / "figures").mkdir(parents=True, exist_ok=True)
-    (base_dir / "figures" / "global_step_clusters.png").write_text("old-figure\n", encoding="utf-8-sig")
-    (new_dir / "figures" / "global_step_clusters.png").write_text("new-figure\n", encoding="utf-8-sig")
+    (base_dir / "trialwise" / "figures").mkdir(parents=True, exist_ok=True)
+    (new_dir / "trialwise" / "figures").mkdir(parents=True, exist_ok=True)
+    (base_dir / "trialwise" / "figures" / "global_step_clusters.png").write_text("old-figure\n", encoding="utf-8-sig")
+    (new_dir / "trialwise" / "figures" / "global_step_clusters.png").write_text("new-figure\n", encoding="utf-8-sig")
 
     result = repo_python(
         repo_root,
@@ -103,9 +103,9 @@ def test_md5_compare_can_optionally_fail_on_figure_only_differences(repo_root: P
     new_dir = tmp_path / "new"
     _write_stable_tree(base_dir, md5_module.STABLE_RELATIVE_PATHS)
     _write_stable_tree(new_dir, md5_module.STABLE_RELATIVE_PATHS)
-    (base_dir / "figures").mkdir(parents=True, exist_ok=True)
-    (new_dir / "figures").mkdir(parents=True, exist_ok=True)
-    rel_path = Path("figures") / "global_step_clusters.png"
+    (base_dir / "trialwise" / "figures").mkdir(parents=True, exist_ok=True)
+    (new_dir / "trialwise" / "figures").mkdir(parents=True, exist_ok=True)
+    rel_path = Path("trialwise") / "figures" / "global_step_clusters.png"
     (base_dir / rel_path).write_text("old-figure\n", encoding="utf-8-sig")
     (new_dir / rel_path).write_text("new-figure\n", encoding="utf-8-sig")
 

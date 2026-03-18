@@ -298,8 +298,8 @@ def test_export_results_records_clustering_audit_workbook_path(tmp_path: Path, m
         ],
     }
 
-    def _fake_render_figures_from_run_dir(run_dir: Path, cfg: dict) -> dict[str, list[str]]:
-        figure_dir = run_dir / "figures"
+    def _fake_write_mode_figures_from_source(*, mode_output_dir: Path, cfg: dict, mode: str, source_path: Path | None = None) -> dict[str, list[str]]:
+        figure_dir = mode_output_dir / "figures"
         trial_dir = figure_dir / "nmf_trials"
         trial_dir.mkdir(parents=True, exist_ok=True)
         group_paths = [figure_dir / "global_step_clusters.png", figure_dir / "global_nonstep_clusters.png"]
@@ -312,7 +312,7 @@ def test_export_results_records_clustering_audit_workbook_path(tmp_path: Path, m
             "cross_group_figure_paths": [],
         }
 
-    monkeypatch.setattr(artifacts_module, "render_figures_from_run_dir", _fake_render_figures_from_run_dir)
+    monkeypatch.setattr(artifacts_module, "_write_mode_figures_from_source", _fake_write_mode_figures_from_source)
 
     context = {
         "config": {
@@ -403,8 +403,8 @@ def test_export_results_records_clustering_audit_workbook_path(tmp_path: Path, m
 
     workbook_path.unlink()
     interpretation_path.unlink()
-    rebuilt = export_from_parquet(Path(context["config"]["runtime"]["output_dir"]))
-    assert rebuilt["root"] is not None
+    rebuilt = export_from_parquet(Path(context["config"]["runtime"]["output_dir"]), context["config"])
+    assert "trialwise" in rebuilt["modes"]
     assert workbook_path.exists()
     assert interpretation_path.exists()
 
@@ -483,8 +483,8 @@ def test_export_results_skips_optional_cross_group_workbook_sheets_when_disabled
         ],
     }
 
-    def _fake_render_figures_from_run_dir(run_dir: Path, cfg: dict) -> dict[str, list[str]]:
-        figure_dir = run_dir / "figures"
+    def _fake_write_mode_figures_from_source(*, mode_output_dir: Path, cfg: dict, mode: str, source_path: Path | None = None) -> dict[str, list[str]]:
+        figure_dir = mode_output_dir / "figures"
         trial_dir = figure_dir / "nmf_trials"
         trial_dir.mkdir(parents=True, exist_ok=True)
         group_paths = [figure_dir / "global_step_clusters.png", figure_dir / "global_nonstep_clusters.png"]
@@ -503,7 +503,7 @@ def test_export_results_skips_optional_cross_group_workbook_sheets_when_disabled
             "cross_group_figure_paths": [str(path) for path in cross_paths],
         }
 
-    monkeypatch.setattr(artifacts_module, "render_figures_from_run_dir", _fake_render_figures_from_run_dir)
+    monkeypatch.setattr(artifacts_module, "_write_mode_figures_from_source", _fake_write_mode_figures_from_source)
 
     context = {
         "config": {
@@ -655,8 +655,8 @@ def test_validate_results_interpretation_workbook_catches_error_tokens(tmp_path:
         ],
     }
 
-    def _fake_render_figures_from_run_dir(run_dir: Path, cfg: dict) -> dict[str, list[str]]:
-        figure_dir = run_dir / "figures"
+    def _fake_write_mode_figures_from_source(*, mode_output_dir: Path, cfg: dict, mode: str, source_path: Path | None = None) -> dict[str, list[str]]:
+        figure_dir = mode_output_dir / "figures"
         trial_dir = figure_dir / "nmf_trials"
         trial_dir.mkdir(parents=True, exist_ok=True)
         group_paths = [figure_dir / "global_step_clusters.png", figure_dir / "global_nonstep_clusters.png"]
@@ -669,7 +669,7 @@ def test_validate_results_interpretation_workbook_catches_error_tokens(tmp_path:
             "cross_group_figure_paths": [],
         }
 
-    monkeypatch.setattr(artifacts_module, "render_figures_from_run_dir", _fake_render_figures_from_run_dir)
+    monkeypatch.setattr(artifacts_module, "_write_mode_figures_from_source", _fake_write_mode_figures_from_source)
 
     context = {
         "config": {

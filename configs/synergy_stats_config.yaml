@@ -7,7 +7,7 @@ synergy_analysis:
 feature_extractor:
   type: "nmf"
   nmf:
-    backend: "torchnmf"
+    backend: "auto"
     torch_device: "auto"
     torch_dtype: "float32"
     vaf_threshold: 0.90
@@ -20,7 +20,7 @@ feature_extractor:
 
       
 synergy_clustering:
-  algorithm: "torch_kmeans"
+  algorithm: "auto"
   torch_device: "auto"
   torch_dtype: "float32"
   torch_restart_batch_size: 128

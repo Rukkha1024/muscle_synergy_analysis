@@ -8,15 +8,9 @@ from pathlib import Path
 
 
 STABLE_RELATIVE_PATHS = {
-    "parquet/all_cluster_labels.parquet",
-    "parquet/all_clustering_metadata.parquet",
-    "parquet/all_minimal_units_H_long.parquet",
-    "parquet/all_minimal_units_W.parquet",
-    "parquet/pooled_cluster_strategy_summary.parquet",
-    "parquet/all_representative_H_posthoc_long.parquet",
-    "parquet/all_representative_W_posthoc.parquet",
-    "parquet/all_trial_window_metadata.parquet",
-    "parquet/final_summary.parquet",
+    "final.parquet",
+    "final_trialwise.parquet",
+    "final_concatenated.parquet",
 }
 
 
@@ -40,8 +34,8 @@ def _stable_files(root: Path) -> dict[str, str]:
 def _figure_relative_paths(root: Path) -> set[str]:
     return {
         str(path.relative_to(root))
-        for path in sorted((root / "figures").rglob("*"))
-        if path.is_file()
+        for path in sorted(root.rglob("*"))
+        if path.is_file() and "figures" in path.relative_to(root).parts
     }
 
 

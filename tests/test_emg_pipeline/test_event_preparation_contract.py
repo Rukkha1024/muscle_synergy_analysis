@@ -11,9 +11,11 @@ from copy import deepcopy
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import pytest
 
 from src.emg_pipeline import load_event_metadata, load_pipeline_config
+from src.emg_pipeline import io as io_module
 
 
 def _transpose_meta_rows_to_meta_sheet(transpose_meta_rows: list[dict[str, object]]) -> pd.DataFrame:
@@ -373,6 +375,47 @@ def test_event_preparation_ignores_platform_rows_with_unusable_merge_keys(
     assert set(prepared["subject"].tolist()) == {"S01"}
     assert prepared.shape[0] == 2
     assert prepared["analysis_selected_group"].any()
+
+
+def test_platform_loader_parses_excel_fallback_numeric_strings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Excel fallback string values like `1.0` should still load as numeric merge keys."""
+    workbook_path = tmp_path / "string_numeric_platform.xlsx"
+    with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
+        pd.DataFrame(
+            [{"subject": "S01", "velocity": 1, "trial": 1, "state": "step_R", "step_TF": "step", "mixed": 1}]
+        ).to_excel(writer, sheet_name="platform", index=False)
+        _transpose_meta_rows_to_meta_sheet([{"subject": "S01", "나이": 24, "주손 or 주발": "R"}]).to_excel(
+            writer,
+            sheet_name="meta",
+            index=False,
+        )
+
+    original_safe_read_excel = io_module._safe_read_excel
+
+    def _fake_safe_read_excel(path: Path, *, sheet_name: str | int | None = None) -> pl.DataFrame:
+        if sheet_name == "platform":
+            return pl.DataFrame(
+                {
+                    "subject": ["S01"],
+                    "velocity": ["1.0"],
+                    "trial": ["1.0"],
+                    "state": ["step_R"],
+                    "step_TF": ["step"],
+                    "RPS": ["1"],
+                    "mixed": ["1.0"],
+                    "platform_onset": ["3.0"],
+                    "platform_offset": ["18.0"],
+                    "step_onset": ["11.0"],
+                }
+            )
+        return original_safe_read_excel(path, sheet_name=sheet_name)
+
+    monkeypatch.setattr(io_module, "_safe_read_excel", _fake_safe_read_excel)
+
+    loaded = io_module._load_platform_with_subject_meta(workbook_path)
+    assert loaded.shape[0] == 1
+    assert loaded.loc[0, "velocity"] == pytest.approx(1.0)
+    assert int(loaded.loc[0, "trial_num"]) == 1
 
 
 def test_event_preparation_raises_when_subject_meta_is_missing(

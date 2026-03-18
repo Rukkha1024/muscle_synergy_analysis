@@ -194,6 +194,21 @@ def test_torch_kmeans_reports_runtime_metadata() -> None:
     assert exports["metadata"]["torch_dtype"].iloc[0] == "float32"
 
 
+def test_auto_clustering_falls_back_to_sklearn_when_torch_runtime_is_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Auto clustering should keep running via sklearn if torch runtime is unavailable."""
+    from src.synergy_stats import clustering as clustering_module
+
+    def _fail_torch_runtime(cfg):  # noqa: ANN001
+        raise RuntimeError("torch runtime unavailable")
+
+    monkeypatch.setattr(clustering_module, "_clustering_torch_runtime", _fail_torch_runtime)
+    cluster_func, _, feature_rows = _make_feature_rows("step")
+    result = cluster_func(feature_rows, _cluster_cfg(algorithm="auto"), "global_step")
+
+    assert result["status"] == "success"
+    assert result["algorithm_used"] == "sklearn_kmeans"
+
+
 @pytest.mark.parametrize(
     ("is_step", "is_nonstep"),
     [

@@ -80,9 +80,28 @@ def _clustering_torch_runtime(cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _resolve_clustering_algorithm(cfg: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Resolve the requested clustering backend into a runnable implementation."""
+    requested = str(cfg.get("algorithm", "auto")).strip().lower() or "auto"
+    runtime: dict[str, Any] = {}
+    if requested == "auto":
+        try:
+            runtime = _clustering_torch_runtime(cfg)
+            return "torch_kmeans", runtime
+        except Exception:
+            try:
+                import cupy  # noqa: F401
+                import cuml  # noqa: F401
+
+                return "cuml_kmeans", runtime
+            except Exception:
+                return "sklearn_kmeans", runtime
+    return requested, runtime
+
+
 def describe_clustering_runtime(cfg: dict[str, Any]) -> dict[str, Any]:
     """Return the requested clustering backend and resolved Torch runtime."""
-    algorithm = str(cfg.get("algorithm", "cuml_kmeans")).strip().lower() or "cuml_kmeans"
+    algorithm, torch_runtime = _resolve_clustering_algorithm(cfg)
     runtime = {
         "algorithm": algorithm,
         "torch_device": "",
@@ -91,7 +110,7 @@ def describe_clustering_runtime(cfg: dict[str, Any]) -> dict[str, Any]:
         "gap_reference_batch_size": int(cfg.get("gap_reference_batch_size", 16)),
     }
     if algorithm == "torch_kmeans":
-        runtime.update(_clustering_torch_runtime(cfg))
+        runtime.update(torch_runtime or _clustering_torch_runtime(cfg))
     return runtime
 
 
@@ -375,7 +394,7 @@ def _duplicate_trial_evidence(sample_map: list[dict[str, Any]], labels: np.ndarr
 
 
 def _fit_kmeans(data: np.ndarray, n_clusters: int, cfg: dict[str, Any]):
-    algorithm = str(cfg.get("algorithm", "cuml_kmeans")).strip().lower()
+    algorithm, _ = _resolve_clustering_algorithm(cfg)
     random_state = int(cfg.get("random_state", 42))
     repeats = int(cfg.get("repeats", 25))
     max_iter = int(cfg.get("max_iter", 300))

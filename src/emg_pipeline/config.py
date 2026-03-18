@@ -90,7 +90,7 @@ def prepare_runtime_paths(cfg: dict[str, Any], repo_root: Path) -> dict[str, Any
     runtime_cfg["output_dir"] = str(output_dir)
     runtime_cfg["manifest_path"] = str(output_dir / "run_manifest.json")
     runtime_cfg["log_path"] = str(output_dir / "logs" / "run.log")
-    runtime_cfg["combined_final_parquet_path"] = str(output_dir / "final.parquet")
+    runtime_cfg["combined_final_parquet_path"] = str(outputs_dir / "final.parquet")
     runtime_cfg["final_parquet_path"] = str(outputs_dir / "final.parquet")
     runtime_cfg["final_parquet_alias_paths"] = {
         "trialwise": str(outputs_dir / "final_trialwise.parquet"),

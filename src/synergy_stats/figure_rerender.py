@@ -12,6 +12,7 @@ from pathlib import Path
 import shutil
 from typing import Any
 
+import pandas as pd
 import polars as pl
 
 from .cross_group_similarity import build_cluster_w_matrix
@@ -26,23 +27,26 @@ from .figures import (
     save_trial_nmf_figure,
     save_within_cluster_strategy_overlay,
 )
+from .single_parquet import (
+    POOLED_CLUSTER_STRATEGY_H_MEANS_KEY,
+    POOLED_CLUSTER_STRATEGY_SUMMARY_KEY,
+    POOLED_CLUSTER_STRATEGY_W_MEANS_KEY,
+    load_single_parquet_bundle,
+    resolve_single_parquet_path,
+)
 
 
-_CORE_ARTIFACT_FILENAMES = {
-    "rep_w": "all_representative_W_posthoc.parquet",
-    "rep_h_long": "all_representative_H_posthoc_long.parquet",
-    "minimal_w": "all_minimal_units_W.parquet",
-    "minimal_h_long": "all_minimal_units_H_long.parquet",
-    "labels": "all_cluster_labels.parquet",
-    "trial_windows": "all_trial_window_metadata.parquet",
+_CORE_BUNDLE_KEYS = {
+    "rep_w": "rep_W",
+    "rep_h_long": "rep_H_long",
+    "minimal_w": "minimal_W",
+    "minimal_h_long": "minimal_H_long",
+    "labels": "labels",
+    "trial_windows": "trial_windows",
 }
-_POOLED_STRATEGY_FILENAME = "pooled_cluster_strategy_summary.parquet"
-_POOLED_STRATEGY_W_MEANS_FILENAME = "pooled_cluster_strategy_W_means.parquet"
-_POOLED_STRATEGY_H_MEANS_FILENAME = "pooled_cluster_strategy_H_means_long.parquet"
-
-_CROSS_GROUP_ARTIFACT_FILENAMES = {
-    "cross_group_pairwise": "cross_group_pairwise.parquet",
-    "cross_group_decision": "cross_group_decision.parquet",
+_CROSS_GROUP_BUNDLE_KEYS = {
+    "cross_group_pairwise": "cross_group_pairwise",
+    "cross_group_decision": "cross_group_decision",
 }
 
 
@@ -73,27 +77,22 @@ def _discover_group_ids(artifacts: dict[str, object]) -> list[str]:
     return discovered
 
 
-def _can_render_cross_group(run_dir: Path, cfg: dict[str, Any], group_ids: list[str]) -> bool:
+def _can_render_cross_group(bundle: dict[str, object], cfg: dict[str, Any], group_ids: list[str]) -> bool:
     if not _requires_cross_group_artifacts(cfg):
         return False
     if not {"global_step", "global_nonstep"}.issubset(set(group_ids)):
         return False
-    parquet_dir = run_dir / "parquet"
     missing = [
-        filename
-        for filename in _CROSS_GROUP_ARTIFACT_FILENAMES.values()
-        if not (parquet_dir / filename).exists()
+        bundle_key
+        for bundle_key in _CROSS_GROUP_BUNDLE_KEYS.values()
+        if bundle.get(bundle_key) is None or bundle[bundle_key].empty
     ]
     if missing:
         missing_text = ", ".join(sorted(missing))
         raise FileNotFoundError(
-            f"Missing figure source artifact(s) in {run_dir}: {missing_text}"
+            f"Missing figure source artifact(s) in single parquet bundle: {missing_text}"
         )
     return True
-
-
-def _read_parquet(path: Path) -> pl.DataFrame:
-    return pl.read_parquet(path)
 
 
 def _format_filename_value(value: Any) -> str:
@@ -176,54 +175,75 @@ def _materialized_paths(
 
 
 def required_figure_artifacts(
-    run_dir: Path,
+    bundle: dict[str, Any],
     *,
     include_cross_group: bool = True,
-) -> dict[str, Path]:
-    artifact_names = dict(_CORE_ARTIFACT_FILENAMES)
+) -> dict[str, str]:
+    bundle_keys = dict(_CORE_BUNDLE_KEYS)
     if include_cross_group:
-        artifact_names.update(_CROSS_GROUP_ARTIFACT_FILENAMES)
+        bundle_keys.update(_CROSS_GROUP_BUNDLE_KEYS)
 
-    resolved: dict[str, Path] = {}
+    resolved: dict[str, str] = {}
     missing: list[str] = []
-    parquet_dir = run_dir / "parquet"
-    for key, filename in artifact_names.items():
-        path = parquet_dir / filename
-        if not path.exists():
-            missing.append(filename)
+    for key, bundle_key in bundle_keys.items():
+        frame = bundle.get(bundle_key)
+        if frame is None or frame.empty:
+            missing.append(bundle_key)
             continue
-        resolved[key] = path
+        resolved[key] = bundle_key
 
     if missing:
         missing_text = ", ".join(sorted(missing))
         raise FileNotFoundError(
-            f"Missing figure source artifact(s) in {run_dir}: {missing_text}"
+            f"Missing figure source artifact(s) in single parquet bundle: {missing_text}"
         )
     return resolved
 
 
 def load_figure_artifacts(
-    run_dir: Path,
+    source_parquet_path: Path,
     *,
     include_cross_group: bool = True,
 ) -> dict[str, object]:
-    artifact_paths = required_figure_artifacts(run_dir, include_cross_group=include_cross_group)
-    frames = {key: _read_parquet(path) for key, path in artifact_paths.items()}
+    bundle = load_single_parquet_bundle(source_parquet_path)
+    bundle_keys = required_figure_artifacts(bundle, include_cross_group=include_cross_group)
+    frames = {
+        key: pl.from_pandas(bundle[bundle_key])
+        for key, bundle_key in bundle_keys.items()
+    }
     return {
-        "paths": artifact_paths,
+        "source_parquet_path": str(source_parquet_path),
         **frames,
     }
 
 
-def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str, list[str]]:
+def _mode_name_for_run_dir(run_dir: Path) -> str:
+    name = run_dir.name.strip().lower()
+    if name not in {"trialwise", "concatenated"}:
+        raise ValueError(f"Expected a mode output directory, got: {run_dir}")
+    return name
+
+
+def render_figures_from_run_dir(
+    run_dir: Path,
+    cfg: dict[str, Any],
+    *,
+    source_parquet_path: Path | None = None,
+) -> dict[str, list[str]]:
     run_dir = Path(run_dir).resolve()
-    artifacts = load_figure_artifacts(run_dir, include_cross_group=False)
+    resolved_source_path = (
+        Path(source_parquet_path).resolve()
+        if source_parquet_path is not None
+        else resolve_single_parquet_path(cfg, _mode_name_for_run_dir(run_dir))
+    )
+    bundle = load_single_parquet_bundle(resolved_source_path)
+    artifacts = load_figure_artifacts(resolved_source_path, include_cross_group=False)
     group_ids = _discover_group_ids(artifacts)
     if not group_ids:
-        raise ValueError(f"Could not discover any group_id values from saved artifacts in {run_dir}.")
-    include_cross_group = _can_render_cross_group(run_dir, cfg, group_ids)
+        raise ValueError(f"Could not discover any group_id values from saved artifacts in {resolved_source_path}.")
+    include_cross_group = _can_render_cross_group(bundle, cfg, group_ids)
     if include_cross_group:
-        artifacts = load_figure_artifacts(run_dir, include_cross_group=True)
+        artifacts = load_figure_artifacts(resolved_source_path, include_cross_group=True)
 
     muscle_names = list(cfg["muscles"]["names"])
     figure_ext = figure_suffix(cfg)
@@ -232,14 +252,8 @@ def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str,
     _cleanup_staging_dirs(run_dir)
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load optional pooled strategy summary
-    parquet_dir = run_dir / "parquet"
-    strategy_summary_path = parquet_dir / _POOLED_STRATEGY_FILENAME
-    strategy_summary = (
-        _read_parquet(strategy_summary_path).to_pandas()
-        if strategy_summary_path.exists()
-        else None
-    )
+    strategy_summary_frame = bundle.get(POOLED_CLUSTER_STRATEGY_SUMMARY_KEY, None)
+    strategy_summary = None if strategy_summary_frame is None or strategy_summary_frame.empty else strategy_summary_frame
 
     rendered_paths = {
         "group_figure_paths": [],
@@ -285,16 +299,14 @@ def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str,
             rendered_paths["pooled_narrative_figure_paths"].append(str(fig03_path))
 
         # Figure 05: Within-cluster strategy overlay
-        strategy_w_path = parquet_dir / _POOLED_STRATEGY_W_MEANS_FILENAME
-        strategy_h_path = parquet_dir / _POOLED_STRATEGY_H_MEANS_FILENAME
+        strategy_w_means = bundle.get(POOLED_CLUSTER_STRATEGY_W_MEANS_KEY, pd.DataFrame())
+        strategy_h_means = bundle.get(POOLED_CLUSTER_STRATEGY_H_MEANS_KEY, pd.DataFrame())
         if (
             strategy_summary is not None
             and "pooled_step_nonstep" in group_ids
-            and strategy_w_path.exists()
-            and strategy_h_path.exists()
+            and not strategy_w_means.empty
+            and not strategy_h_means.empty
         ):
-            strategy_w_means = _read_parquet(strategy_w_path).to_pandas()
-            strategy_h_means = _read_parquet(strategy_h_path).to_pandas()
             fig05_path = tmp_dir / f"05_within_cluster_strategy_overlay{figure_ext}"
             save_within_cluster_strategy_overlay(
                 strategy_w_means=strategy_w_means,

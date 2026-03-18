@@ -1,4 +1,4 @@
-"""End-to-end contract tests for mode-separated synergy artifacts."""
+﻿"""End-to-end contract tests for single-parquet, mode-only outputs."""
 
 from __future__ import annotations
 
@@ -6,11 +6,10 @@ import json
 from pathlib import Path
 
 from openpyxl import load_workbook
-import pandas as pd
-import polars as pl
 import pytest
 import yaml
 
+from src.synergy_stats.single_parquet import load_single_parquet_bundle
 from tests.helpers import read_final_parquet, repo_python
 
 
@@ -63,22 +62,6 @@ def _write_mode_test_configs(
     fixture_global_cfg = yaml.safe_load(
         Path(fixture_bundle["global_config"]).read_text(encoding="utf-8-sig")
     )
-    event_xlsm_path = tmp_path / f"perturb_inform_equal_length_{mode}.xlsm"
-    workbook = load_workbook(Path(fixture_bundle["xlsm"]))
-    try:
-        sheet = workbook["platform"]
-        header_cells = next(sheet.iter_rows(min_row=1, max_row=1))
-        header_map = {str(cell.value): cell.column for cell in header_cells}
-        for row_idx in range(2, sheet.max_row + 1):
-            mixed_value = sheet.cell(row=row_idx, column=header_map["mixed"]).value
-            step_tf = sheet.cell(row=row_idx, column=header_map["step_TF"]).value
-            if int(mixed_value or 0) == 1 and str(step_tf).strip().lower() == "step":
-                sheet.cell(row=row_idx, column=header_map["step_onset"]).value = 12
-        workbook.save(event_xlsm_path)
-    finally:
-        workbook.close()
-
-    fixture_global_cfg["input"]["event_xlsm_path"] = str(event_xlsm_path)
     fixture_global_cfg["configs"]["synergy_stats"] = str(synergy_cfg_path)
     global_cfg_path = tmp_path / f"global_config_{mode}.yaml"
     global_cfg_path.write_text(
@@ -113,13 +96,12 @@ def _run_fixture_mode(
     return run_dir, result
 
 
-def test_both_mode_writes_trialwise_and_concatenated_outputs(
+def test_both_mode_writes_single_parquet_aliases_and_mode_only_outputs(
     repo_root: Path,
     fixture_bundle: dict[str, object],
     tmp_path: Path,
 ) -> None:
-    """A both-mode run should emit mode bundles plus combined root artifacts."""
-
+    """A both-mode run should write alias parquet sources and mode-specific outputs only."""
     main_path = repo_root / "main.py"
     if not main_path.exists():
         pytest.xfail("main.py is not implemented yet; end-to-end contract is staged.")
@@ -138,133 +120,65 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
             f"stderr:\n{result.stderr}"
         )
 
-    combined_final_parquet = run_dir / "final.parquet"
     final_parquet_alias = repo_root / "outputs" / "final.parquet"
     final_trialwise_alias = repo_root / "outputs" / "final_trialwise.parquet"
     final_concatenated_alias = repo_root / "outputs" / "final_concatenated.parquet"
     manifest_path = run_dir / "run_manifest.json"
     methods_manifest_path = run_dir / "analysis_methods_manifest.json"
-    parquet_dir = run_dir / "parquet"
-    summary_path = parquet_dir / "final_summary.parquet"
-    interpretation_workbook = run_dir / "results_interpretation.xlsx"
-    audit_workbook = run_dir / "clustering_audit.xlsx"
-    root_source_trial_windows_path = parquet_dir / "all_concatenated_source_trial_windows.parquet"
-    root_pooled_strategy_summary_path = parquet_dir / "pooled_cluster_strategy_summary.parquet"
 
     assert manifest_path.exists()
     assert methods_manifest_path.exists()
-    assert summary_path.exists()
-    assert interpretation_workbook.exists()
-    assert audit_workbook.exists()
-    assert root_source_trial_windows_path.exists()
-    assert root_pooled_strategy_summary_path.exists()
-    assert combined_final_parquet.exists()
     assert final_parquet_alias.exists()
     assert final_trialwise_alias.exists()
     assert final_concatenated_alias.exists()
-    assert not (parquet_dir / "cross_group_pairwise.parquet").exists()
-    assert not (parquet_dir / "cross_group_decision.parquet").exists()
-    assert not (run_dir / "figures").exists()
+    assert not (run_dir / "parquet").exists()
+    assert not (run_dir / "final.parquet").exists()
+    assert not (run_dir / "clustering_audit.xlsx").exists()
+    assert not (run_dir / "results_interpretation.xlsx").exists()
+    assert not list(run_dir.rglob("*.csv"))
 
     with manifest_path.open("r", encoding="utf-8-sig") as handle:
         manifest = json.load(handle)
     assert manifest["selected_mode"] == "both"
     assert manifest["analysis_modes"] == ["trialwise", "concatenated"]
+    assert Path(manifest["combined_final_parquet_path"]) == final_parquet_alias
 
     with methods_manifest_path.open("r", encoding="utf-8-sig") as handle:
         methods_manifest = json.load(handle)
     assert methods_manifest["analysis_modes"] == ["trialwise", "concatenated"]
     assert set(methods_manifest["modes"]) == {"trialwise", "concatenated"}
 
-    summary_df = pd.read_parquet(summary_path)
-    assert summary_df.shape[0] == 2
-    assert set(summary_df["aggregation_mode"].tolist()) == {"trialwise", "concatenated"}
-    assert set(summary_df["group_id"].tolist()) == {"pooled_step_nonstep"}
-    assert set(summary_df["status"].tolist()) == {"success"}
+    combined_df = read_final_parquet(final_parquet_alias)
+    assert "artifact_kind" in combined_df.columns
+    assert set(combined_df["artifact_kind"].unique().to_list()) >= {
+        "final_summary",
+        "metadata",
+        "labels",
+        "rep_W",
+        "rep_H_long",
+        "minimal_W",
+        "minimal_H_long",
+        "trial_windows",
+        "audit_selection_summary",
+    }
 
-    combined_df = read_final_parquet(combined_final_parquet)
-    assert {
-        "aggregation_mode",
-        "group_id",
-        "subject",
-        "velocity",
-        "trial_num",
-        "analysis_unit_id",
-        "source_trial_nums_csv",
-    }.issubset(set(combined_df.columns))
-    assert set(combined_df["aggregation_mode"].unique().to_list()) == {"trialwise", "concatenated"}
-    assert combined_df.filter(pl.col("aggregation_mode") == "concatenated").height > 0
-    assert set(
-        combined_df.filter(pl.col("aggregation_mode") == "concatenated")["trial_num"].unique().to_list()
-    ) == {"concat_step", "concat_nonstep"}
-
-    trialwise_df = read_final_parquet(final_trialwise_alias)
-    concatenated_df = read_final_parquet(final_concatenated_alias)
-    assert set(trialwise_df["aggregation_mode"].unique().to_list()) == {"trialwise"}
-    assert set(concatenated_df["aggregation_mode"].unique().to_list()) == {"concatenated"}
+    trialwise_bundle = load_single_parquet_bundle(final_trialwise_alias)
+    concatenated_bundle = load_single_parquet_bundle(final_concatenated_alias)
+    assert set(trialwise_bundle["minimal_W"]["aggregation_mode"].unique().tolist()) == {"trialwise"}
+    assert set(concatenated_bundle["minimal_W"]["aggregation_mode"].unique().tolist()) == {"concatenated"}
+    assert set(trialwise_bundle["labels"]["group_id"].unique().tolist()) == {"pooled_step_nonstep"}
+    assert set(concatenated_bundle["labels"]["group_id"].unique().tolist()) == {"pooled_step_nonstep"}
 
     for mode in ("trialwise", "concatenated"):
         mode_dir = run_dir / mode
-        mode_parquet_dir = mode_dir / "parquet"
         assert mode_dir.exists()
-        assert (mode_dir / "final.parquet").exists()
-        assert (mode_parquet_dir / "final_summary.parquet").exists()
-        assert (mode_parquet_dir / "all_cluster_labels.parquet").exists()
-        assert (mode_parquet_dir / "all_clustering_metadata.parquet").exists()
-        assert (mode_parquet_dir / "all_representative_W_posthoc.parquet").exists()
-        assert (mode_parquet_dir / "all_representative_H_posthoc_long.parquet").exists()
-        assert (mode_parquet_dir / "all_minimal_units_W.parquet").exists()
-        assert (mode_parquet_dir / "all_minimal_units_H_long.parquet").exists()
-        assert (mode_parquet_dir / "all_trial_window_metadata.parquet").exists()
-        assert (mode_parquet_dir / "pooled_cluster_strategy_summary.parquet").exists()
-        if mode == "concatenated":
-            assert (mode_parquet_dir / "all_concatenated_source_trial_windows.parquet").exists()
-        else:
-            assert not (mode_parquet_dir / "all_concatenated_source_trial_windows.parquet").exists()
         assert (mode_dir / "clustering_audit.xlsx").exists()
         assert (mode_dir / "results_interpretation.xlsx").exists()
-        assert not (mode_parquet_dir / "cross_group_pairwise.parquet").exists()
-        assert not (mode_parquet_dir / "cross_group_decision.parquet").exists()
         assert (mode_dir / "figures" / "pooled_step_nonstep_clusters.png").exists()
-        assert not (mode_dir / "figures" / "cross_group_cosine_heatmap.png").exists()
-        assert not (mode_dir / "figures" / "cross_group_matched_w.png").exists()
-        assert not (mode_dir / "figures" / "cross_group_matched_h.png").exists()
-        assert not (mode_dir / "figures" / "cross_group_decision_summary.png").exists()
+        assert not (mode_dir / "parquet").exists()
+        assert not list(mode_dir.rglob("*.csv"))
 
-    concatenated_labels = pl.read_parquet(run_dir / "concatenated" / "parquet" / "all_cluster_labels.parquet")
-    assert concatenated_labels.height > 0
-    assert set(concatenated_labels["trial_num"].unique().to_list()) == {"concat_step", "concat_nonstep"}
-    assert set(concatenated_labels["aggregation_mode"].unique().to_list()) == {"concatenated"}
-    assert set(concatenated_labels["group_id"].unique().to_list()) == {"pooled_step_nonstep"}
-
-    pooled_strategy_summary = pl.read_parquet(root_pooled_strategy_summary_path)
-    assert pooled_strategy_summary.height > 0
-    assert set(pooled_strategy_summary["aggregation_mode"].unique().to_list()) == {"trialwise", "concatenated"}
-    assert set(pooled_strategy_summary["group_id"].unique().to_list()) == {"pooled_step_nonstep"}
-    assert set(pooled_strategy_summary["strategy_label"].unique().to_list()) == {"step", "nonstep"}
-    assert {
-        "cluster_id",
-        "n_rows",
-        "cluster_total_rows",
-        "fraction_within_cluster",
-    }.issubset(set(pooled_strategy_summary.columns))
-
-    root_source_trial_windows = pl.read_parquet(root_source_trial_windows_path)
-    assert root_source_trial_windows.height > 0
-    assert set(root_source_trial_windows["aggregation_mode"].unique().to_list()) == {"concatenated"}
-    assert {
-        "analysis_unit_id",
-        "trial_num",
-        "source_trial_num",
-        "analysis_window_source",
-        "analysis_window_start",
-        "analysis_window_end",
-        "analysis_window_length",
-        "analysis_window_is_surrogate",
-    }.issubset(set(root_source_trial_windows.columns))
-    assert root_source_trial_windows.group_by("analysis_unit_id").len()["len"].max() >= 2
-
-    root_book = load_workbook(interpretation_workbook)
+    trialwise_book = load_workbook(run_dir / "trialwise" / "results_interpretation.xlsx")
     try:
         assert {
             "summary",
@@ -276,18 +190,17 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
             "minimal_W",
             "minimal_H",
             "table_guide",
-        }.issubset(set(root_book.sheetnames))
-        assert "cross_group_pairwise" not in root_book.sheetnames
+        }.issubset(set(trialwise_book.sheetnames))
     finally:
-        root_book.close()
+        trialwise_book.close()
 
 
-def test_trialwise_only_run_does_not_write_concatenated_source_trial_manifest(
+def test_trialwise_only_run_omits_concatenated_alias_and_outputs(
     repo_root: Path,
     fixture_bundle: dict[str, object],
     tmp_path: Path,
 ) -> None:
-    """A trialwise-only run should not emit the concatenated-only provenance file."""
+    """A trialwise-only run should not create concatenated-only output trees."""
     main_path = repo_root / "main.py"
     if not main_path.exists():
         pytest.xfail("main.py is not implemented yet; end-to-end contract is staged.")
@@ -306,5 +219,18 @@ def test_trialwise_only_run_does_not_write_concatenated_source_trial_manifest(
             f"stderr:\n{result.stderr}"
         )
 
-    assert not (run_dir / "parquet" / "all_concatenated_source_trial_windows.parquet").exists()
-    assert not (run_dir / "trialwise" / "parquet" / "all_concatenated_source_trial_windows.parquet").exists()
+    final_parquet_alias = repo_root / "outputs" / "final.parquet"
+    final_trialwise_alias = repo_root / "outputs" / "final_trialwise.parquet"
+
+    assert final_parquet_alias.exists()
+    assert final_trialwise_alias.exists()
+    assert (run_dir / "trialwise" / "results_interpretation.xlsx").exists()
+    assert (run_dir / "trialwise" / "clustering_audit.xlsx").exists()
+    assert not (run_dir / "concatenated").exists()
+    assert not (run_dir / "results_interpretation.xlsx").exists()
+    assert not (run_dir / "clustering_audit.xlsx").exists()
+    assert not list(run_dir.rglob("*.csv"))
+
+    trialwise_bundle = load_single_parquet_bundle(final_trialwise_alias)
+    assert trialwise_bundle["source_trial_windows"].empty
+    assert set(trialwise_bundle["minimal_W"]["aggregation_mode"].unique().tolist()) == {"trialwise"}

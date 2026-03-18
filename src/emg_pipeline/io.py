@@ -42,6 +42,20 @@ def _safe_read_excel(path: Path, *, sheet_name: str | int | None = None) -> pl.D
             return pl.from_pandas(table.astype("string"))
 
 
+def _coerce_excel_numeric(column_name: str, *, as_int: bool = False) -> pl.Expr:
+    """Parse Excel fallback strings like `1.0` or blanks into numeric values."""
+    expression = (
+        pl.col(column_name)
+        .cast(pl.Utf8, strict=False)
+        .str.strip_chars()
+        .replace("", None)
+        .cast(pl.Float64, strict=False)
+    )
+    if as_int:
+        return expression.round(0).cast(pl.Int64, strict=False).alias(column_name)
+    return expression.alias(column_name)
+
+
 def _load_subject_meta_from_meta_sheet(path: Path) -> pl.DataFrame:
     meta_raw = _safe_read_excel(path, sheet_name="meta")
     if "subject" not in meta_raw.columns:
@@ -115,8 +129,8 @@ def _load_platform_with_subject_meta(path: Path) -> pd.DataFrame:
 
     platform = platform.with_columns(
         pl.col("subject").cast(pl.Utf8, strict=False).str.strip_chars(),
-        pl.col("velocity").cast(pl.Float64, strict=False),
-        pl.col("trial_num").cast(pl.Int64, strict=False),
+        _coerce_excel_numeric("velocity"),
+        _coerce_excel_numeric("trial_num", as_int=True),
     )
     invalid_platform_key_mask = (
         (pl.col("subject").is_null() | (pl.col("subject") == ""))
@@ -134,7 +148,7 @@ def _load_platform_with_subject_meta(path: Path) -> pd.DataFrame:
         platform = platform.filter(~invalid_platform_key_mask)
     for column in ["platform_onset", "platform_offset", "step_onset"]:
         if column in platform.columns:
-            platform = platform.with_columns(pl.col(column).cast(pl.Float64, strict=False))
+            platform = platform.with_columns(_coerce_excel_numeric(column))
 
     meta = _load_subject_meta(path)
 
