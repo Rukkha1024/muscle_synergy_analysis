@@ -73,7 +73,17 @@ def _can_render_cross_group(run_dir: Path, cfg: dict[str, Any], group_ids: list[
         return False
     if not {"global_step", "global_nonstep"}.issubset(set(group_ids)):
         return False
-    return all((run_dir / filename).exists() for filename in _CROSS_GROUP_ARTIFACT_FILENAMES.values())
+    missing = [
+        filename
+        for filename in _CROSS_GROUP_ARTIFACT_FILENAMES.values()
+        if not (run_dir / filename).exists()
+    ]
+    if missing:
+        missing_text = ", ".join(sorted(missing))
+        raise FileNotFoundError(
+            f"Missing figure source artifact(s) in {run_dir}: {missing_text}"
+        )
+    return True
 
 
 def _read_csv_utf8_sig(path: Path) -> pl.DataFrame:

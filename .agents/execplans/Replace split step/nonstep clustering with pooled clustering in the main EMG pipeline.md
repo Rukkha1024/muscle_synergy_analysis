@@ -22,7 +22,9 @@ From the user’s perspective, this means the production pipeline will finally a
 - [x] (2026-03-18 03:20Z) Updated `src/synergy_stats/artifacts.py`, `src/synergy_stats/figure_rerender.py`, `src/synergy_stats/figures.py`, and workbook wording so pooled runs export one discovered group figure, skip cross-group files, and write `pooled_cluster_strategy_summary.csv`.
 - [x] (2026-03-18 03:30Z) Updated contract tests and helper fixtures for the pooled output contract; targeted `pytest` coverage now passes for clustering, artifacts, figure rerender, MD5 comparison, and end-to-end mode exports.
 - [x] (2026-03-18 03:45Z) Ran the real fixture pipeline in `conda run -n cuda`, confirmed pooled-only mode artifacts, captured the expected MD5 mismatch versus the split-era reference, and confirmed reproducibility with a second pooled run plus passing MD5 comparison.
-- [ ] Commit with a Korean message of at least five lines and complete the required review pass.
+- [x] (2026-03-18 03:50Z) Committed the main pooled-clustering refactor with a Korean commit message of at least five lines.
+- [x] (2026-03-18 03:55Z) Reviewer found one rerender regression for legacy split runs with missing cross-group CSVs; restored fail-fast behavior and added a regression test for the incomplete split artifact set.
+- [ ] Complete the final review pass after the rerender regression fix.
 
 ## Surprises & Discoveries
 

@@ -541,6 +541,20 @@ def test_rerender_pooled_run_skips_cross_group_artifacts(tmp_path: Path) -> None
     assert len(list((figure_dir / "nmf_trials").glob("*.png"))) == 2
 
 
+def test_rerender_split_run_still_fails_when_cross_group_csv_is_missing(tmp_path: Path) -> None:
+    """Legacy split rerender should fail fast on an incomplete cross-group artifact set."""
+    run_dir = tmp_path / "split_run_missing_cross_group"
+    _write_minimal_run_artifacts(run_dir)
+    (run_dir / "cross_group_w_pairwise_cosine.csv").unlink()
+
+    try:
+        render_figures_from_run_dir(run_dir, _sample_cfg())
+    except FileNotFoundError as exc:
+        assert "cross_group_w_pairwise_cosine.csv" in str(exc)
+    else:
+        raise AssertionError("Expected rerender to fail when a split cross-group CSV is missing.")
+
+
 def test_cli_rerender_uses_saved_run_artifacts_only(
     repo_root: Path,
     tmp_path: Path,
