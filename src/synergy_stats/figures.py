@@ -289,6 +289,8 @@ def save_within_cluster_strategy_overlay(
     muscle_names: list[str],
     cfg: dict,
     output_path: Path,
+    total_trials: Optional[int] = None,
+    total_subjects: Optional[int] = None,
 ) -> None:
     """Render per-cluster step vs nonstep W bar + H overlay (Figure 05)."""
     import numpy as np
@@ -304,8 +306,9 @@ def save_within_cluster_strategy_overlay(
     if n_clusters == 0:
         return
 
+    n_part = f"  (n={total_trials} trials, {total_subjects} subjects)" if total_trials is not None and total_subjects is not None else ""
     fig, axes = plt.subplots(n_clusters, 2, figsize=(14, 3.5 * n_clusters), squeeze=False)
-    fig.suptitle("Within-cluster strategy overlay (step vs nonstep)", fontsize=14, fontweight="bold", y=0.995)
+    fig.suptitle(f"Within-cluster strategy overlay (step vs nonstep){n_part}", fontsize=14, fontweight="bold", y=0.995)
 
     for row_idx, cid in enumerate(cluster_ids):
         ax_w, ax_h = axes[row_idx]
@@ -336,8 +339,8 @@ def save_within_cluster_strategy_overlay(
                     transform=ax.transAxes,
                 )
                 ax.set_title(f"Cluster {cid}{subtitle}", fontsize=11)
-            ax_w.set_ylabel("Weight")
-            ax_h.set_ylabel("Activation")
+            ax_w.set_ylabel("Mean Weight")
+            ax_h.set_ylabel("Mean Activation (±1 SD)")
             continue
 
         # W grouped bar
@@ -355,7 +358,7 @@ def save_within_cluster_strategy_overlay(
             ax_w.bar(x + offset, vals, bar_width, color=STRATEGY_COLORS[strategy], label=strategy)
         ax_w.set_xticks(x)
         ax_w.set_xticklabels(muscle_names, rotation=45, ha="right")
-        ax_w.set_ylabel("Weight")
+        ax_w.set_ylabel("Mean Weight")
         ax_w.set_title(f"Cluster {cid}: W{subtitle}", fontsize=11)
         ax_w.legend(fontsize=8)
 
@@ -381,7 +384,7 @@ def save_within_cluster_strategy_overlay(
             margin = (ymax - ymin) * 0.05 if ymax > ymin else 0.1
             ax_h.set_ylim(ymin - margin, ymax + margin)
         ax_h.set_xlim(0.0, 100.0)
-        ax_h.set_ylabel("Activation")
+        ax_h.set_ylabel("Mean Activation (±1 SD)")
         ax_h.set_xlabel("Normalized window (%)")
         ax_h.set_title(f"Cluster {cid}: H{subtitle}", fontsize=11)
         ax_h.legend(fontsize=8)
