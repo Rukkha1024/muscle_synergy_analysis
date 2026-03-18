@@ -248,6 +248,170 @@ def _write_minimal_run_artifacts(run_dir: Path) -> None:
     )
 
 
+def _write_minimal_pooled_run_artifacts(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    _write_csv(
+        [
+            {"group_id": "pooled_step_nonstep", "cluster_id": 0, "muscle": "M1", "W_value": 1.0},
+            {"group_id": "pooled_step_nonstep", "cluster_id": 0, "muscle": "M2", "W_value": 0.0},
+        ],
+        run_dir / "all_representative_W_posthoc.csv",
+    )
+    _write_csv(
+        [
+            {"group_id": "pooled_step_nonstep", "cluster_id": 0, "frame_idx": 0, "h_value": 0.1},
+            {"group_id": "pooled_step_nonstep", "cluster_id": 0, "frame_idx": 1, "h_value": 0.5},
+            {"group_id": "pooled_step_nonstep", "cluster_id": 0, "frame_idx": 2, "h_value": 0.2},
+        ],
+        run_dir / "all_representative_H_posthoc_long.csv",
+    )
+    _write_csv(
+        [
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "trial_id": "S01_v1_T1",
+                "component_index": 0,
+                "muscle": "M1",
+                "W_value": 1.0,
+                "analysis_step_class": "step",
+            },
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "trial_id": "S01_v1_T1",
+                "component_index": 0,
+                "muscle": "M2",
+                "W_value": 0.0,
+                "analysis_step_class": "step",
+            },
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S02",
+                "velocity": 1,
+                "trial_num": 2,
+                "trial_id": "S02_v1_T2",
+                "component_index": 0,
+                "muscle": "M1",
+                "W_value": 0.9,
+                "analysis_step_class": "nonstep",
+            },
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S02",
+                "velocity": 1,
+                "trial_num": 2,
+                "trial_id": "S02_v1_T2",
+                "component_index": 0,
+                "muscle": "M2",
+                "W_value": 0.1,
+                "analysis_step_class": "nonstep",
+            },
+        ],
+        run_dir / "all_minimal_units_W.csv",
+    )
+    _write_csv(
+        [
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "trial_id": "S01_v1_T1",
+                "component_index": 0,
+                "frame_idx": 0,
+                "h_value": 0.1,
+                "analysis_step_class": "step",
+            },
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "trial_id": "S01_v1_T1",
+                "component_index": 0,
+                "frame_idx": 1,
+                "h_value": 0.5,
+                "analysis_step_class": "step",
+            },
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S02",
+                "velocity": 1,
+                "trial_num": 2,
+                "trial_id": "S02_v1_T2",
+                "component_index": 0,
+                "frame_idx": 0,
+                "h_value": 0.2,
+                "analysis_step_class": "nonstep",
+            },
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S02",
+                "velocity": 1,
+                "trial_num": 2,
+                "trial_id": "S02_v1_T2",
+                "component_index": 0,
+                "frame_idx": 1,
+                "h_value": 0.4,
+                "analysis_step_class": "nonstep",
+            },
+        ],
+        run_dir / "all_minimal_units_H_long.csv",
+    )
+    _write_csv(
+        [
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "trial_id": "S01_v1_T1",
+                "component_index": 0,
+                "cluster_id": 0,
+                "analysis_step_class": "step",
+            },
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S02",
+                "velocity": 1,
+                "trial_num": 2,
+                "trial_id": "S02_v1_T2",
+                "component_index": 0,
+                "cluster_id": 0,
+                "analysis_step_class": "nonstep",
+            },
+        ],
+        run_dir / "all_cluster_labels.csv",
+    )
+    _write_csv(
+        [
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "trial_id": "S01_v1_T1",
+                "analysis_step_class": "step",
+            },
+            {
+                "group_id": "pooled_step_nonstep",
+                "subject": "S02",
+                "velocity": 1,
+                "trial_num": 2,
+                "trial_id": "S02_v1_T2",
+                "analysis_step_class": "nonstep",
+            },
+        ],
+        run_dir / "all_trial_window_metadata.csv",
+    )
+
+
 def _write_minimal_global_config(config_root: Path) -> Path:
     config_root.mkdir(parents=True, exist_ok=True)
     global_config = config_root / "global_config.yaml"
@@ -359,6 +523,22 @@ def test_rerender_cleans_staging_dir_when_plotting_fails(tmp_path: Path, monkeyp
 
     assert not (run_dir / "figures.__tmp__").exists()
     assert not (run_dir / "figures.__bak__").exists()
+
+
+def test_rerender_pooled_run_skips_cross_group_artifacts(tmp_path: Path) -> None:
+    """A pooled run should rerender group and trial figures without split-only files."""
+    run_dir = tmp_path / "pooled_run"
+    _write_minimal_pooled_run_artifacts(run_dir)
+
+    rendered = render_figures_from_run_dir(run_dir, _sample_cfg())
+
+    figure_dir = run_dir / "figures"
+    assert len(rendered["group_figure_paths"]) == 1
+    assert len(rendered["trial_figure_paths"]) == 2
+    assert len(rendered["cross_group_figure_paths"]) == 0
+    assert (figure_dir / "pooled_step_nonstep_clusters.png").exists()
+    assert not (figure_dir / "cross_group_cosine_heatmap.png").exists()
+    assert len(list((figure_dir / "nmf_trials").glob("*.png"))) == 2
 
 
 def test_cli_rerender_uses_saved_run_artifacts_only(

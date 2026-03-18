@@ -148,6 +148,7 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
     interpretation_workbook = run_dir / "results_interpretation.xlsx"
     audit_workbook = run_dir / "clustering_audit.xlsx"
     root_source_trial_windows_path = run_dir / "all_concatenated_source_trial_windows.csv"
+    root_pooled_strategy_summary_path = run_dir / "pooled_cluster_strategy_summary.csv"
 
     assert manifest_path.exists()
     assert methods_manifest_path.exists()
@@ -155,6 +156,7 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
     assert interpretation_workbook.exists()
     assert audit_workbook.exists()
     assert root_source_trial_windows_path.exists()
+    assert root_pooled_strategy_summary_path.exists()
     assert combined_final_parquet.exists()
     assert final_parquet_alias.exists()
     assert final_trialwise_alias.exists()
@@ -174,9 +176,9 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
     assert set(methods_manifest["modes"]) == {"trialwise", "concatenated"}
 
     summary_df = pd.read_csv(summary_path, encoding="utf-8-sig")
-    assert summary_df.shape[0] == 4
+    assert summary_df.shape[0] == 2
     assert set(summary_df["aggregation_mode"].tolist()) == {"trialwise", "concatenated"}
-    assert set(summary_df["group_id"].tolist()) == {"global_step", "global_nonstep"}
+    assert set(summary_df["group_id"].tolist()) == {"pooled_step_nonstep"}
     assert set(summary_df["status"].tolist()) == {"success"}
 
     combined_df = read_final_parquet(combined_final_parquet)
@@ -212,20 +214,20 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
         assert (mode_dir / "all_minimal_units_W.csv").exists()
         assert (mode_dir / "all_minimal_units_H_long.csv").exists()
         assert (mode_dir / "all_trial_window_metadata.csv").exists()
+        assert (mode_dir / "pooled_cluster_strategy_summary.csv").exists()
         if mode == "concatenated":
             assert (mode_dir / "all_concatenated_source_trial_windows.csv").exists()
         else:
             assert not (mode_dir / "all_concatenated_source_trial_windows.csv").exists()
         assert (mode_dir / "clustering_audit.xlsx").exists()
         assert (mode_dir / "results_interpretation.xlsx").exists()
-        assert (mode_dir / "cross_group_w_pairwise_cosine.csv").exists()
-        assert (mode_dir / "cross_group_w_cluster_decision.csv").exists()
-        assert (mode_dir / "figures" / "global_step_clusters.png").exists()
-        assert (mode_dir / "figures" / "global_nonstep_clusters.png").exists()
-        assert (mode_dir / "figures" / "cross_group_cosine_heatmap.png").exists()
-        assert (mode_dir / "figures" / "cross_group_matched_w.png").exists()
-        assert (mode_dir / "figures" / "cross_group_matched_h.png").exists()
-        assert (mode_dir / "figures" / "cross_group_decision_summary.png").exists()
+        assert not (mode_dir / "cross_group_w_pairwise_cosine.csv").exists()
+        assert not (mode_dir / "cross_group_w_cluster_decision.csv").exists()
+        assert (mode_dir / "figures" / "pooled_step_nonstep_clusters.png").exists()
+        assert not (mode_dir / "figures" / "cross_group_cosine_heatmap.png").exists()
+        assert not (mode_dir / "figures" / "cross_group_matched_w.png").exists()
+        assert not (mode_dir / "figures" / "cross_group_matched_h.png").exists()
+        assert not (mode_dir / "figures" / "cross_group_decision_summary.png").exists()
 
     concatenated_labels = pl.read_csv(
         run_dir / "concatenated" / "all_cluster_labels.csv",
@@ -234,6 +236,19 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
     assert concatenated_labels.height > 0
     assert set(concatenated_labels["trial_num"].unique().to_list()) == {"concat_step", "concat_nonstep"}
     assert set(concatenated_labels["aggregation_mode"].unique().to_list()) == {"concatenated"}
+    assert set(concatenated_labels["group_id"].unique().to_list()) == {"pooled_step_nonstep"}
+
+    pooled_strategy_summary = pl.read_csv(root_pooled_strategy_summary_path, encoding="utf8-lossy")
+    assert pooled_strategy_summary.height > 0
+    assert set(pooled_strategy_summary["aggregation_mode"].unique().to_list()) == {"trialwise", "concatenated"}
+    assert set(pooled_strategy_summary["group_id"].unique().to_list()) == {"pooled_step_nonstep"}
+    assert set(pooled_strategy_summary["strategy_label"].unique().to_list()) == {"step", "nonstep"}
+    assert {
+        "cluster_id",
+        "n_rows",
+        "cluster_total_rows",
+        "fraction_within_cluster",
+    }.issubset(set(pooled_strategy_summary.columns))
 
     root_source_trial_windows = pl.read_csv(root_source_trial_windows_path, encoding="utf8-lossy")
     assert root_source_trial_windows.height > 0

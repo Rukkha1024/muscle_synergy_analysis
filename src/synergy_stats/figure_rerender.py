@@ -55,6 +55,27 @@ def _requires_cross_group_artifacts(cfg: dict[str, Any]) -> bool:
     return bool(cross_group_cfg["enabled"] and cross_group_cfg["output_figures"])
 
 
+def _discover_group_ids(artifacts: dict[str, object]) -> list[str]:
+    discovered: list[str] = []
+    for key in ("labels", "trial_windows", "rep_w"):
+        frame = artifacts.get(key)
+        if frame is None or "group_id" not in frame.columns:
+            continue
+        for group_id in frame.get_column("group_id").drop_nulls().cast(pl.Utf8).unique(maintain_order=True).to_list():
+            normalized = str(group_id).strip()
+            if normalized and normalized not in discovered:
+                discovered.append(normalized)
+    return discovered
+
+
+def _can_render_cross_group(run_dir: Path, cfg: dict[str, Any], group_ids: list[str]) -> bool:
+    if not _requires_cross_group_artifacts(cfg):
+        return False
+    if not {"global_step", "global_nonstep"}.issubset(set(group_ids)):
+        return False
+    return all((run_dir / filename).exists() for filename in _CROSS_GROUP_ARTIFACT_FILENAMES.values())
+
+
 def _read_csv_utf8_sig(path: Path) -> pl.DataFrame:
     text = path.read_text(encoding="utf-8-sig")
     return pl.read_csv(StringIO(text))
@@ -180,8 +201,13 @@ def load_figure_artifacts(
 
 def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str, list[str]]:
     run_dir = Path(run_dir).resolve()
-    include_cross_group = _requires_cross_group_artifacts(cfg)
-    artifacts = load_figure_artifacts(run_dir, include_cross_group=include_cross_group)
+    artifacts = load_figure_artifacts(run_dir, include_cross_group=False)
+    group_ids = _discover_group_ids(artifacts)
+    if not group_ids:
+        raise ValueError(f"Could not discover any group_id values from saved artifacts in {run_dir}.")
+    include_cross_group = _can_render_cross_group(run_dir, cfg, group_ids)
+    if include_cross_group:
+        artifacts = load_figure_artifacts(run_dir, include_cross_group=True)
 
     muscle_names = list(cfg["muscles"]["names"])
     figure_ext = figure_suffix(cfg)
@@ -196,7 +222,7 @@ def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str,
         "cross_group_figure_paths": [],
     }
     try:
-        for group_id in ("global_step", "global_nonstep"):
+        for group_id in group_ids:
             output_path = tmp_dir / f"{group_id}_clusters{figure_ext}"
             save_group_cluster_figure(
                 group_id=group_id,

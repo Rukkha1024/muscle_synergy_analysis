@@ -45,6 +45,7 @@ AGGREGATE_NAME_MAP = {
 }
 
 CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME = "all_concatenated_source_trial_windows.csv"
+POOLED_CLUSTER_STRATEGY_SUMMARY_FILENAME = "pooled_cluster_strategy_summary.csv"
 
 
 def summarize_group_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -120,6 +121,84 @@ def _prepare_parquet_frame(frame: pd.DataFrame) -> pd.DataFrame:
     return prepared
 
 
+def _present_group_ids(frame: pd.DataFrame) -> list[str]:
+    if frame.empty or "group_id" not in frame.columns:
+        return []
+    group_ids = (
+        frame["group_id"]
+        .dropna()
+        .astype(str)
+        .map(str.strip)
+    )
+    return [group_id for group_id in group_ids.drop_duplicates().tolist() if group_id]
+
+
+def _can_build_cross_group_artifacts(aggregate_frames: dict[str, pd.DataFrame]) -> bool:
+    present_groups = set(_present_group_ids(aggregate_frames.get("rep_W", pd.DataFrame())))
+    return {"global_step", "global_nonstep"}.issubset(present_groups)
+
+
+def _build_pooled_cluster_strategy_summary(labels_frame: pd.DataFrame) -> pd.DataFrame:
+    required_columns = {"group_id", "cluster_id", "analysis_step_class"}
+    if labels_frame.empty or not required_columns.issubset(set(labels_frame.columns)):
+        return pd.DataFrame()
+
+    pooled_labels = labels_frame.loc[labels_frame["group_id"].astype(str) == "pooled_step_nonstep"].copy()
+    if pooled_labels.empty:
+        return pd.DataFrame()
+
+    pooled_labels["strategy_label"] = (
+        pooled_labels["analysis_step_class"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+    pooled_labels = pooled_labels.loc[pooled_labels["strategy_label"].isin(["step", "nonstep"])].copy()
+    if pooled_labels.empty:
+        return pd.DataFrame()
+
+    summary = (
+        pooled_labels.groupby(["group_id", "cluster_id", "strategy_label"], dropna=False)
+        .size()
+        .rename("n_rows")
+        .reset_index()
+    )
+    cluster_totals = (
+        pooled_labels.groupby(["group_id", "cluster_id"], dropna=False)
+        .size()
+        .rename("cluster_total_rows")
+        .reset_index()
+    )
+    strategy_index = pd.MultiIndex.from_product(
+        [
+            sorted(pooled_labels["group_id"].drop_duplicates().tolist()),
+            sorted(pooled_labels["cluster_id"].drop_duplicates().tolist()),
+            ["step", "nonstep"],
+        ],
+        names=["group_id", "cluster_id", "strategy_label"],
+    )
+    summary = (
+        summary.set_index(["group_id", "cluster_id", "strategy_label"])
+        .reindex(strategy_index, fill_value=0)
+        .reset_index()
+    )
+    summary = summary.merge(cluster_totals, on=["group_id", "cluster_id"], how="left")
+    summary["fraction_within_cluster"] = (
+        summary["n_rows"] / summary["cluster_total_rows"].where(summary["cluster_total_rows"].ne(0), pd.NA)
+    )
+    summary["fraction_within_cluster"] = summary["fraction_within_cluster"].fillna(0.0)
+    return summary[
+        [
+            "group_id",
+            "cluster_id",
+            "strategy_label",
+            "n_rows",
+            "cluster_total_rows",
+            "fraction_within_cluster",
+        ]
+    ]
+
+
 def _build_cross_group_artifacts(
     aggregate_frames: dict[str, pd.DataFrame],
     muscle_names: list[str],
@@ -128,6 +207,8 @@ def _build_cross_group_artifacts(
 ) -> dict[str, pd.DataFrame]:
     cross_group_cfg = _cross_group_similarity_cfg(cfg)
     if not cross_group_cfg["enabled"]:
+        return {}
+    if not _can_build_cross_group_artifacts(aggregate_frames):
         return {}
     if cross_group_cfg["metric"] != "cosine":
         raise ValueError(f"Unsupported cross_group_w_similarity.metric: {cross_group_cfg['metric']}")
@@ -191,8 +272,7 @@ def _write_mode_exports(
     all_frames = {key: [] for key in AGGREGATE_NAME_MAP}
     source_trial_window_frames: list[pd.DataFrame] = []
     group_summaries = []
-    for group_id in ("global_step", "global_nonstep"):
-        payload = cluster_group_results[group_id]
+    for group_id, payload in cluster_group_results.items():
         exports = build_group_exports(
             group_id=group_id,
             feature_rows=payload["feature_rows"],
@@ -246,6 +326,13 @@ def _write_mode_exports(
             source_trial_windows_frame,
             mode_output_dir / CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME,
         )
+    pooled_strategy_summary_frame = _build_pooled_cluster_strategy_summary(aggregate_frames["labels"])
+    if not pooled_strategy_summary_frame.empty:
+        pooled_strategy_summary_frame = _with_mode_column(pooled_strategy_summary_frame, mode)
+        _write_csv(
+            pooled_strategy_summary_frame,
+            mode_output_dir / POOLED_CLUSTER_STRATEGY_SUMMARY_FILENAME,
+        )
 
     mode_final_parquet_path = mode_output_dir / "final.parquet"
     mode_final_parquet_path.parent.mkdir(parents=True, exist_ok=True)
@@ -291,6 +378,7 @@ def _write_mode_exports(
         "final_parquet_path": mode_final_parquet_path,
         "final_alias_path": final_alias_path,
         "source_trial_windows_frame": source_trial_windows_frame,
+        "pooled_strategy_summary_frame": pooled_strategy_summary_frame,
         "clustering_audit_workbook_path": workbook_path,
         "clustering_audit_workbook_validation": workbook_validation,
         "results_interpretation_workbook_path": interpretation_workbook_path,
@@ -395,6 +483,14 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
             combined_source_trial_windows_frame,
             root_output_dir / CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME,
         )
+    combined_pooled_strategy_summary = _concat_frames_union(
+        [exports.get("pooled_strategy_summary_frame", pd.DataFrame()) for exports in mode_exports.values()]
+    )
+    if not combined_pooled_strategy_summary.empty:
+        _write_csv(
+            combined_pooled_strategy_summary,
+            root_output_dir / POOLED_CLUSTER_STRATEGY_SUMMARY_FILENAME,
+        )
 
     combined_final_parquet_path = Path(
         runtime_cfg.get("combined_final_parquet_path")
@@ -453,6 +549,10 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
     if not combined_source_trial_windows_frame.empty:
         context["artifacts"]["concatenated_source_trial_windows_path"] = str(
             root_output_dir / CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME
+        )
+    if not combined_pooled_strategy_summary.empty:
+        context["artifacts"]["pooled_cluster_strategy_summary_path"] = str(
+            root_output_dir / POOLED_CLUSTER_STRATEGY_SUMMARY_FILENAME
         )
     context["artifacts"]["final_parquet_alias_paths"] = {
         mode: str(mode_alias_paths.get(mode, root_output_dir / f"final_{mode}.parquet"))

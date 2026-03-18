@@ -1,4 +1,4 @@
-﻿"""Clustering contract tests for global step and nonstep groups."""
+﻿"""Clustering contract tests for pooled and helper-level group behavior."""
 
 from __future__ import annotations
 
@@ -206,7 +206,7 @@ def test_cluster_stage_rejects_selected_trials_without_exactly_one_group(
     is_step: bool,
     is_nonstep: bool,
 ) -> None:
-    """Selected trials must map to exactly one global target group."""
+    """Selected trials must map to exactly one strategy label before pooling."""
     _, _, result_cls = _load_group_helpers()
     run_stage = _load_cluster_stage_run(repo_root)
     feature_rows = [
@@ -233,7 +233,7 @@ def test_cluster_stage_rejects_selected_trials_without_exactly_one_group(
         },
         "feature_rows": feature_rows,
     }
-    with pytest.raises(ValueError, match="exactly one global group"):
+    with pytest.raises(ValueError, match="exactly one strategy label"):
         run_stage(context)
 
 
@@ -253,15 +253,22 @@ def test_cluster_stage_rejects_legacy_grouping_key(repo_root) -> None:
         run_stage(context)
 
 
-def test_cluster_stage_clusters_concatenated_mode_without_special_case(repo_root) -> None:
-    """Concatenated rows should use the normal global clustering path."""
+def test_cluster_stage_clusters_concatenated_mode_into_one_pooled_group(repo_root) -> None:
+    """Concatenated rows should be pooled into one clustering space per mode."""
     run_stage = _load_cluster_stage_run(repo_root)
     _, _, feature_rows = _make_feature_rows("step")
     _, _, nonstep_rows = _make_feature_rows("nonstep")
     context = {
         "config": {
             "synergy_clustering": {
-                **_cluster_cfg(max_clusters=4, max_iter=20, repeats=4, gap_ref_n=2, gap_ref_restarts=1),
+                **_cluster_cfg(
+                    max_clusters=4,
+                    max_iter=20,
+                    repeats=4,
+                    gap_ref_n=2,
+                    gap_ref_restarts=1,
+                    require_zero_duplicate_solution=False,
+                ),
             }
         },
         "analysis_modes": ["concatenated"],
@@ -275,10 +282,12 @@ def test_cluster_stage_clusters_concatenated_mode_without_special_case(repo_root
     assert "analysis_mode_cluster_group_results" in updated
     assert "concatenated" in updated["analysis_mode_cluster_group_results"]
     assert set(updated["analysis_mode_cluster_group_results"]["concatenated"]) == {
-        "global_step",
-        "global_nonstep",
+        "pooled_step_nonstep",
     }
-    assert updated["analysis_mode_cluster_group_results"]["concatenated"]["global_step"]["cluster_result"]["status"] == "success"
+    pooled_payload = updated["analysis_mode_cluster_group_results"]["concatenated"]["pooled_step_nonstep"]
+    assert pooled_payload["cluster_result"]["status"] == "success"
+    assert pooled_payload["group_id"] == "pooled_step_nonstep"
+    assert len(pooled_payload["feature_rows"]) == len(feature_rows) + len(nonstep_rows)
 
 
 def test_cluster_intra_subject_compatibility_wrapper_still_returns_success() -> None:

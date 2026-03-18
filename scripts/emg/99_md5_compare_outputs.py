@@ -1,4 +1,4 @@
-﻿"""Compare stable global step/nonstep output files by relative path and MD5."""
+﻿"""Compare curated pooled-clustering output files by relative path and MD5."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ STABLE_RELATIVE_PATHS = {
     "all_clustering_metadata.csv",
     "all_minimal_units_H_long.csv",
     "all_minimal_units_W.csv",
+    "pooled_cluster_strategy_summary.csv",
     "all_representative_H_posthoc_long.csv",
     "all_representative_W_posthoc.csv",
     "all_trial_window_metadata.csv",

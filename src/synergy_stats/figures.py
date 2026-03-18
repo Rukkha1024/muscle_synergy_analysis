@@ -73,6 +73,8 @@ def _figure_dpi(cfg: dict) -> int:
 
 
 def _group_title(group_id: str) -> str:
+    if group_id == "pooled_step_nonstep":
+        return "Pooled step/nonstep clusters"
     if group_id == "global_step":
         return "Global step clusters"
     if group_id == "global_nonstep":

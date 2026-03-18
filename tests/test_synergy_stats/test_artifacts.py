@@ -58,12 +58,12 @@ def test_group_exports_expand_concatenated_source_trial_windows() -> None:
     ]
     cluster_result = {
         "status": "success",
-        "group_id": "global_step",
+        "group_id": "pooled_step_nonstep",
         "n_clusters": 1,
         "labels": np.array([0], dtype=np.int32),
         "sample_map": [
             {
-                "group_id": "global_step",
+                "group_id": "pooled_step_nonstep",
                 "subject": "S01",
                 "velocity": 1,
                 "trial_num": "concat_step",
@@ -75,7 +75,7 @@ def test_group_exports_expand_concatenated_source_trial_windows() -> None:
     }
 
     exports = build_group_exports(
-        group_id="global_step",
+        group_id="pooled_step_nonstep",
         feature_rows=feature_rows,
         cluster_result=cluster_result,
         muscle_names=["TA", "MG"],
