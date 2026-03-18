@@ -15,7 +15,7 @@ import polars as pl
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-COMPARE_SCRIPT = SCRIPT_DIR.parent / "compare_Cheung,2021" / "analyze_compare_cheung_synergy_analysis.py"
+COMPARE_SCRIPT = SCRIPT_DIR.parent / "analyze_compare_cheung_synergy_analysis.py"
 
 
 def parse_args() -> argparse.Namespace:

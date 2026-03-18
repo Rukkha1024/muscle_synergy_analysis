@@ -2,9 +2,9 @@
 
 ## 왜 이 폴더를 만들었는가
 
-baseline pipeline은 step과 nonstep 조건을 **각각 따로** clustering 한 뒤 cross-group cosine matching으로 synergy 쌍을 비교한다. 이 방식은 두 조건의 cluster space가 서로 다르기 때문에, "같은 cluster 안에서 step과 nonstep의 구조가 실제로 얼마나 비슷한지"를 직접 답하기 어렵다.
+현재 main pipeline의 source of truth는 step과 nonstep을 함께 묶는 **pooled clustering**이다. 하지만 main pipeline 기본 산출물만으로는 같은 pooled cluster 안에서 step/nonstep member 수, subject coverage, sub-centroid similarity, representative H 차이를 한 번에 읽기 어렵다.
 
-이 분석은 그 한계를 보완하기 위해, 두 조건의 trial-level `W` 벡터를 **하나의 공통 cluster space에 풀링**한 뒤 같은 cluster 내부에서 step/nonstep 구성을 직접 비교한다.
+이 분석은 그 한계를 보완하기 위해, baseline trial selection과 window를 그대로 다시 검증한 뒤 두 조건의 trial-level `W` 벡터를 **하나의 공통 cluster space에 다시 풀링**하고, 같은 cluster 내부에서 step/nonstep 구성을 직접 비교한다.
 
 ## 사용자 목표
 
@@ -21,8 +21,8 @@ baseline pipeline은 step과 nonstep 조건을 **각각 따로** clustering 한 
 | --- | --- |
 | 파이프라인 설정 | `configs/global_config.yaml` |
 | baseline run | `outputs/runs/default_run` |
-| EMG parquet | global config의 `emg_path` 참조 |
-| Event workbook | global config의 `event_workbook` 참조 |
+| EMG parquet | global config의 `input.emg_parquet_path` 참조 |
+| Event workbook | global config의 `input.event_xlsm_path` 참조 |
 
 ## 폴더 구조
 
@@ -101,4 +101,4 @@ conda run -n module python analysis/pooled_shared_specific_synergy/analyze_poole
 
 ## 해석 메모
 
-이 분석은 **pipeline 대체가 아니라 analysis-only validation/interpretation layer**다. baseline output을 덮어쓰지 않으며, 결과 해석도 항상 `outputs/runs/default_run/`과 분리해서 본다.
+이 분석은 **pipeline 대체가 아니라 analysis-only validation/interpretation layer**다. main pipeline의 pooled baseline을 바꾸지 않고, `all_trial_window_metadata.csv`를 source of truth로 다시 검증한 뒤 해석용 산출물을 별도 디렉터리에 만든다.

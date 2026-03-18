@@ -1,20 +1,20 @@
 # gap13 duplicate-component exclusion cosine rerun
 
-이 폴더는 `default_run`의 cross-group cosine similarity 결과를 그대로 받아들이지 않고, **step 그룹만 gap statistic 원래 값인 K=13으로 다시 보고 싶다**는 질문에 답하기 위해 만들었다.
+이 폴더는 **legacy cross-group baseline bundle**의 cosine similarity 결과를 그대로 받아들이지 않고, **step 그룹만 gap statistic 원래 값인 K=13으로 다시 보고 싶다**는 질문에 답하기 위해 만들었다.
 
-현재 baseline 파이프라인은 step 그룹에서 `K=13`일 때 within-trial duplicate가 남아서, zero-duplicate 조건을 만족하는 첫 K인 `16`으로 올라간 뒤 cosine similarity를 계산한다. 이 분석은 그 지점에서 한 번 멈추고, **step K=13 해를 유지한 채 duplicate가 된 component만 제외하면 cross-group 결과가 어떻게 달라지는지**를 확인하는 것이 목적이다.
+현재 main pipeline의 source of truth는 pooled clustering이다. 다만 이 rerun은 그 main pipeline 자체를 다시 실행하는 문서가 아니라, `global_step` / `global_nonstep` cross-group export가 남아 있는 호환 baseline bundle을 대상으로 만든 legacy analysis다. 목적은 **step K=13 해를 유지한 채 duplicate가 된 component만 제외하면 cross-group 결과가 어떻게 달라지는지**를 확인하는 것이다.
 
 ## 왜 이 분석을 했는가
 
-1. baseline figure는 [final_summary.csv](/home/alice/workspace/26-03-synergy-analysis/outputs/runs/default_run/final_summary.csv) 기준으로 `global_step: k_gap_raw=13, k_selected=16`이다.
-2. 따라서 현재 figure는 “gap statistic이 제안한 구조 K”보다 “zero-duplicate를 만족하는 더 큰 K”의 결과를 반영한다.
+1. 이 분석이 작성될 당시 사용한 호환 baseline bundle에서는 `global_step: k_gap_raw=13, k_selected=16`이었다.
+2. 따라서 당시 figure는 “gap statistic이 제안한 구조 K”보다 “zero-duplicate를 만족하는 더 큰 K”의 결과를 반영했다.
 3. 사용자가 보고 싶은 것은 `K=13` 구조를 버리지 않고, 중복된 step component만 제거했을 때도 cross-group cosine matching이 유지되는지 여부다.
 4. 이번 rerun에서는 baseline audit과 같은 기준으로 `K=13`의 **min-duplicate candidate**를 다시 찾았고, 그 후보에서 실제 duplicate trial은 `유병한_v110.0_T6`, `조민석_v30.0_T2` 두 개였다.
 5. fixed-`K=13` observed objective는 baseline metadata와 비교하되, GPU/환경 차이를 고려해 `--objective-atol` 허용 오차 안에서 일치 여부를 기록한다.
 
 ## 이번 분석의 핵심 규칙
 
-1. 입력은 `outputs/runs/default_run/` 아래 baseline export만 사용한다.
+1. 입력은 `all_minimal_units_W.csv`, `all_minimal_units_H_long.csv`, `all_cluster_labels.csv`, `all_representative_W_posthoc.csv`, `all_clustering_metadata.csv`, `all_representative_H_posthoc_long.csv`가 들어 있는 **호환 baseline bundle**만 사용한다.
 2. step 그룹은 `K=13`으로 고정하고, baseline uniqueness search와 같은 방식으로 **duplicate trial 수가 가장 적은 candidate**를 선택한다.
 3. duplicate trial-cluster pair가 있으면, 그 pair 안에서 **cluster centroid와 cosine similarity가 가장 높은 component 1개만 남기고 나머지 duplicate component만 제외**한다.
 4. nonstep 그룹은 baseline representative W를 그대로 사용한다.
@@ -39,6 +39,8 @@ conda run --no-capture-output -n cuda python \
   analysis/cosine_rerun_gap13_duplicate_exclusion/analyze_cosine_rerun_gap13_duplicate_exclusion.py \
   --overwrite
 ```
+
+기본 `--baseline-run outputs/runs/default_run` 경로는 예시일 뿐이다. 실제 실행에는 위 aggregate CSV들이 준비된 호환 baseline bundle이 필요하다.
 
 dry-run으로 입력과 reconstruction consistency만 확인하려면:
 

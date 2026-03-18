@@ -2,6 +2,8 @@
 
 이 폴더는 `analysis/compare_Cheung,2021`의 paper-like muscle synergy clustering 경로를 독립적으로 감사하기 위한 analysis 작업입니다. source of truth는 `analysis/compare_Cheung,2021/analyze_compare_cheung_synergy_analysis.py`이며, production pipeline의 forced reassignment 동작은 이번 작업 범위에 포함하지 않습니다.
 
+현재 main pipeline의 source of truth는 pooled clustering 기반 baseline이다. 이 audit은 그 main pipeline을 바꾸지 않고, `compare_Cheung,2021` 분석 경로가 남기는 duplicate assignment burden만 별도로 점검한다.
+
 ## What This Analysis Answers
 
 - 같은 trial 내부 서로 다른 synergy가 ordinary k-means 결과에서 같은 cluster label을 얼마나 자주 공유하는가
@@ -22,8 +24,8 @@
 repo root에서 실행합니다.
 
 ```bash
-conda run --no-capture-output -n cuda python analysis/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py --dry-run
-conda run --no-capture-output -n cuda python analysis/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py
+conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py --dry-run
+conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/duplicate_assignment_audit/analyze_duplicate_assignment_audit.py
 ```
 
 기본 runtime은 현재 체크인된 `analysis/compare_Cheung,2021/report.md`와 맞추기 위해 다음 override를 사용합니다.
@@ -37,7 +39,7 @@ compare_Cheung script의 코드 기본값은 `1000 / 500 / 100`이므로, paper-
 ## Verify
 
 ```bash
-conda run --no-capture-output -n cuda python analysis/duplicate_assignment_audit/verify_duplicate_assignment_audit.py
+conda run --no-capture-output -n cuda python analysis/compare_Cheung,2021/duplicate_assignment_audit/verify_duplicate_assignment_audit.py
 ```
 
 이 검증은 아래를 확인합니다.
@@ -53,7 +55,7 @@ reference 파일이 별도로 존재하지 않아 외부 reference와의 direct 
 
 ## Outputs
 
-생성 산출물은 `analysis/duplicate_assignment_audit/results/` 아래에 저장됩니다.
+생성 산출물은 `analysis/compare_Cheung,2021/duplicate_assignment_audit/results/` 아래에 저장됩니다.
 
 - `overall_metrics.csv`
 - `per_unit_metrics.csv`
