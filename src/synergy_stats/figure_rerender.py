@@ -348,9 +348,9 @@ def render_figures_from_run_dir(
             _pooled_labels = artifacts["labels"].filter(pl.col("group_id") == "pooled_step_nonstep").to_pandas()
             _pooled_tw = artifacts["trial_windows"].filter(pl.col("group_id") == "pooled_step_nonstep").to_pandas()
             if not _pooled_labels.empty and not _pooled_tw.empty:
-                _fig05_total_trials, _fig05_total_subjects, _fig05_coverage = _build_cluster_coverage(_pooled_labels, _pooled_tw)
+                _fig05_total_trials, _, _fig05_coverage = _build_cluster_coverage(_pooled_labels, _pooled_tw)
             else:
-                _fig05_total_trials, _fig05_total_subjects, _fig05_coverage = None, None, None
+                _fig05_total_trials, _fig05_coverage = None, None
             save_within_cluster_strategy_overlay(
                 strategy_w_means=strategy_w_means,
                 strategy_h_means=strategy_h_means,
@@ -359,7 +359,6 @@ def render_figures_from_run_dir(
                 cfg=cfg,
                 output_path=fig05_path,
                 total_trials=_fig05_total_trials,
-                total_subjects=_fig05_total_subjects,
                 coverage=_fig05_coverage,
             )
             rendered_paths["pooled_narrative_figure_paths"].append(str(fig05_path))

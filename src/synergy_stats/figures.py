@@ -116,15 +116,16 @@ def _build_cluster_coverage(
 def _build_strategy_subtitle_part(
     strategy_summary: pd.DataFrame,
     cluster_id: object,
-    cluster_total: int,
+    total_step_trials: int,
+    total_nonstep_trials: int,
 ) -> str:
-    """Return strategy portion of subtitle: ``step X/N, nonstep Y/N``."""
+    """Return strategy portion of subtitle: ``step X/total_step, nonstep Y/total_nonstep``."""
     crows = strategy_summary[strategy_summary["cluster_id"] == cluster_id]
     step_row = crows[crows["strategy_label"] == "step"]
     nonstep_row = crows[crows["strategy_label"] == "nonstep"]
     sn = int(step_row["n_rows"].iloc[0]) if not step_row.empty else 0
     nn = int(nonstep_row["n_rows"].iloc[0]) if not nonstep_row.empty else 0
-    return f"step {sn}/{cluster_total}, nonstep {nn}/{cluster_total}"
+    return f"step {sn}/{total_step_trials}, nonstep {nn}/{total_nonstep_trials}"
 
 
 def _render_component_grid(
@@ -138,7 +139,6 @@ def _render_component_grid(
     row_label: str,
     coverage: Optional[pd.DataFrame] = None,
     total_trials: Optional[int] = None,
-    total_subjects: Optional[int] = None,
     strategy_summary: Optional[pd.DataFrame] = None,
 ) -> None:
     plt = _pyplot()
@@ -146,22 +146,26 @@ def _render_component_grid(
     cluster_ids = sorted(rep_w["cluster_id"].dropna().unique().tolist()) if not rep_w.empty else []
     n_clusters = max(len(cluster_ids), 1)
 
+    total_step_trials = 0
+    total_nonstep_trials = 0
+    if strategy_summary is not None and not strategy_summary.empty:
+        total_step_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "step", "n_rows"].sum())
+        total_nonstep_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "nonstep", "n_rows"].sum())
+
     fig, axes = plt.subplots(n_clusters, 2, figsize=(14, 3.5 * n_clusters), squeeze=False)
     fig.suptitle(title, fontsize=14, fontweight="bold", y=0.995)
     for row_index, cluster_id in enumerate(cluster_ids or [0]):
         ax_w, ax_h = axes[row_index]
 
         subtitle = ""
-        if coverage is not None and total_trials is not None and total_subjects is not None:
+        if coverage is not None and total_trials is not None:
             cov_row = coverage.loc[coverage["cluster_id"] == cluster_id]
             if not cov_row.empty:
                 nt = int(cov_row["n_trials"].iloc[0])
-                ns = int(cov_row["n_subjects"].iloc[0])
                 tp = float(cov_row["trial_pct"].iloc[0])
-                subtitle = f"\n{nt}/{total_trials} trials ({tp}%)  |  {ns}/{total_subjects} subjects"
+                subtitle = f"\n{nt}/{total_trials} trials ({tp}%)"
                 if strategy_summary is not None and not strategy_summary.empty:
-                    ct = int(cov_row["n_trials"].iloc[0])
-                    strategy_part = _build_strategy_subtitle_part(strategy_summary, cluster_id, ct)
+                    strategy_part = _build_strategy_subtitle_part(strategy_summary, cluster_id, total_step_trials, total_nonstep_trials)
                     subtitle += f"  |  {strategy_part}"
 
         cluster_w = rep_w.loc[rep_w["cluster_id"] == cluster_id].copy()
@@ -203,10 +207,10 @@ def save_group_cluster_figure(
 ) -> None:
     has_coverage = cluster_labels is not None and trial_metadata is not None
     if has_coverage:
-        total_trials, total_subjects, coverage = _build_cluster_coverage(
+        total_trials, _, coverage = _build_cluster_coverage(
             cluster_labels, trial_metadata,
         )
-        title = f"{_group_title(group_id)}  (n={total_trials} trials, {total_subjects} subjects)"
+        title = f"{_group_title(group_id)}  (n={total_trials} trials)"
     else:
         coverage = pd.DataFrame()
         title = _group_title(group_id)
@@ -221,7 +225,6 @@ def save_group_cluster_figure(
         row_label="Cluster",
         coverage=coverage if has_coverage else None,
         total_trials=total_trials if has_coverage else None,
-        total_subjects=total_subjects if has_coverage else None,
         strategy_summary=strategy_summary,
     )
 
@@ -289,7 +292,6 @@ def save_within_cluster_strategy_overlay(
     cfg: dict,
     output_path: Path,
     total_trials: Optional[int] = None,
-    total_subjects: Optional[int] = None,
     coverage: Optional[pd.DataFrame] = None,
 ) -> None:
     """Render per-cluster step vs nonstep W bar + H overlay (Figure 05)."""
@@ -306,7 +308,10 @@ def save_within_cluster_strategy_overlay(
     if n_clusters == 0:
         return
 
-    n_part = f"  (n={total_trials} trials, {total_subjects} subjects)" if total_trials is not None and total_subjects is not None else ""
+    total_step_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "step", "n_rows"].sum()) if not strategy_summary.empty else 0
+    total_nonstep_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "nonstep", "n_rows"].sum()) if not strategy_summary.empty else 0
+
+    n_part = f"  (n={total_trials} trials)" if total_trials is not None else ""
     fig, axes = plt.subplots(n_clusters, 2, figsize=(14, 3.5 * n_clusters), squeeze=False)
     fig.suptitle(f"Within-cluster strategy overlay (step vs nonstep){n_part}", fontsize=14, fontweight="bold", y=0.995)
 
@@ -316,20 +321,13 @@ def save_within_cluster_strategy_overlay(
         # Build subtitle (same format as Figure 04)
         subtitle = ""
         if not strategy_summary.empty:
-            crows = strategy_summary[strategy_summary["cluster_id"] == cid]
-            step_row = crows[crows["strategy_label"] == "step"]
-            nonstep_row = crows[crows["strategy_label"] == "nonstep"]
-            sn = int(step_row["n_rows"].iloc[0]) if not step_row.empty else 0
-            nn = int(nonstep_row["n_rows"].iloc[0]) if not nonstep_row.empty else 0
-            ct = sn + nn
-            strategy_part = f"step {sn}/{ct}, nonstep {nn}/{ct}"
-            if coverage is not None and total_trials is not None and total_subjects is not None:
+            strategy_part = _build_strategy_subtitle_part(strategy_summary, cid, total_step_trials, total_nonstep_trials)
+            if coverage is not None and total_trials is not None:
                 cov_row = coverage.loc[coverage["cluster_id"] == cid]
                 if not cov_row.empty:
                     nt = int(cov_row["n_trials"].iloc[0])
-                    ns = int(cov_row["n_subjects"].iloc[0])
                     tp = float(cov_row["trial_pct"].iloc[0])
-                    subtitle = f"\n{nt}/{total_trials} trials ({tp}%)  |  {ns}/{total_subjects} subjects  |  {strategy_part}"
+                    subtitle = f"\n{nt}/{total_trials} trials ({tp}%)  |  {strategy_part}"
                 else:
                     subtitle = f"\n{strategy_part}"
             else:
