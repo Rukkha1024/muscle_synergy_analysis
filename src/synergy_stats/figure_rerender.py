@@ -331,6 +331,8 @@ def render_figures_from_run_dir(
                 cluster_labels=artifacts["labels"].filter(pl.col("group_id") == group_id).to_pandas(),
                 trial_metadata=artifacts["trial_windows"].filter(pl.col("group_id") == group_id).to_pandas(),
                 strategy_summary=group_strategy,
+                total_step_trials_global=_step_total_unique if group_id == "pooled_step_nonstep" else None,
+                total_nonstep_trials_global=_nonstep_total_unique if group_id == "pooled_step_nonstep" else None,
             )
             rendered_paths["group_figure_paths"].append(str(output_path))
 

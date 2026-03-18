@@ -140,17 +140,23 @@ def _render_component_grid(
     coverage: Optional[pd.DataFrame] = None,
     total_trials: Optional[int] = None,
     strategy_summary: Optional[pd.DataFrame] = None,
+    total_step_trials_global: Optional[int] = None,
+    total_nonstep_trials_global: Optional[int] = None,
 ) -> None:
     plt = _pyplot()
     _configure_fonts()
     cluster_ids = sorted(rep_w["cluster_id"].dropna().unique().tolist()) if not rep_w.empty else []
     n_clusters = max(len(cluster_ids), 1)
 
-    total_step_trials = 0
-    total_nonstep_trials = 0
-    if strategy_summary is not None and not strategy_summary.empty:
-        total_step_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "step", "n_rows"].sum())
-        total_nonstep_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "nonstep", "n_rows"].sum())
+    if total_step_trials_global is not None:
+        total_step_trials = total_step_trials_global
+        total_nonstep_trials = total_nonstep_trials_global if total_nonstep_trials_global is not None else 0
+    else:
+        total_step_trials = 0
+        total_nonstep_trials = 0
+        if strategy_summary is not None and not strategy_summary.empty:
+            total_step_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "step", "n_rows"].sum())
+            total_nonstep_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "nonstep", "n_rows"].sum())
 
     fig, axes = plt.subplots(n_clusters, 2, figsize=(14, 3.5 * n_clusters), squeeze=False)
     fig.suptitle(title, fontsize=14, fontweight="bold", y=0.995)
@@ -204,6 +210,8 @@ def save_group_cluster_figure(
     cluster_labels: Optional[pd.DataFrame] = None,
     trial_metadata: Optional[pd.DataFrame] = None,
     strategy_summary: Optional[pd.DataFrame] = None,
+    total_step_trials_global: Optional[int] = None,
+    total_nonstep_trials_global: Optional[int] = None,
 ) -> None:
     has_coverage = cluster_labels is not None and trial_metadata is not None
     if has_coverage:
@@ -226,6 +234,8 @@ def save_group_cluster_figure(
         coverage=coverage if has_coverage else None,
         total_trials=total_trials if has_coverage else None,
         strategy_summary=strategy_summary,
+        total_step_trials_global=total_step_trials_global,
+        total_nonstep_trials_global=total_nonstep_trials_global,
     )
 
 
