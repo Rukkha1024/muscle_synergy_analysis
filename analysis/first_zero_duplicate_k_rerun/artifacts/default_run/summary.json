@@ -1,0 +1,51 @@
+﻿{
+  "source_parquet": "/home/alice/workspace/26-03-synergy-analysis/outputs/final_concatenated.parquet",
+  "group_id": "pooled_step_nonstep",
+  "analysis_date": "2026-03-19",
+  "vector_count": 221,
+  "trial_count": 45,
+  "muscle_count": 16,
+  "k_min": 7,
+  "k_max": 20,
+  "selection_method": "first_zero_duplicate",
+  "gap_statistic_used": false,
+  "k_selected_first_zero_duplicate": 13,
+  "pipeline_k_gap_raw": 15,
+  "pipeline_k_selected": 15,
+  "pipeline_k_min_unique": 13,
+  "duplicate_trial_count_by_k": {
+    "7": 17,
+    "8": 12,
+    "9": 6,
+    "10": 3,
+    "11": 2,
+    "12": 1,
+    "13": 0
+  },
+  "pipeline_duplicate_trial_count_by_k": {
+    "10": 3,
+    "11": 2,
+    "12": 1,
+    "13": 0,
+    "14": 0,
+    "15": 0,
+    "16": 0,
+    "17": 0,
+    "18": 0,
+    "19": 0,
+    "20": 0,
+    "7": 17,
+    "8": 12,
+    "9": 6
+  },
+  "scan_cfg": {
+    "algorithm": "torch_kmeans",
+    "torch_device": "cuda",
+    "torch_dtype": "float32",
+    "uniqueness_candidate_restarts": 1000,
+    "max_iter": 300,
+    "random_state": 42,
+    "torch_restart_batch_size": 128
+  },
+  "figure_path": "k_duplicate_burden.png"
+}

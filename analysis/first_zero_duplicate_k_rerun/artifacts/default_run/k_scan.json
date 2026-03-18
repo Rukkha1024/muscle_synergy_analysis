@@ -1,0 +1,1601 @@
+﻿{
+  "selection_method": "first_zero_duplicate",
+  "gap_statistic_used": false,
+  "scan_rows": [
+    {
+      "k": 7,
+      "duplicate_trial_count": 17,
+      "searched_restarts": 1000,
+      "zero_duplicate_found": false,
+      "objective": null,
+      "representative_duplicate_trials": [
+        [
+          "권유영",
+          35.0,
+          "concat_nonstep"
+        ],
+        [
+          "김서하",
+          130.0,
+          "concat_nonstep"
+        ],
+        [
+          "김우연",
+          60.0,
+          "concat_nonstep"
+        ],
+        [
+          "김우연",
+          60.0,
+          "concat_step"
+        ],
+        [
+          "김유민",
+          70.0,
+          "concat_step"
+        ],
+        [
+          "방수진",
+          50.0,
+          "concat_nonstep"
+        ],
+        [
+          "방수진",
+          50.0,
+          "concat_step"
+        ],
+        [
+          "오나영",
+          25.0,
+          "concat_nonstep"
+        ],
+        [
+          "오나영",
+          25.0,
+          "concat_step"
+        ],
+        [
+          "유병한",
+          110.0,
+          "concat_step"
+        ],
+        [
+          "유재원",
+          45.0,
+          "concat_nonstep"
+        ],
+        [
+          "유재원",
+          45.0,
+          "concat_step"
+        ],
+        [
+          "이은수",
+          35.0,
+          "concat_nonstep"
+        ],
+        [
+          "이은수",
+          35.0,
+          "concat_step"
+        ],
+        [
+          "이인섭",
+          30.0,
+          "concat_step"
+        ],
+        [
+          "이재유",
+          20.0,
+          "concat_nonstep"
+        ],
+        [
+          "조민석",
+          30.0,
+          "concat_step"
+        ]
+      ],
+      "representative_duplicate_evidence": [
+        {
+          "subject": "권유영",
+          "velocity": 35.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "권유영_v35.0_Tconcat_nonstep",
+          "trial_key": [
+            "권유영",
+            35.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 5,
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_indexes": [
+            2,
+            4
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_indexes": [
+                2,
+                4
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "김서하",
+          "velocity": 130.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "김서하_v130.0_Tconcat_nonstep",
+          "trial_key": [
+            "김서하",
+            130.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_indexes": [
+            4,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_indexes": [
+                4,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "김우연",
+          "velocity": 60.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "김우연_v60.0_Tconcat_nonstep",
+          "trial_key": [
+            "김우연",
+            60.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 5,
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_indexes": [
+            2,
+            3
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                2,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "김우연",
+          "velocity": 60.0,
+          "trial_num": "concat_step",
+          "trial_id": "김우연_v60.0_Tconcat_step",
+          "trial_key": [
+            "김우연",
+            60.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 4,
+          "duplicate_cluster_labels": [
+            5
+          ],
+          "duplicate_component_indexes": [
+            2,
+            3
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 5,
+              "component_indexes": [
+                2,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "김유민",
+          "velocity": 70.0,
+          "trial_num": "concat_step",
+          "trial_id": "김유민_v70.0_Tconcat_step",
+          "trial_key": [
+            "김유민",
+            70.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            1
+          ],
+          "duplicate_component_indexes": [
+            2,
+            3
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 1,
+              "component_indexes": [
+                2,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "방수진",
+          "velocity": 50.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "방수진_v50.0_Tconcat_nonstep",
+          "trial_key": [
+            "방수진",
+            50.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 4,
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_indexes": [
+            1,
+            3
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                1,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "방수진",
+          "velocity": 50.0,
+          "trial_num": "concat_step",
+          "trial_id": "방수진_v50.0_Tconcat_step",
+          "trial_key": [
+            "방수진",
+            50.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            0
+          ],
+          "duplicate_component_indexes": [
+            0,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 0,
+              "component_indexes": [
+                0,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "오나영",
+          "velocity": 25.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "오나영_v25.0_Tconcat_nonstep",
+          "trial_key": [
+            "오나영",
+            25.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_indexes": [
+            4,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_indexes": [
+                4,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "오나영",
+          "velocity": 25.0,
+          "trial_num": "concat_step",
+          "trial_id": "오나영_v25.0_Tconcat_step",
+          "trial_key": [
+            "오나영",
+            25.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 7,
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_indexes": [
+            3,
+            4
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_indexes": [
+                3,
+                4
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "유병한",
+          "velocity": 110.0,
+          "trial_num": "concat_step",
+          "trial_id": "유병한_v110.0_Tconcat_step",
+          "trial_key": [
+            "유병한",
+            110.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 7,
+          "duplicate_cluster_labels": [
+            2,
+            6
+          ],
+          "duplicate_component_indexes": [
+            1,
+            2,
+            3,
+            6
+          ],
+          "duplicate_cluster_count": 2,
+          "duplicate_component_count": 4,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_indexes": [
+                2,
+                3
+              ],
+              "component_count": 2
+            },
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                1,
+                6
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "유재원",
+          "velocity": 45.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "유재원_v45.0_Tconcat_nonstep",
+          "trial_key": [
+            "유재원",
+            45.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                0,
+                2
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "유재원",
+          "velocity": 45.0,
+          "trial_num": "concat_step",
+          "trial_id": "유재원_v45.0_Tconcat_step",
+          "trial_key": [
+            "유재원",
+            45.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_indexes": [
+            0,
+            4
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_indexes": [
+                0,
+                4
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이은수",
+          "velocity": 35.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "이은수_v35.0_Tconcat_nonstep",
+          "trial_key": [
+            "이은수",
+            35.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            2,
+            3
+          ],
+          "duplicate_component_indexes": [
+            1,
+            3,
+            4,
+            5
+          ],
+          "duplicate_cluster_count": 2,
+          "duplicate_component_count": 4,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_indexes": [
+                1,
+                4
+              ],
+              "component_count": 2
+            },
+            {
+              "cluster_id": 3,
+              "component_indexes": [
+                3,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이은수",
+          "velocity": 35.0,
+          "trial_num": "concat_step",
+          "trial_id": "이은수_v35.0_Tconcat_step",
+          "trial_key": [
+            "이은수",
+            35.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            4
+          ],
+          "duplicate_component_indexes": [
+            0,
+            4
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 4,
+              "component_indexes": [
+                0,
+                4
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이인섭",
+          "velocity": 30.0,
+          "trial_num": "concat_step",
+          "trial_id": "이인섭_v30.0_Tconcat_step",
+          "trial_key": [
+            "이인섭",
+            30.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 3,
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_indexes": [
+            0,
+            2
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_indexes": [
+                0,
+                2
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이재유",
+          "velocity": 20.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "이재유_v20.0_Tconcat_nonstep",
+          "trial_key": [
+            "이재유",
+            20.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 4,
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_indexes": [
+                1,
+                2
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "조민석",
+          "velocity": 30.0,
+          "trial_num": "concat_step",
+          "trial_id": "조민석_v30.0_Tconcat_step",
+          "trial_key": [
+            "조민석",
+            30.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 7,
+          "duplicate_cluster_labels": [
+            2,
+            4
+          ],
+          "duplicate_component_indexes": [
+            0,
+            1,
+            5,
+            6
+          ],
+          "duplicate_cluster_count": 2,
+          "duplicate_component_count": 4,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_indexes": [
+                0,
+                6
+              ],
+              "component_count": 2
+            },
+            {
+              "cluster_id": 4,
+              "component_indexes": [
+                1,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "k": 8,
+      "duplicate_trial_count": 12,
+      "searched_restarts": 1000,
+      "zero_duplicate_found": false,
+      "objective": null,
+      "representative_duplicate_trials": [
+        [
+          "권유영",
+          35.0,
+          "concat_nonstep"
+        ],
+        [
+          "김서하",
+          130.0,
+          "concat_nonstep"
+        ],
+        [
+          "김우연",
+          60.0,
+          "concat_nonstep"
+        ],
+        [
+          "김유민",
+          70.0,
+          "concat_step"
+        ],
+        [
+          "방수진",
+          50.0,
+          "concat_step"
+        ],
+        [
+          "오나영",
+          25.0,
+          "concat_nonstep"
+        ],
+        [
+          "유병한",
+          110.0,
+          "concat_step"
+        ],
+        [
+          "유재원",
+          45.0,
+          "concat_step"
+        ],
+        [
+          "이은수",
+          35.0,
+          "concat_nonstep"
+        ],
+        [
+          "이인섭",
+          30.0,
+          "concat_nonstep"
+        ],
+        [
+          "이재유",
+          20.0,
+          "concat_nonstep"
+        ],
+        [
+          "이지수",
+          130.0,
+          "concat_nonstep"
+        ]
+      ],
+      "representative_duplicate_evidence": [
+        {
+          "subject": "권유영",
+          "velocity": 35.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "권유영_v35.0_Tconcat_nonstep",
+          "trial_key": [
+            "권유영",
+            35.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 5,
+          "duplicate_cluster_labels": [
+            4
+          ],
+          "duplicate_component_indexes": [
+            1,
+            3
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 4,
+              "component_indexes": [
+                1,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "김서하",
+          "velocity": 130.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "김서하_v130.0_Tconcat_nonstep",
+          "trial_key": [
+            "김서하",
+            130.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_indexes": [
+            4,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                4,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "김우연",
+          "velocity": 60.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "김우연_v60.0_Tconcat_nonstep",
+          "trial_key": [
+            "김우연",
+            60.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 5,
+          "duplicate_cluster_labels": [
+            5
+          ],
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 5,
+              "component_indexes": [
+                0,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "김유민",
+          "velocity": 70.0,
+          "trial_num": "concat_step",
+          "trial_id": "김유민_v70.0_Tconcat_step",
+          "trial_key": [
+            "김유민",
+            70.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            7
+          ],
+          "duplicate_component_indexes": [
+            2,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 7,
+              "component_indexes": [
+                2,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "방수진",
+          "velocity": 50.0,
+          "trial_num": "concat_step",
+          "trial_id": "방수진_v50.0_Tconcat_step",
+          "trial_key": [
+            "방수진",
+            50.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            4
+          ],
+          "duplicate_component_indexes": [
+            0,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 4,
+              "component_indexes": [
+                0,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "오나영",
+          "velocity": 25.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "오나영_v25.0_Tconcat_nonstep",
+          "trial_key": [
+            "오나영",
+            25.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_indexes": [
+            4,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                4,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "유병한",
+          "velocity": 110.0,
+          "trial_num": "concat_step",
+          "trial_id": "유병한_v110.0_Tconcat_step",
+          "trial_key": [
+            "유병한",
+            110.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 7,
+          "duplicate_cluster_labels": [
+            5,
+            6
+          ],
+          "duplicate_component_indexes": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "duplicate_cluster_count": 2,
+          "duplicate_component_count": 4,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 5,
+              "component_indexes": [
+                1,
+                5
+              ],
+              "component_count": 2
+            },
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                2,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "유재원",
+          "velocity": 45.0,
+          "trial_num": "concat_step",
+          "trial_id": "유재원_v45.0_Tconcat_step",
+          "trial_key": [
+            "유재원",
+            45.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_indexes": [
+            0,
+            4
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                0,
+                4
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이은수",
+          "velocity": 35.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "이은수_v35.0_Tconcat_nonstep",
+          "trial_key": [
+            "이은수",
+            35.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            1
+          ],
+          "duplicate_component_indexes": [
+            3,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 1,
+              "component_indexes": [
+                3,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이인섭",
+          "velocity": 30.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "이인섭_v30.0_Tconcat_nonstep",
+          "trial_key": [
+            "이인섭",
+            30.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 3,
+          "duplicate_cluster_labels": [
+            5
+          ],
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 5,
+              "component_indexes": [
+                1,
+                2
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이재유",
+          "velocity": 20.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "이재유_v20.0_Tconcat_nonstep",
+          "trial_key": [
+            "이재유",
+            20.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 4,
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                1,
+                2
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이지수",
+          "velocity": 130.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "이지수_v130.0_Tconcat_nonstep",
+          "trial_key": [
+            "이지수",
+            130.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 4,
+          "duplicate_cluster_labels": [
+            4
+          ],
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 4,
+              "component_indexes": [
+                0,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "k": 9,
+      "duplicate_trial_count": 6,
+      "searched_restarts": 1000,
+      "zero_duplicate_found": false,
+      "objective": null,
+      "representative_duplicate_trials": [
+        [
+          "김민정",
+          20.0,
+          "concat_nonstep"
+        ],
+        [
+          "김우연",
+          60.0,
+          "concat_nonstep"
+        ],
+        [
+          "방수진",
+          50.0,
+          "concat_step"
+        ],
+        [
+          "유병한",
+          110.0,
+          "concat_step"
+        ],
+        [
+          "이은수",
+          35.0,
+          "concat_nonstep"
+        ],
+        [
+          "이인섭",
+          30.0,
+          "concat_nonstep"
+        ]
+      ],
+      "representative_duplicate_evidence": [
+        {
+          "subject": "김민정",
+          "velocity": 20.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "김민정_v20.0_Tconcat_nonstep",
+          "trial_key": [
+            "김민정",
+            20.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 4,
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_indexes": [
+            0,
+            1
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_indexes": [
+                0,
+                1
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "김우연",
+          "velocity": 60.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "김우연_v60.0_Tconcat_nonstep",
+          "trial_key": [
+            "김우연",
+            60.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 5,
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_indexes": [
+            0,
+            3
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                0,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "방수진",
+          "velocity": 50.0,
+          "trial_num": "concat_step",
+          "trial_id": "방수진_v50.0_Tconcat_step",
+          "trial_key": [
+            "방수진",
+            50.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            1
+          ],
+          "duplicate_component_indexes": [
+            0,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 1,
+              "component_indexes": [
+                0,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "유병한",
+          "velocity": 110.0,
+          "trial_num": "concat_step",
+          "trial_id": "유병한_v110.0_Tconcat_step",
+          "trial_key": [
+            "유병한",
+            110.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 7,
+          "duplicate_cluster_labels": [
+            2
+          ],
+          "duplicate_component_indexes": [
+            0,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 2,
+              "component_indexes": [
+                0,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이은수",
+          "velocity": 35.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "이은수_v35.0_Tconcat_nonstep",
+          "trial_key": [
+            "이은수",
+            35.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            7
+          ],
+          "duplicate_component_indexes": [
+            3,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 7,
+              "component_indexes": [
+                3,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이인섭",
+          "velocity": 30.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "이인섭_v30.0_Tconcat_nonstep",
+          "trial_key": [
+            "이인섭",
+            30.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 3,
+          "duplicate_cluster_labels": [
+            6
+          ],
+          "duplicate_component_indexes": [
+            1,
+            2
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 6,
+              "component_indexes": [
+                1,
+                2
+              ],
+              "component_count": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "k": 10,
+      "duplicate_trial_count": 3,
+      "searched_restarts": 1000,
+      "zero_duplicate_found": false,
+      "objective": null,
+      "representative_duplicate_trials": [
+        [
+          "유병한",
+          110.0,
+          "concat_step"
+        ],
+        [
+          "이은수",
+          35.0,
+          "concat_nonstep"
+        ],
+        [
+          "조민석",
+          30.0,
+          "concat_step"
+        ]
+      ],
+      "representative_duplicate_evidence": [
+        {
+          "subject": "유병한",
+          "velocity": 110.0,
+          "trial_num": "concat_step",
+          "trial_id": "유병한_v110.0_Tconcat_step",
+          "trial_key": [
+            "유병한",
+            110.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 7,
+          "duplicate_cluster_labels": [
+            3
+          ],
+          "duplicate_component_indexes": [
+            0,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 3,
+              "component_indexes": [
+                0,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "이은수",
+          "velocity": 35.0,
+          "trial_num": "concat_nonstep",
+          "trial_id": "이은수_v35.0_Tconcat_nonstep",
+          "trial_key": [
+            "이은수",
+            35.0,
+            "concat_nonstep"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            0
+          ],
+          "duplicate_component_indexes": [
+            3,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 0,
+              "component_indexes": [
+                3,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "조민석",
+          "velocity": 30.0,
+          "trial_num": "concat_step",
+          "trial_id": "조민석_v30.0_Tconcat_step",
+          "trial_key": [
+            "조민석",
+            30.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 7,
+          "duplicate_cluster_labels": [
+            7
+          ],
+          "duplicate_component_indexes": [
+            5,
+            6
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 7,
+              "component_indexes": [
+                5,
+                6
+              ],
+              "component_count": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "k": 11,
+      "duplicate_trial_count": 2,
+      "searched_restarts": 1000,
+      "zero_duplicate_found": false,
+      "objective": null,
+      "representative_duplicate_trials": [
+        [
+          "김유민",
+          70.0,
+          "concat_step"
+        ],
+        [
+          "방수진",
+          50.0,
+          "concat_step"
+        ]
+      ],
+      "representative_duplicate_evidence": [
+        {
+          "subject": "김유민",
+          "velocity": 70.0,
+          "trial_num": "concat_step",
+          "trial_id": "김유민_v70.0_Tconcat_step",
+          "trial_key": [
+            "김유민",
+            70.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            7
+          ],
+          "duplicate_component_indexes": [
+            2,
+            3
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 7,
+              "component_indexes": [
+                2,
+                3
+              ],
+              "component_count": 2
+            }
+          ]
+        },
+        {
+          "subject": "방수진",
+          "velocity": 50.0,
+          "trial_num": "concat_step",
+          "trial_id": "방수진_v50.0_Tconcat_step",
+          "trial_key": [
+            "방수진",
+            50.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            4
+          ],
+          "duplicate_component_indexes": [
+            0,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 4,
+              "component_indexes": [
+                0,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "k": 12,
+      "duplicate_trial_count": 1,
+      "searched_restarts": 1000,
+      "zero_duplicate_found": false,
+      "objective": null,
+      "representative_duplicate_trials": [
+        [
+          "방수진",
+          50.0,
+          "concat_step"
+        ]
+      ],
+      "representative_duplicate_evidence": [
+        {
+          "subject": "방수진",
+          "velocity": 50.0,
+          "trial_num": "concat_step",
+          "trial_id": "방수진_v50.0_Tconcat_step",
+          "trial_key": [
+            "방수진",
+            50.0,
+            "concat_step"
+          ],
+          "n_synergies_in_trial": 6,
+          "duplicate_cluster_labels": [
+            4
+          ],
+          "duplicate_component_indexes": [
+            0,
+            5
+          ],
+          "duplicate_cluster_count": 1,
+          "duplicate_component_count": 2,
+          "duplicate_cluster_details": [
+            {
+              "cluster_id": 4,
+              "component_indexes": [
+                0,
+                5
+              ],
+              "component_count": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "k": 13,
+      "duplicate_trial_count": 0,
+      "searched_restarts": 1000,
+      "zero_duplicate_found": true,
+      "objective": 49.23583221435547,
+      "representative_duplicate_trials": [],
+      "representative_duplicate_evidence": []
+    }
+  ]
+}
