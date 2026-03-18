@@ -177,6 +177,8 @@ outputs/
 
 run 루트에 있는 `all_*.csv`는 실행된 모든 mode를 합친 aggregate 산출물이다. 따라서 root CSV와 root workbook을 읽을 때는 먼저 `aggregation_mode` 컬럼으로 `trialwise`와 `concatenated`를 구분해야 한다. 반면 figure는 root에 합쳐 저장하지 않고, 각 mode 하위 디렉터리 안에만 생성한다. 현재 기본 `both` 실행에서는 root `figures/` 트리와 root cross-group similarity CSV를 만들지 않는다. 이렇게 해야 `trialwise`와 `concatenated`를 같은 그림이나 같은 similarity table에서 직접 섞어 해석하지 않게 된다.
 
+각 figure의 시각화 구성과 해석 방법은 [`docs/figures.md`](docs/figures.md)에 정리되어 있다.
+
 CSV를 읽을 때는 먼저 공통 식별 컬럼을 이해하는 것이 좋다.
 
 - `aggregation_mode`: `trialwise` 또는 `concatenated`
