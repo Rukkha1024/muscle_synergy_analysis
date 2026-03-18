@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass
 import hashlib
 import json
 from pathlib import Path
+from statistics import stdev
 import sys
 from typing import Any
 
@@ -209,11 +210,12 @@ def _subject_strategy_summary_rows(
                 "analysis_unit_count": len(values),
                 "velocity_count": len(velocity_values),
                 "velocities": velocity_values,
-                "n_components_mean": round(sum(component_values) / len(component_values), 4),
+                "n_components_mean": round(_mean(component_values), 4),
+                "n_components_sd": round(_sd(component_values), 4),
                 "n_components_min": min(component_values),
                 "n_components_max": max(component_values),
                 "n_components_values": component_values,
-                "vaf_mean": round(sum(vaf_values) / len(vaf_values), 6),
+                "vaf_mean": round(_mean(vaf_values), 6),
                 "vaf_min": round(min(vaf_values), 6),
                 "vaf_max": round(max(vaf_values), 6),
             }
@@ -300,6 +302,24 @@ def _render_table(rows: list[dict[str, Any]], columns: list[str]) -> str:
     return "\n".join("| " + " | ".join(row) + " |" for row in rendered_rows)
 
 
+def _mean(values: list[float]) -> float:
+    return sum(values) / len(values)
+
+
+def _sd(values: list[float]) -> float:
+    if len(values) < 2:
+        return 0.0
+    return float(stdev(values))
+
+
+def _format_mean_sd(mean_value: float, sd_value: float) -> str:
+    return f"{mean_value:.2f} ± {sd_value:.2f}"
+
+
+def _format_range(min_value: float, max_value: float) -> str:
+    return f"{min_value:.2f}-{max_value:.2f}"
+
+
 def _json_default(value: Any) -> Any:
     if isinstance(value, Path):
         return str(value)
@@ -308,11 +328,15 @@ def _json_default(value: Any) -> Any:
     raise TypeError(f"Unsupported JSON value: {type(value)!r}")
 
 
-def _checksum_lines(paths: list[Path]) -> list[str]:
+def _checksum_lines(base_dir: Path, paths: list[Path]) -> list[str]:
     lines = []
     for path in paths:
         digest = hashlib.md5(path.read_bytes()).hexdigest()
-        lines.append(f"{digest}  {path.name}")
+        try:
+            display_path = path.relative_to(base_dir)
+        except ValueError:
+            display_path = path.name
+        lines.append(f"{digest}  {display_path}")
     return lines
 
 
@@ -384,6 +408,35 @@ def _build_report_payload(
             )
             subject_rows.extend(_subject_strategy_summary_rows(result.feature_rows, mode, result.threshold))
 
+    threshold_component_rows: list[dict[str, Any]] = []
+    for mode in MODE_ORDER:
+        for threshold in args.thresholds:
+            threshold_label = _format_threshold(float(threshold))
+            mode_rows = [row for row in subject_rows if row["mode"] == mode and row["threshold_label"] == threshold_label]
+            row: dict[str, Any] = {
+                "mode": mode,
+                "threshold": float(threshold),
+                "threshold_label": threshold_label,
+                "subject_count_total": len({str(item["subject"]) for item in mode_rows}),
+            }
+            for step_class in STEP_CLASS_ORDER:
+                step_rows = [item for item in mode_rows if item["step_class"] == step_class]
+                component_means = [float(item["n_components_mean"]) for item in step_rows]
+                row[f"{step_class}_subject_count"] = len({str(item["subject"]) for item in step_rows})
+                row[f"{step_class}_component_mean"] = round(_mean(component_means), 4)
+                row[f"{step_class}_component_sd"] = round(_sd(component_means), 4)
+                row[f"{step_class}_component_min"] = round(min(component_means), 4)
+                row[f"{step_class}_component_max"] = round(max(component_means), 4)
+                row[f"{step_class}_component_mean_sd"] = _format_mean_sd(
+                    row[f"{step_class}_component_mean"],
+                    row[f"{step_class}_component_sd"],
+                )
+                row[f"{step_class}_component_range"] = _format_range(
+                    row[f"{step_class}_component_min"],
+                    row[f"{step_class}_component_max"],
+                )
+            threshold_component_rows.append(row)
+
     return {
         "config_path": str(args.config),
         "out_dir": str(args.out_dir),
@@ -403,6 +456,7 @@ def _build_report_payload(
         "overall_mode_summary": overall_rows,
         "cluster_summary": cluster_rows,
         "subject_strategy_summary": subject_rows,
+        "threshold_component_summary": threshold_component_rows,
     }
 
 
@@ -414,9 +468,44 @@ def _write_summary(out_dir: Path, payload: dict[str, Any]) -> Path:
     return summary_path
 
 
+def _write_threshold_summaries(out_dir: Path, payload: dict[str, Any]) -> list[Path]:
+    written_paths: list[Path] = []
+    for threshold in payload["thresholds"]:
+        threshold_value = float(threshold)
+        threshold_label = _format_threshold(threshold_value)
+        threshold_slug = f"vaf_{int(round(threshold_value * 100)):02d}"
+        threshold_dir = out_dir / "by_threshold" / threshold_slug
+        threshold_dir.mkdir(parents=True, exist_ok=True)
+        threshold_payload = {
+            "config_path": payload["config_path"],
+            "out_dir": str(threshold_dir),
+            "threshold": threshold_value,
+            "threshold_label": threshold_label,
+            "input": payload["input"],
+            "data_summary": payload["data_summary"],
+            "overall_mode_summary": [
+                row for row in payload["overall_mode_summary"] if row["threshold_label"] == threshold_label
+            ],
+            "cluster_summary": [
+                row for row in payload["cluster_summary"] if row["threshold_label"] == threshold_label
+            ],
+            "subject_strategy_summary": [
+                row for row in payload["subject_strategy_summary"] if row["threshold_label"] == threshold_label
+            ],
+            "threshold_component_summary": [
+                row for row in payload["threshold_component_summary"] if row["threshold_label"] == threshold_label
+            ],
+        }
+        threshold_path = threshold_dir / "summary.json"
+        with threshold_path.open("w", encoding="utf-8-sig") as handle:
+            json.dump(threshold_payload, handle, ensure_ascii=False, indent=2, default=_json_default)
+        written_paths.append(threshold_path)
+    return written_paths
+
+
 def _write_checksums(out_dir: Path, paths: list[Path]) -> Path:
     checksum_path = out_dir / "checksums.md5"
-    checksum_path.write_text("\n".join(_checksum_lines(paths)) + "\n", encoding="utf-8")
+    checksum_path.write_text("\n".join(_checksum_lines(out_dir, paths)) + "\n", encoding="utf-8")
     return checksum_path
 
 
@@ -440,6 +529,24 @@ def _print_payload_summary(payload: dict[str, Any]) -> None:
                 "k_selected",
                 "k_min_unique",
                 "selection_status",
+            ],
+        )
+    )
+
+    _print_section("Threshold Component Summary")
+    print(
+        _render_table(
+            payload["threshold_component_summary"],
+            [
+                "mode",
+                "threshold_label",
+                "subject_count_total",
+                "step_subject_count",
+                "step_component_mean_sd",
+                "step_component_range",
+                "nonstep_subject_count",
+                "nonstep_component_mean_sd",
+                "nonstep_component_range",
             ],
         )
     )
@@ -499,12 +606,15 @@ def main() -> None:
 
     payload = _build_report_payload(args, cfg, merged_df, trial_records, threshold_results)
     summary_path = _write_summary(args.out_dir, payload)
-    checksum_path = _write_checksums(args.out_dir, [summary_path])
+    threshold_summary_paths = _write_threshold_summaries(args.out_dir, payload)
+    checksum_path = _write_checksums(args.out_dir, [summary_path, *threshold_summary_paths])
     _print_payload_summary(payload)
 
     print("\nArtifacts")
     print("---------")
     print(f"summary.json: {summary_path}")
+    for threshold_path in threshold_summary_paths:
+        print(f"threshold summary: {threshold_path}")
     print(f"checksums.md5: {checksum_path}")
 
 

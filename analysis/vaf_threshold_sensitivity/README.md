@@ -34,4 +34,5 @@ conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/
 
 - `report.md`: 사용자용 요약 리포트
 - `artifacts/default_run/summary.json`: 재현용 구조화 결과
+- `artifacts/default_run/by_threshold/vaf_XX/summary.json`: VAF parameter별 구조화 결과
 - `artifacts/default_run/checksums.md5`: 생성 산출물 checksum

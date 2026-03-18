@@ -1,0 +1,2217 @@
+﻿{
+  "config_path": "/home/alice/workspace/26-03-synergy-analysis/configs/global_config.yaml",
+  "out_dir": "analysis/vaf_threshold_sensitivity/artifacts/default_run/by_threshold/vaf_85",
+  "threshold": 0.85,
+  "threshold_label": "85%",
+  "input": {
+    "emg_parquet_path": "/mnt/c/Users/Alice/OneDrive - 청주대학교/근전도 분석 코드/shared_files/output/03_post_processed_min_max_only/min-max_norm_only.parquet",
+    "event_xlsm_path": "/mnt/c/Users/Alice/OneDrive - 청주대학교/연구실 자료/연구실_노인균형프로토콜/데이터 정리-설문, 신체계측, 기타 데이터/perturb_inform.xlsm"
+  },
+  "data_summary": {
+    "merged_rows": 474500,
+    "selected_trials": 125,
+    "trial_records": 125,
+    "subjects": [
+      "가윤호",
+      "강비은",
+      "권유영",
+      "김민정",
+      "김서하",
+      "김우연",
+      "김유민",
+      "김종철",
+      "방수진",
+      "방주원",
+      "성효은",
+      "안지연",
+      "오나영",
+      "유도경",
+      "유병한",
+      "유재원",
+      "이은수",
+      "이인섭",
+      "이재유",
+      "이지수",
+      "임상우",
+      "정혜진",
+      "조민석",
+      "최지유"
+    ],
+    "selected_step_trials": 53,
+    "selected_nonstep_trials": 72
+  },
+  "overall_mode_summary": [
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "analysis_unit_count": 125,
+      "step_unit_count": 53,
+      "nonstep_unit_count": 72,
+      "component_count_total": 349,
+      "component_mean": 2.792,
+      "component_min": 1,
+      "component_max": 5,
+      "vaf_mean": 0.876526,
+      "vaf_min": 0.850022,
+      "vaf_max": 0.925736,
+      "k_lb": 5,
+      "k_gap_raw": 13,
+      "k_selected": 13,
+      "k_min_unique": 10.0,
+      "selection_status": "success_gap_unique",
+      "algorithm_used": "torch_kmeans",
+      "n_components_clustered": 349
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "analysis_unit_count": 45,
+      "step_unit_count": 21,
+      "nonstep_unit_count": 24,
+      "component_count_total": 155,
+      "component_mean": 3.4444,
+      "component_min": 2,
+      "component_max": 6,
+      "vaf_mean": 0.873263,
+      "vaf_min": 0.852127,
+      "vaf_max": 0.92268,
+      "k_lb": 6,
+      "k_gap_raw": 10,
+      "k_selected": 10,
+      "k_min_unique": 8.0,
+      "selection_status": "success_gap_unique",
+      "algorithm_used": "torch_kmeans",
+      "n_components_clustered": 155
+    }
+  ],
+  "cluster_summary": [
+    {
+      "mode": "trialwise",
+      "threshold_label": "85%",
+      "analysis_unit_count": 125,
+      "component_count_total": 349,
+      "k_lb": 5,
+      "k_gap_raw": 13,
+      "k_selected": 13,
+      "k_min_unique": 10.0,
+      "selection_status": "success_gap_unique"
+    },
+    {
+      "mode": "concatenated",
+      "threshold_label": "85%",
+      "analysis_unit_count": 45,
+      "component_count_total": 155,
+      "k_lb": 6,
+      "k_gap_raw": 10,
+      "k_selected": 10,
+      "k_min_unique": 8.0,
+      "selection_status": "success_gap_unique"
+    }
+  ],
+  "subject_strategy_summary": [
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "가윤호",
+      "step_class": "nonstep",
+      "analysis_unit_count": 4,
+      "velocity_count": 1,
+      "velocities": [
+        "60.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "vaf_mean": 0.882139,
+      "vaf_min": 0.870001,
+      "vaf_max": 0.894847,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "강비은",
+      "step_class": "nonstep",
+      "analysis_unit_count": 5,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 2.6,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        2,
+        3,
+        3,
+        2
+      ],
+      "vaf_mean": 0.87286,
+      "vaf_min": 0.854279,
+      "vaf_max": 0.889703,
+      "n_components_sd": 0.5477
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "권유영",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.864985,
+      "vaf_min": 0.864985,
+      "vaf_max": 0.864985,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김민정",
+      "step_class": "nonstep",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2,
+        2
+      ],
+      "vaf_mean": 0.868331,
+      "vaf_min": 0.853758,
+      "vaf_max": 0.882904,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김서하",
+      "step_class": "nonstep",
+      "analysis_unit_count": 6,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 2.8333,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        2
+      ],
+      "vaf_mean": 0.877543,
+      "vaf_min": 0.864756,
+      "vaf_max": 0.896328,
+      "n_components_sd": 0.4082
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김우연",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "60.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.862211,
+      "vaf_min": 0.862211,
+      "vaf_max": 0.862211,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김유민",
+      "step_class": "nonstep",
+      "analysis_unit_count": 6,
+      "velocity_count": 1,
+      "velocities": [
+        "70.0"
+      ],
+      "n_components_mean": 2.8333,
+      "n_components_min": 2,
+      "n_components_max": 4,
+      "n_components_values": [
+        3,
+        3,
+        2,
+        2,
+        3,
+        4
+      ],
+      "vaf_mean": 0.868639,
+      "vaf_min": 0.850022,
+      "vaf_max": 0.896128,
+      "n_components_sd": 0.7528
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김종철",
+      "step_class": "nonstep",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "135.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2,
+        2
+      ],
+      "vaf_mean": 0.897489,
+      "vaf_min": 0.892861,
+      "vaf_max": 0.902117,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "방수진",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "50.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.881755,
+      "vaf_min": 0.881755,
+      "vaf_max": 0.881755,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "방주원",
+      "step_class": "nonstep",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "200.0"
+      ],
+      "n_components_mean": 1.6667,
+      "n_components_min": 1,
+      "n_components_max": 2,
+      "n_components_values": [
+        2,
+        2,
+        1
+      ],
+      "vaf_mean": 0.909965,
+      "vaf_min": 0.891376,
+      "vaf_max": 0.921811,
+      "n_components_sd": 0.5774
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "성효은",
+      "step_class": "nonstep",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2,
+        2
+      ],
+      "vaf_mean": 0.859183,
+      "vaf_min": 0.850766,
+      "vaf_max": 0.867599,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "안지연",
+      "step_class": "nonstep",
+      "analysis_unit_count": 5,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 2.2,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        2,
+        2,
+        2,
+        2,
+        3
+      ],
+      "vaf_mean": 0.87308,
+      "vaf_min": 0.855404,
+      "vaf_max": 0.893781,
+      "n_components_sd": 0.4472
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "오나영",
+      "step_class": "nonstep",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "25.0"
+      ],
+      "n_components_mean": 2.6667,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        3,
+        2
+      ],
+      "vaf_mean": 0.867095,
+      "vaf_min": 0.858229,
+      "vaf_max": 0.883622,
+      "n_components_sd": 0.5774
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유도경",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.867227,
+      "vaf_min": 0.867227,
+      "vaf_max": 0.867227,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유병한",
+      "step_class": "nonstep",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "110.0"
+      ],
+      "n_components_mean": 2.5,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        2
+      ],
+      "vaf_mean": 0.859233,
+      "vaf_min": 0.855043,
+      "vaf_max": 0.863423,
+      "n_components_sd": 0.7071
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유재원",
+      "step_class": "nonstep",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "45.0"
+      ],
+      "n_components_mean": 2.6667,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        3,
+        2
+      ],
+      "vaf_mean": 0.883081,
+      "vaf_min": 0.880128,
+      "vaf_max": 0.885233,
+      "n_components_sd": 0.5774
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이은수",
+      "step_class": "nonstep",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        3
+      ],
+      "vaf_mean": 0.864205,
+      "vaf_min": 0.859486,
+      "vaf_max": 0.868925,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이인섭",
+      "step_class": "nonstep",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2,
+        2
+      ],
+      "vaf_mean": 0.887848,
+      "vaf_min": 0.866212,
+      "vaf_max": 0.909485,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이재유",
+      "step_class": "nonstep",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 2.3333,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        2,
+        2
+      ],
+      "vaf_mean": 0.892743,
+      "vaf_min": 0.872411,
+      "vaf_max": 0.912428,
+      "n_components_sd": 0.5774
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이지수",
+      "step_class": "nonstep",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2,
+        2
+      ],
+      "vaf_mean": 0.874389,
+      "vaf_min": 0.863283,
+      "vaf_max": 0.885494,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "임상우",
+      "step_class": "nonstep",
+      "analysis_unit_count": 4,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 2.25,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        2,
+        2,
+        2
+      ],
+      "vaf_mean": 0.874636,
+      "vaf_min": 0.856712,
+      "vaf_max": 0.892843,
+      "n_components_sd": 0.5
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "정혜진",
+      "step_class": "nonstep",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        3
+      ],
+      "vaf_mean": 0.881653,
+      "vaf_min": 0.866334,
+      "vaf_max": 0.896972,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "조민석",
+      "step_class": "nonstep",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 2,
+      "n_components_max": 4,
+      "n_components_values": [
+        2,
+        3,
+        4
+      ],
+      "vaf_mean": 0.865464,
+      "vaf_min": 0.853636,
+      "vaf_max": 0.8742,
+      "n_components_sd": 1.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "최지유",
+      "step_class": "nonstep",
+      "analysis_unit_count": 7,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 2.2857,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        2,
+        2,
+        2,
+        3,
+        3,
+        2,
+        2
+      ],
+      "vaf_mean": 0.863294,
+      "vaf_min": 0.850648,
+      "vaf_max": 0.882148,
+      "n_components_sd": 0.488
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "가윤호",
+      "step_class": "step",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "60.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2,
+        2
+      ],
+      "vaf_mean": 0.877556,
+      "vaf_min": 0.871085,
+      "vaf_max": 0.884027,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "강비은",
+      "step_class": "step",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 2.3333,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        2,
+        2,
+        3
+      ],
+      "vaf_mean": 0.883762,
+      "vaf_min": 0.86413,
+      "vaf_max": 0.907891,
+      "n_components_sd": 0.5774
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김민정",
+      "step_class": "step",
+      "analysis_unit_count": 4,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "vaf_mean": 0.871544,
+      "vaf_min": 0.866784,
+      "vaf_max": 0.882341,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김서하",
+      "step_class": "step",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 2,
+      "n_components_max": 4,
+      "n_components_values": [
+        2,
+        3,
+        4
+      ],
+      "vaf_mean": 0.868256,
+      "vaf_min": 0.853714,
+      "vaf_max": 0.888881,
+      "n_components_sd": 1.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김우연",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "60.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.887442,
+      "vaf_min": 0.887442,
+      "vaf_max": 0.887442,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김유민",
+      "step_class": "step",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "70.0"
+      ],
+      "n_components_mean": 3.5,
+      "n_components_min": 3,
+      "n_components_max": 4,
+      "n_components_values": [
+        4,
+        3
+      ],
+      "vaf_mean": 0.867114,
+      "vaf_min": 0.857977,
+      "vaf_max": 0.87625,
+      "n_components_sd": 0.7071
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "방수진",
+      "step_class": "step",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "50.0"
+      ],
+      "n_components_mean": 3.5,
+      "n_components_min": 3,
+      "n_components_max": 4,
+      "n_components_values": [
+        3,
+        4
+      ],
+      "vaf_mean": 0.869716,
+      "vaf_min": 0.868815,
+      "vaf_max": 0.870616,
+      "n_components_sd": 0.7071
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "성효은",
+      "step_class": "step",
+      "analysis_unit_count": 4,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 2.5,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        2,
+        3,
+        2,
+        3
+      ],
+      "vaf_mean": 0.866101,
+      "vaf_min": 0.854611,
+      "vaf_max": 0.876255,
+      "n_components_sd": 0.5774
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "안지연",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.87288,
+      "vaf_min": 0.87288,
+      "vaf_max": 0.87288,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "오나영",
+      "step_class": "step",
+      "analysis_unit_count": 5,
+      "velocity_count": 1,
+      "velocities": [
+        "25.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 3,
+      "n_components_max": 5,
+      "n_components_values": [
+        4,
+        4,
+        5,
+        4,
+        3
+      ],
+      "vaf_mean": 0.870458,
+      "vaf_min": 0.85649,
+      "vaf_max": 0.900414,
+      "n_components_sd": 0.7071
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유도경",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.873131,
+      "vaf_min": 0.873131,
+      "vaf_max": 0.873131,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유병한",
+      "step_class": "step",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "110.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4,
+        4,
+        4
+      ],
+      "vaf_mean": 0.871188,
+      "vaf_min": 0.858605,
+      "vaf_max": 0.878028,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유재원",
+      "step_class": "step",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "45.0"
+      ],
+      "n_components_mean": 3.6667,
+      "n_components_min": 3,
+      "n_components_max": 4,
+      "n_components_values": [
+        4,
+        3,
+        4
+      ],
+      "vaf_mean": 0.883083,
+      "vaf_min": 0.865358,
+      "vaf_max": 0.897235,
+      "n_components_sd": 0.5774
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이은수",
+      "step_class": "step",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 3.5,
+      "n_components_min": 3,
+      "n_components_max": 4,
+      "n_components_values": [
+        4,
+        3
+      ],
+      "vaf_mean": 0.868559,
+      "vaf_min": 0.852441,
+      "vaf_max": 0.884677,
+      "n_components_sd": 0.7071
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이인섭",
+      "step_class": "step",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2,
+        2
+      ],
+      "vaf_mean": 0.9032,
+      "vaf_min": 0.880665,
+      "vaf_max": 0.925736,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이재유",
+      "step_class": "step",
+      "analysis_unit_count": 4,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 2.75,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        2,
+        3,
+        3
+      ],
+      "vaf_mean": 0.897587,
+      "vaf_min": 0.877508,
+      "vaf_max": 0.922564,
+      "n_components_sd": 0.5
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이지수",
+      "step_class": "step",
+      "analysis_unit_count": 3,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 2.6667,
+      "n_components_min": 2,
+      "n_components_max": 3,
+      "n_components_values": [
+        3,
+        2,
+        3
+      ],
+      "vaf_mean": 0.900374,
+      "vaf_min": 0.897386,
+      "vaf_max": 0.902052,
+      "n_components_sd": 0.5774
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "임상우",
+      "step_class": "step",
+      "analysis_unit_count": 2,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.5,
+      "n_components_min": 3,
+      "n_components_max": 4,
+      "n_components_values": [
+        3,
+        4
+      ],
+      "vaf_mean": 0.893179,
+      "vaf_min": 0.890383,
+      "vaf_max": 0.895974,
+      "n_components_sd": 0.7071
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "정혜진",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.882159,
+      "vaf_min": 0.882159,
+      "vaf_max": 0.882159,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "조민석",
+      "step_class": "step",
+      "analysis_unit_count": 4,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 4.5,
+      "n_components_min": 4,
+      "n_components_max": 5,
+      "n_components_values": [
+        5,
+        5,
+        4,
+        4
+      ],
+      "vaf_mean": 0.871724,
+      "vaf_min": 0.860523,
+      "vaf_max": 0.892781,
+      "n_components_sd": 0.5774
+    },
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "최지유",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.898533,
+      "vaf_min": 0.898533,
+      "vaf_max": 0.898533,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "가윤호",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "60.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.888547,
+      "vaf_min": 0.888547,
+      "vaf_max": 0.888547,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "강비은",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.864465,
+      "vaf_min": 0.864465,
+      "vaf_max": 0.864465,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "권유영",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.859226,
+      "vaf_min": 0.859226,
+      "vaf_max": 0.859226,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김민정",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.892332,
+      "vaf_min": 0.892332,
+      "vaf_max": 0.892332,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김서하",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.872458,
+      "vaf_min": 0.872458,
+      "vaf_max": 0.872458,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김우연",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "60.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.862711,
+      "vaf_min": 0.862711,
+      "vaf_max": 0.862711,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김유민",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "70.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.853454,
+      "vaf_min": 0.853454,
+      "vaf_max": 0.853454,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김종철",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "135.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2
+      ],
+      "vaf_mean": 0.865723,
+      "vaf_min": 0.865723,
+      "vaf_max": 0.865723,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "방수진",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "50.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.881485,
+      "vaf_min": 0.881485,
+      "vaf_max": 0.881485,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "방주원",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "200.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2
+      ],
+      "vaf_mean": 0.904751,
+      "vaf_min": 0.904751,
+      "vaf_max": 0.904751,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "성효은",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.878501,
+      "vaf_min": 0.878501,
+      "vaf_max": 0.878501,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "안지연",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.874794,
+      "vaf_min": 0.874794,
+      "vaf_max": 0.874794,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "오나영",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "25.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.864381,
+      "vaf_min": 0.864381,
+      "vaf_max": 0.864381,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유도경",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.871013,
+      "vaf_min": 0.871013,
+      "vaf_max": 0.871013,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유병한",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "110.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.868494,
+      "vaf_min": 0.868494,
+      "vaf_max": 0.868494,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유재원",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "45.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.870599,
+      "vaf_min": 0.870599,
+      "vaf_max": 0.870599,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이은수",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.859113,
+      "vaf_min": 0.859113,
+      "vaf_max": 0.859113,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이인섭",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.886486,
+      "vaf_min": 0.886486,
+      "vaf_max": 0.886486,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이재유",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.878349,
+      "vaf_min": 0.878349,
+      "vaf_max": 0.878349,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이지수",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.896778,
+      "vaf_min": 0.896778,
+      "vaf_max": 0.896778,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "임상우",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.876388,
+      "vaf_min": 0.876388,
+      "vaf_max": 0.876388,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "정혜진",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.887702,
+      "vaf_min": 0.887702,
+      "vaf_max": 0.887702,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "조민석",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.852132,
+      "vaf_min": 0.852132,
+      "vaf_max": 0.852132,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "최지유",
+      "step_class": "nonstep",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.873601,
+      "vaf_min": 0.873601,
+      "vaf_max": 0.873601,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "가윤호",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "60.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.883363,
+      "vaf_min": 0.883363,
+      "vaf_max": 0.883363,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "강비은",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.870552,
+      "vaf_min": 0.870552,
+      "vaf_max": 0.870552,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김민정",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.861925,
+      "vaf_min": 0.861925,
+      "vaf_max": 0.861925,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김서하",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.873447,
+      "vaf_min": 0.873447,
+      "vaf_max": 0.873447,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김우연",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "60.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.887405,
+      "vaf_min": 0.887405,
+      "vaf_max": 0.887405,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "김유민",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "70.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.859384,
+      "vaf_min": 0.859384,
+      "vaf_max": 0.859384,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "방수진",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "50.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.854639,
+      "vaf_min": 0.854639,
+      "vaf_max": 0.854639,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "성효은",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.854376,
+      "vaf_min": 0.854376,
+      "vaf_max": 0.854376,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "안지연",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.873104,
+      "vaf_min": 0.873104,
+      "vaf_max": 0.873104,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "오나영",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "25.0"
+      ],
+      "n_components_mean": 6.0,
+      "n_components_min": 6,
+      "n_components_max": 6,
+      "n_components_values": [
+        6
+      ],
+      "vaf_mean": 0.88319,
+      "vaf_min": 0.88319,
+      "vaf_max": 0.88319,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유도경",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.889734,
+      "vaf_min": 0.889734,
+      "vaf_max": 0.889734,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유병한",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "110.0"
+      ],
+      "n_components_mean": 5.0,
+      "n_components_min": 5,
+      "n_components_max": 5,
+      "n_components_values": [
+        5
+      ],
+      "vaf_mean": 0.870018,
+      "vaf_min": 0.870018,
+      "vaf_max": 0.870018,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "유재원",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "45.0"
+      ],
+      "n_components_mean": 5.0,
+      "n_components_min": 5,
+      "n_components_max": 5,
+      "n_components_values": [
+        5
+      ],
+      "vaf_mean": 0.873464,
+      "vaf_min": 0.873464,
+      "vaf_max": 0.873464,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이은수",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.873542,
+      "vaf_min": 0.873542,
+      "vaf_max": 0.873542,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이인섭",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.92268,
+      "vaf_min": 0.92268,
+      "vaf_max": 0.92268,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이재유",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.861081,
+      "vaf_min": 0.861081,
+      "vaf_max": 0.861081,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "이지수",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "130.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.852127,
+      "vaf_min": 0.852127,
+      "vaf_max": 0.852127,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "임상우",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 3.0,
+      "n_components_min": 3,
+      "n_components_max": 3,
+      "n_components_values": [
+        3
+      ],
+      "vaf_mean": 0.8619,
+      "vaf_min": 0.8619,
+      "vaf_max": 0.8619,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "정혜진",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "20.0"
+      ],
+      "n_components_mean": 4.0,
+      "n_components_min": 4,
+      "n_components_max": 4,
+      "n_components_values": [
+        4
+      ],
+      "vaf_mean": 0.883001,
+      "vaf_min": 0.883001,
+      "vaf_max": 0.883001,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "조민석",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "30.0"
+      ],
+      "n_components_mean": 5.0,
+      "n_components_min": 5,
+      "n_components_max": 5,
+      "n_components_values": [
+        5
+      ],
+      "vaf_mean": 0.863571,
+      "vaf_min": 0.863571,
+      "vaf_max": 0.863571,
+      "n_components_sd": 0.0
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject": "최지유",
+      "step_class": "step",
+      "analysis_unit_count": 1,
+      "velocity_count": 1,
+      "velocities": [
+        "35.0"
+      ],
+      "n_components_mean": 2.0,
+      "n_components_min": 2,
+      "n_components_max": 2,
+      "n_components_values": [
+        2
+      ],
+      "vaf_mean": 0.860859,
+      "vaf_min": 0.860859,
+      "vaf_max": 0.860859,
+      "n_components_sd": 0.0
+    }
+  ],
+  "threshold_component_summary": [
+    {
+      "mode": "trialwise",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject_count_total": 24,
+      "step_subject_count": 21,
+      "step_component_mean": 3.2103,
+      "step_component_sd": 0.694,
+      "step_component_min": 2.0,
+      "step_component_max": 4.5,
+      "step_component_mean_sd": "3.21 ± 0.69",
+      "step_component_range": "2.00-4.50",
+      "nonstep_subject_count": 24,
+      "nonstep_component_mean": 2.5348,
+      "nonstep_component_sd": 0.5287,
+      "nonstep_component_min": 1.6667,
+      "nonstep_component_max": 4.0,
+      "nonstep_component_mean_sd": "2.53 ± 0.53",
+      "nonstep_component_range": "1.67-4.00"
+    },
+    {
+      "mode": "concatenated",
+      "threshold": 0.85,
+      "threshold_label": "85%",
+      "subject_count_total": 24,
+      "step_subject_count": 21,
+      "step_component_mean": 3.7143,
+      "step_component_sd": 0.9562,
+      "step_component_min": 2.0,
+      "step_component_max": 6.0,
+      "step_component_mean_sd": "3.71 ± 0.96",
+      "step_component_range": "2.00-6.00",
+      "nonstep_subject_count": 24,
+      "nonstep_component_mean": 3.2083,
+      "nonstep_component_sd": 0.5882,
+      "nonstep_component_min": 2.0,
+      "nonstep_component_max": 4.0,
+      "nonstep_component_mean_sd": "3.21 ± 0.59",
+      "nonstep_component_range": "2.00-4.00"
+    }
+  ]
+}

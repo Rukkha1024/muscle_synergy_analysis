@@ -54,7 +54,29 @@
 
 main pipeline helper를 그대로 재사용해 rerun한 결과, threshold가 올라갈수록 두 mode 모두 평균 시너지 수가 단조 증가했다. `trialwise`는 평균 `2.112 → 2.792 → 3.984 → 6.032`, `concatenated`는 평균 `2.5111 → 3.4444 → 4.9556 → 7.2444`로 상승했다.
 
-### 1. Mode-level K summary
+각 VAF parameter별 subject coverage와 step/nonstep NMF component 분포를 먼저 요약하면, `trialwise`와 `concatenated` 모두에서 threshold 상승에 따라 평균과 분산이 함께 커졌다. subject coverage는 매 threshold마다 전체 `24`명이 유지되었고, 이 중 `step` summary에 기여한 subject는 `21`, `nonstep` summary에 기여한 subject는 `24`명이었다.
+
+### 1. Threshold-level component summary
+
+#### Trialwise
+
+| VAF | Total subjects | Step subjects | Step mean ± SD | Step range | Nonstep subjects | Nonstep mean ± SD | Nonstep range |
+|-----|----------------|---------------|----------------|------------|------------------|-------------------|---------------|
+| `80%` | 24 | 21 | 2.35 ± 0.62 | 1.00-3.25 | 24 | 1.99 ± 0.51 | 1.20-3.00 |
+| `85%` | 24 | 21 | 3.21 ± 0.69 | 2.00-4.50 | 24 | 2.53 ± 0.53 | 1.67-4.00 |
+| `90%` | 24 | 21 | 4.27 ± 1.01 | 2.50-6.25 | 24 | 3.81 ± 0.89 | 2.00-6.00 |
+| `95%` | 24 | 21 | 6.31 ± 1.27 | 4.00-8.00 | 24 | 5.83 ± 1.27 | 3.00-8.00 |
+
+#### Concatenated
+
+| VAF | Total subjects | Step subjects | Step mean ± SD | Step range | Nonstep subjects | Nonstep mean ± SD | Nonstep range |
+|-----|----------------|---------------|----------------|------------|------------------|-------------------|---------------|
+| `80%` | 24 | 21 | 2.71 ± 0.78 | 1.00-4.00 | 24 | 2.33 ± 0.48 | 2.00-3.00 |
+| `85%` | 24 | 21 | 3.71 ± 0.96 | 2.00-6.00 | 24 | 3.21 ± 0.59 | 2.00-4.00 |
+| `90%` | 24 | 21 | 5.19 ± 1.33 | 3.00-8.00 | 24 | 4.75 ± 0.99 | 2.00-6.00 |
+| `95%` | 24 | 21 | 7.29 ± 1.06 | 5.00-8.00 | 24 | 7.21 ± 1.10 | 4.00-8.00 |
+
+### 2. Mode-level K summary
 
 | Mode | VAF | Analysis units | Total components | `k_lb` | `k_gap_raw` | `k_selected` | `k_min_unique` | Selection status |
 |------|-----|----------------|------------------|--------|-------------|--------------|----------------|------------------|
@@ -69,7 +91,7 @@ main pipeline helper를 그대로 재사용해 rerun한 결과, threshold가 올
 
 요약하면, `80%`와 `85%`에서는 gap statistic이 제안한 `K`가 그대로 채택되었고, `90%`부터는 zero-duplicate feasible solution을 찾기 위해 `K`가 추가 상승했다. 특히 `trialwise 95%`에서는 `k_gap_raw=17`이었지만 실제 채택된 값은 `K=62`였다.
 
-### 2. Trialwise subject summary
+### 3. Trialwise subject summary
 
 #### Step
 
@@ -126,7 +148,7 @@ main pipeline helper를 그대로 재사용해 rerun한 결과, threshold가 올
 | 조민석 | 3 | 2.33 [2-3] | 3.00 [2-4] | 4.33 [4-5] | 7.00 [7-7] |
 | 최지유 | 7 | 1.86 [1-3] | 2.29 [2-3] | 3.71 [3-5] | 5.29 [5-6] |
 
-### 3. Concatenated subject summary
+### 4. Concatenated subject summary
 
 #### Step
 
