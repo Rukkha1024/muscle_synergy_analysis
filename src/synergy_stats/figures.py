@@ -11,7 +11,6 @@ import pandas as pd
 
 SUPPORTED_FIGURE_FORMATS = {"png", "jpg", "jpeg", "tif", "tiff"}
 STRATEGY_COLORS = {"step": "#5C7CFA", "nonstep": "#E64980"}
-MIN_STRATEGY_N = 3
 KOREAN_FONT_CANDIDATES = (
     "NanumGothic",
     "NanumBarunGothic",
@@ -335,25 +334,6 @@ def save_within_cluster_strategy_overlay(
                     subtitle = f"\n{strategy_part}"
             else:
                 subtitle = f"\n{strategy_part}"
-
-        # Check minimum n
-        crows = strategy_summary[strategy_summary["cluster_id"] == cid] if not strategy_summary.empty else pd.DataFrame()
-        step_n = int(crows.loc[crows["strategy_label"] == "step", "n_rows"].iloc[0]) if not crows.empty and not crows.loc[crows["strategy_label"] == "step"].empty else 0
-        nonstep_n = int(crows.loc[crows["strategy_label"] == "nonstep", "n_rows"].iloc[0]) if not crows.empty and not crows.loc[crows["strategy_label"] == "nonstep"].empty else 0
-        insufficient = step_n < MIN_STRATEGY_N or nonstep_n < MIN_STRATEGY_N
-
-        if insufficient:
-            for ax in (ax_w, ax_h):
-                ax.text(
-                    0.5, 0.5,
-                    f"insufficient n (step={step_n}, nonstep={nonstep_n})",
-                    ha="center", va="center", fontsize=10, color="gray",
-                    transform=ax.transAxes,
-                )
-                ax.set_title(f"Cluster {cid}{subtitle}", fontsize=11)
-            ax_w.set_ylabel("Mean Weight")
-            ax_h.set_ylabel("Mean Activation")
-            continue
 
         # W grouped bar
         cluster_w = strategy_w_means[strategy_w_means["cluster_id"] == cid]
