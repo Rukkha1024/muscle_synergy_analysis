@@ -10,6 +10,8 @@ import pandas as pd
 
 
 SUPPORTED_FIGURE_FORMATS = {"png", "jpg", "jpeg", "tif", "tiff"}
+STRATEGY_COLORS = {"step": "#5C7CFA", "nonstep": "#E64980"}
+MIN_STRATEGY_N = 3
 KOREAN_FONT_CANDIDATES = (
     "NanumGothic",
     "NanumBarunGothic",
@@ -112,6 +114,20 @@ def _build_cluster_coverage(
     return total_trials, total_subjects, coverage
 
 
+def _build_strategy_subtitle_part(
+    strategy_summary: pd.DataFrame,
+    cluster_id: object,
+    cluster_total: int,
+) -> str:
+    """Return strategy portion of subtitle: ``step X/N, nonstep Y/N``."""
+    crows = strategy_summary[strategy_summary["cluster_id"] == cluster_id]
+    step_row = crows[crows["strategy_label"] == "step"]
+    nonstep_row = crows[crows["strategy_label"] == "nonstep"]
+    sn = int(step_row["n_rows"].iloc[0]) if not step_row.empty else 0
+    nn = int(nonstep_row["n_rows"].iloc[0]) if not nonstep_row.empty else 0
+    return f"step {sn}/{cluster_total}, nonstep {nn}/{cluster_total}"
+
+
 def _render_component_grid(
     title: str,
     rep_w: pd.DataFrame,
@@ -124,6 +140,7 @@ def _render_component_grid(
     coverage: Optional[pd.DataFrame] = None,
     total_trials: Optional[int] = None,
     total_subjects: Optional[int] = None,
+    strategy_summary: Optional[pd.DataFrame] = None,
 ) -> None:
     plt = _pyplot()
     _configure_fonts()
@@ -143,6 +160,10 @@ def _render_component_grid(
                 ns = int(cov_row["n_subjects"].iloc[0])
                 tp = float(cov_row["trial_pct"].iloc[0])
                 subtitle = f"\n{nt}/{total_trials} trials ({tp}%)  |  {ns}/{total_subjects} subjects"
+                if strategy_summary is not None and not strategy_summary.empty:
+                    ct = int(cov_row["n_trials"].iloc[0])
+                    strategy_part = _build_strategy_subtitle_part(strategy_summary, cluster_id, ct)
+                    subtitle += f"  |  {strategy_part}"
 
         cluster_w = rep_w.loc[rep_w["cluster_id"] == cluster_id].copy()
         cluster_h = rep_h.loc[rep_h["cluster_id"] == cluster_id].copy()
@@ -179,6 +200,7 @@ def save_group_cluster_figure(
     output_path: Path,
     cluster_labels: Optional[pd.DataFrame] = None,
     trial_metadata: Optional[pd.DataFrame] = None,
+    strategy_summary: Optional[pd.DataFrame] = None,
 ) -> None:
     has_coverage = cluster_labels is not None and trial_metadata is not None
     if has_coverage:
@@ -201,7 +223,161 @@ def save_group_cluster_figure(
         coverage=coverage if has_coverage else None,
         total_trials=total_trials if has_coverage else None,
         total_subjects=total_subjects if has_coverage else None,
+        strategy_summary=strategy_summary,
     )
+
+
+def save_cluster_strategy_composition(
+    strategy_summary: pd.DataFrame,
+    cfg: dict,
+    output_path: Path,
+) -> None:
+    """Render cluster-by-strategy 100% stacked bar chart (Figure 03)."""
+    plt = _pyplot()
+    _configure_fonts()
+
+    if strategy_summary.empty:
+        return
+
+    cluster_ids = sorted(strategy_summary["cluster_id"].unique())
+    n_clusters = len(cluster_ids)
+
+    step_fracs = []
+    nonstep_fracs = []
+    totals = []
+    for cid in cluster_ids:
+        crows = strategy_summary[strategy_summary["cluster_id"] == cid]
+        step_row = crows[crows["strategy_label"] == "step"]
+        nonstep_row = crows[crows["strategy_label"] == "nonstep"]
+        sf = float(step_row["fraction_within_cluster"].iloc[0]) if not step_row.empty else 0.0
+        nf = float(nonstep_row["fraction_within_cluster"].iloc[0]) if not nonstep_row.empty else 0.0
+        step_fracs.append(sf)
+        nonstep_fracs.append(nf)
+        total = int(crows["cluster_total_rows"].iloc[0]) if not crows.empty else 0
+        totals.append(total)
+
+    import numpy as np
+
+    x = np.arange(n_clusters)
+    width = 0.6
+
+    fig, ax = plt.subplots(figsize=(max(8, 0.8 * n_clusters), 5))
+    ax.bar(x, step_fracs, width, color=STRATEGY_COLORS["step"], label="step")
+    ax.bar(x, nonstep_fracs, width, bottom=step_fracs, color=STRATEGY_COLORS["nonstep"], label="nonstep")
+
+    for i, total in enumerate(totals):
+        ax.text(i, 1.02, f"n={total}", ha="center", va="bottom", fontsize=8)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(c) for c in cluster_ids])
+    ax.set_xlabel("Cluster ID")
+    ax.set_ylabel("Fraction")
+    ax.set_ylim(0.0, 1.15)
+    ax.set_title("Cluster strategy composition (step / nonstep)", fontsize=13, fontweight="bold")
+    ax.legend(loc="upper right", fontsize=9)
+
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_normalized_figure_format(cfg), bbox_inches="tight")
+    plt.close(fig)
+
+
+def save_within_cluster_strategy_overlay(
+    strategy_w_means: pd.DataFrame,
+    strategy_h_means: pd.DataFrame,
+    strategy_summary: pd.DataFrame,
+    muscle_names: list[str],
+    cfg: dict,
+    output_path: Path,
+) -> None:
+    """Render per-cluster step vs nonstep W bar + H overlay (Figure 05)."""
+    import numpy as np
+
+    plt = _pyplot()
+    _configure_fonts()
+
+    if strategy_w_means.empty or strategy_h_means.empty:
+        return
+
+    cluster_ids = sorted(strategy_w_means["cluster_id"].unique())
+    n_clusters = len(cluster_ids)
+    if n_clusters == 0:
+        return
+
+    fig, axes = plt.subplots(n_clusters, 2, figsize=(14, 3.5 * n_clusters), squeeze=False)
+    fig.suptitle("Within-cluster strategy overlay (step vs nonstep)", fontsize=14, fontweight="bold", y=0.995)
+
+    for row_idx, cid in enumerate(cluster_ids):
+        ax_w, ax_h = axes[row_idx]
+
+        # Build subtitle
+        subtitle = ""
+        if not strategy_summary.empty:
+            crows = strategy_summary[strategy_summary["cluster_id"] == cid]
+            step_row = crows[crows["strategy_label"] == "step"]
+            nonstep_row = crows[crows["strategy_label"] == "nonstep"]
+            sn = int(step_row["n_rows"].iloc[0]) if not step_row.empty else 0
+            nn = int(nonstep_row["n_rows"].iloc[0]) if not nonstep_row.empty else 0
+            ct = sn + nn
+            subtitle = f"\nstep {sn}/{ct}, nonstep {nn}/{ct}"
+
+        # Check minimum n
+        crows = strategy_summary[strategy_summary["cluster_id"] == cid] if not strategy_summary.empty else pd.DataFrame()
+        step_n = int(crows.loc[crows["strategy_label"] == "step", "n_rows"].iloc[0]) if not crows.empty and not crows.loc[crows["strategy_label"] == "step"].empty else 0
+        nonstep_n = int(crows.loc[crows["strategy_label"] == "nonstep", "n_rows"].iloc[0]) if not crows.empty and not crows.loc[crows["strategy_label"] == "nonstep"].empty else 0
+        insufficient = step_n < MIN_STRATEGY_N or nonstep_n < MIN_STRATEGY_N
+
+        if insufficient:
+            for ax in (ax_w, ax_h):
+                ax.text(
+                    0.5, 0.5,
+                    f"insufficient n (step={step_n}, nonstep={nonstep_n})",
+                    ha="center", va="center", fontsize=10, color="gray",
+                    transform=ax.transAxes,
+                )
+                ax.set_title(f"Cluster {cid}{subtitle}", fontsize=11)
+            ax_w.set_ylabel("Weight")
+            ax_h.set_ylabel("Activation")
+            continue
+
+        # W grouped bar
+        cluster_w = strategy_w_means[strategy_w_means["cluster_id"] == cid]
+        x = np.arange(len(muscle_names))
+        bar_width = 0.35
+        for strategy, offset in [("step", -bar_width / 2), ("nonstep", bar_width / 2)]:
+            sw = cluster_w[cluster_w["strategy_label"] == strategy]
+            if sw.empty:
+                continue
+            sw = sw.copy()
+            sw["muscle"] = pd.Categorical(sw["muscle"], categories=muscle_names, ordered=True)
+            sw = sw.sort_values("muscle")
+            vals = [float(sw.loc[sw["muscle"] == m, "W_mean"].iloc[0]) if not sw.loc[sw["muscle"] == m].empty else 0.0 for m in muscle_names]
+            ax_w.bar(x + offset, vals, bar_width, color=STRATEGY_COLORS[strategy], label=strategy)
+        ax_w.set_xticks(x)
+        ax_w.set_xticklabels(muscle_names, rotation=45, ha="right")
+        ax_w.set_ylabel("Weight")
+        ax_w.set_title(f"Cluster {cid}: W{subtitle}", fontsize=11)
+        ax_w.legend(fontsize=8)
+
+        # H overlay lines
+        cluster_h = strategy_h_means[strategy_h_means["cluster_id"] == cid]
+        for strategy in ["step", "nonstep"]:
+            sh = cluster_h[cluster_h["strategy_label"] == strategy].sort_values("frame_idx")
+            if sh.empty:
+                continue
+            frames = sh["frame_idx"].to_numpy(dtype=float)
+            x_pct = 100.0 * frames / frames.max() if len(frames) > 1 and frames.max() > 0 else frames
+            ax_h.plot(x_pct, sh["h_mean"].to_numpy(dtype=float), color=STRATEGY_COLORS[strategy], linewidth=2.0, label=strategy)
+        ax_h.set_xlim(0.0, 100.0)
+        ax_h.set_ylabel("Activation")
+        ax_h.set_xlabel("Normalized window (%)")
+        ax_h.set_title(f"Cluster {cid}: H{subtitle}", fontsize=11)
+        ax_h.legend(fontsize=8)
+
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_normalized_figure_format(cfg), bbox_inches="tight")
+    plt.close(fig)
 
 
 def save_trial_nmf_figure(

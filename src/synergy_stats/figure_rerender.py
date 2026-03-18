@@ -18,12 +18,14 @@ import polars as pl
 from .cross_group_similarity import build_cluster_w_matrix
 from .figures import (
     figure_suffix,
+    save_cluster_strategy_composition,
     save_cross_group_decision_summary,
     save_cross_group_heatmap,
     save_cross_group_matched_h,
     save_cross_group_matched_w,
     save_group_cluster_figure,
     save_trial_nmf_figure,
+    save_within_cluster_strategy_overlay,
 )
 
 
@@ -35,6 +37,10 @@ _CORE_ARTIFACT_FILENAMES = {
     "labels": "all_cluster_labels.csv",
     "trial_windows": "all_trial_window_metadata.csv",
 }
+_POOLED_STRATEGY_FILENAME = "pooled_cluster_strategy_summary.csv"
+_POOLED_STRATEGY_W_MEANS_FILENAME = "pooled_cluster_strategy_W_means.csv"
+_POOLED_STRATEGY_H_MEANS_FILENAME = "pooled_cluster_strategy_H_means_long.csv"
+
 _CROSS_GROUP_ARTIFACT_FILENAMES = {
     "cross_group_pairwise": "cross_group_w_pairwise_cosine.csv",
     "cross_group_decision": "cross_group_w_cluster_decision.csv",
@@ -226,14 +232,28 @@ def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str,
     _cleanup_staging_dirs(run_dir)
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
+    # Load optional pooled strategy summary
+    strategy_summary_path = run_dir / _POOLED_STRATEGY_FILENAME
+    strategy_summary = (
+        _read_csv_utf8_sig(strategy_summary_path).to_pandas()
+        if strategy_summary_path.exists()
+        else None
+    )
+
     rendered_paths = {
         "group_figure_paths": [],
         "trial_figure_paths": [],
         "cross_group_figure_paths": [],
+        "pooled_narrative_figure_paths": [],
     }
     try:
         for group_id in group_ids:
             output_path = tmp_dir / f"{group_id}_clusters{figure_ext}"
+            group_strategy = (
+                strategy_summary
+                if strategy_summary is not None and group_id == "pooled_step_nonstep"
+                else None
+            )
             save_group_cluster_figure(
                 group_id=group_id,
                 rep_w=artifacts["rep_w"].filter(pl.col("group_id") == group_id).to_pandas(),
@@ -243,8 +263,47 @@ def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str,
                 output_path=output_path,
                 cluster_labels=artifacts["labels"].filter(pl.col("group_id") == group_id).to_pandas(),
                 trial_metadata=artifacts["trial_windows"].filter(pl.col("group_id") == group_id).to_pandas(),
+                strategy_summary=group_strategy,
             )
             rendered_paths["group_figure_paths"].append(str(output_path))
+
+            # Figure 04 alias: copy pooled figure with numbered name
+            if group_id == "pooled_step_nonstep":
+                fig04_path = tmp_dir / f"04_pooled_cluster_representatives{figure_ext}"
+                shutil.copy2(output_path, fig04_path)
+                rendered_paths["pooled_narrative_figure_paths"].append(str(fig04_path))
+
+        # Figure 03: Cluster strategy composition
+        if strategy_summary is not None and "pooled_step_nonstep" in group_ids:
+            fig03_path = tmp_dir / f"03_cluster_strategy_composition{figure_ext}"
+            save_cluster_strategy_composition(
+                strategy_summary=strategy_summary,
+                cfg=cfg,
+                output_path=fig03_path,
+            )
+            rendered_paths["pooled_narrative_figure_paths"].append(str(fig03_path))
+
+        # Figure 05: Within-cluster strategy overlay
+        strategy_w_path = run_dir / _POOLED_STRATEGY_W_MEANS_FILENAME
+        strategy_h_path = run_dir / _POOLED_STRATEGY_H_MEANS_FILENAME
+        if (
+            strategy_summary is not None
+            and "pooled_step_nonstep" in group_ids
+            and strategy_w_path.exists()
+            and strategy_h_path.exists()
+        ):
+            strategy_w_means = _read_csv_utf8_sig(strategy_w_path).to_pandas()
+            strategy_h_means = _read_csv_utf8_sig(strategy_h_path).to_pandas()
+            fig05_path = tmp_dir / f"05_within_cluster_strategy_overlay{figure_ext}"
+            save_within_cluster_strategy_overlay(
+                strategy_w_means=strategy_w_means,
+                strategy_h_means=strategy_h_means,
+                strategy_summary=strategy_summary,
+                muscle_names=muscle_names,
+                cfg=cfg,
+                output_path=fig05_path,
+            )
+            rendered_paths["pooled_narrative_figure_paths"].append(str(fig05_path))
 
         trial_figure_dir = tmp_dir / "nmf_trials"
         for trial_row in _group_trial_rows(artifacts["trial_windows"]):
@@ -329,10 +388,11 @@ def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str,
         _cleanup_staging_dirs(run_dir)
         raise
     logging.info(
-        "Rendered %s group figure(s), %s trial figure(s), and %s cross-group figure(s) into %s",
+        "Rendered %s group figure(s), %s trial figure(s), %s cross-group figure(s), and %s pooled narrative figure(s) into %s",
         len(rendered_paths["group_figure_paths"]),
         len(rendered_paths["trial_figure_paths"]),
         len(rendered_paths["cross_group_figure_paths"]),
+        len(rendered_paths["pooled_narrative_figure_paths"]),
         figure_dir,
     )
     return materialized_paths

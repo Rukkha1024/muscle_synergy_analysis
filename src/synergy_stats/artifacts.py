@@ -46,6 +46,8 @@ AGGREGATE_NAME_MAP = {
 
 CONCATENATED_SOURCE_TRIAL_WINDOWS_FILENAME = "all_concatenated_source_trial_windows.csv"
 POOLED_CLUSTER_STRATEGY_SUMMARY_FILENAME = "pooled_cluster_strategy_summary.csv"
+POOLED_CLUSTER_STRATEGY_W_MEANS_FILENAME = "pooled_cluster_strategy_W_means.csv"
+POOLED_CLUSTER_STRATEGY_H_MEANS_FILENAME = "pooled_cluster_strategy_H_means_long.csv"
 
 
 def summarize_group_results(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -199,6 +201,76 @@ def _build_pooled_cluster_strategy_summary(labels_frame: pd.DataFrame) -> pd.Dat
     ]
 
 
+def _build_pooled_cluster_strategy_W_means(
+    labels_frame: pd.DataFrame,
+    minimal_w: pd.DataFrame,
+) -> pd.DataFrame:
+    """Per-cluster, per-strategy mean W values for the pooled group."""
+    required = {"group_id", "cluster_id", "analysis_step_class"}
+    if labels_frame.empty or not required.issubset(set(labels_frame.columns)):
+        return pd.DataFrame()
+
+    pooled_labels = labels_frame.loc[labels_frame["group_id"].astype(str) == "pooled_step_nonstep"].copy()
+    if pooled_labels.empty:
+        return pd.DataFrame()
+    pooled_labels["strategy_label"] = pooled_labels["analysis_step_class"].astype(str).str.strip().str.lower()
+    pooled_labels = pooled_labels.loc[pooled_labels["strategy_label"].isin(["step", "nonstep"])].copy()
+    if pooled_labels.empty:
+        return pd.DataFrame()
+
+    merge_keys = ["group_id", "trial_id", "component_index"]
+    merged = minimal_w.merge(
+        pooled_labels[merge_keys + ["cluster_id", "strategy_label"]],
+        on=merge_keys,
+        how="inner",
+    )
+    if merged.empty:
+        return pd.DataFrame()
+
+    result = (
+        merged.groupby(["group_id", "cluster_id", "strategy_label", "muscle"], dropna=False)["W_value"]
+        .mean()
+        .rename("W_mean")
+        .reset_index()
+    )
+    return result
+
+
+def _build_pooled_cluster_strategy_H_means_long(
+    labels_frame: pd.DataFrame,
+    minimal_h_long: pd.DataFrame,
+) -> pd.DataFrame:
+    """Per-cluster, per-strategy mean H values (long format) for the pooled group."""
+    required = {"group_id", "cluster_id", "analysis_step_class"}
+    if labels_frame.empty or not required.issubset(set(labels_frame.columns)):
+        return pd.DataFrame()
+
+    pooled_labels = labels_frame.loc[labels_frame["group_id"].astype(str) == "pooled_step_nonstep"].copy()
+    if pooled_labels.empty:
+        return pd.DataFrame()
+    pooled_labels["strategy_label"] = pooled_labels["analysis_step_class"].astype(str).str.strip().str.lower()
+    pooled_labels = pooled_labels.loc[pooled_labels["strategy_label"].isin(["step", "nonstep"])].copy()
+    if pooled_labels.empty:
+        return pd.DataFrame()
+
+    merge_keys = ["group_id", "trial_id", "component_index"]
+    merged = minimal_h_long.merge(
+        pooled_labels[merge_keys + ["cluster_id", "strategy_label"]],
+        on=merge_keys,
+        how="inner",
+    )
+    if merged.empty:
+        return pd.DataFrame()
+
+    result = (
+        merged.groupby(["group_id", "cluster_id", "strategy_label", "frame_idx"], dropna=False)["h_value"]
+        .mean()
+        .rename("h_mean")
+        .reset_index()
+    )
+    return result
+
+
 def _build_cross_group_artifacts(
     aggregate_frames: dict[str, pd.DataFrame],
     muscle_names: list[str],
@@ -333,6 +405,20 @@ def _write_mode_exports(
             pooled_strategy_summary_frame,
             mode_output_dir / POOLED_CLUSTER_STRATEGY_SUMMARY_FILENAME,
         )
+
+    pooled_strategy_w_means = _build_pooled_cluster_strategy_W_means(
+        aggregate_frames["labels"], aggregate_frames["minimal_W"],
+    )
+    if not pooled_strategy_w_means.empty:
+        pooled_strategy_w_means = _with_mode_column(pooled_strategy_w_means, mode)
+        _write_csv(pooled_strategy_w_means, mode_output_dir / POOLED_CLUSTER_STRATEGY_W_MEANS_FILENAME)
+
+    pooled_strategy_h_means = _build_pooled_cluster_strategy_H_means_long(
+        aggregate_frames["labels"], aggregate_frames["minimal_H_long"],
+    )
+    if not pooled_strategy_h_means.empty:
+        pooled_strategy_h_means = _with_mode_column(pooled_strategy_h_means, mode)
+        _write_csv(pooled_strategy_h_means, mode_output_dir / POOLED_CLUSTER_STRATEGY_H_MEANS_FILENAME)
 
     mode_final_parquet_path = mode_output_dir / "final.parquet"
     mode_final_parquet_path.parent.mkdir(parents=True, exist_ok=True)
@@ -580,5 +666,10 @@ def export_results(context: dict[str, Any]) -> dict[str, Any]:
         path
         for exports in mode_exports.values()
         for path in exports["rendered_figures"]["cross_group_figure_paths"]
+    ]
+    context["artifacts"]["pooled_narrative_figure_paths"] = [
+        path
+        for exports in mode_exports.values()
+        for path in exports["rendered_figures"].get("pooled_narrative_figure_paths", [])
     ]
     return context
