@@ -259,38 +259,37 @@ def render_figures_from_run_dir(
     strategy_summary = None if strategy_summary_frame is None or strategy_summary_frame.empty else strategy_summary_frame
 
     # Global unique trial counts per strategy (for title and subtitle denominators).
+    # Always rebuilt from labels to ensure unique trial counts (not component-level row counts).
+    # The bundle's pooled_strategy_summary uses .size() which overcounts multi-component trials.
     _step_total_unique: int | None = None
     _nonstep_total_unique: int | None = None
 
-    # Fallback: rebuild strategy_summary from artifacts labels when bundle entry is missing/empty.
-    # n_rows counts unique trial_ids per cluster (not component rows).
-    if strategy_summary is None:
-        _labels_pl = artifacts.get("labels")
-        if _labels_pl is not None and not _labels_pl.is_empty() and "analysis_step_class" in _labels_pl.columns:
-            _pl = (
-                _labels_pl
-                .filter(pl.col("group_id").cast(pl.Utf8) == "pooled_step_nonstep")
-                .with_columns(
-                    pl.col("analysis_step_class").cast(pl.Utf8).str.strip_chars().str.to_lowercase().alias("strategy_label")
-                )
-                .filter(pl.col("strategy_label").is_in(["step", "nonstep"]))
+    _labels_pl = artifacts.get("labels")
+    if _labels_pl is not None and not _labels_pl.is_empty() and "analysis_step_class" in _labels_pl.columns:
+        _pl = (
+            _labels_pl
+            .filter(pl.col("group_id").cast(pl.Utf8) == "pooled_step_nonstep")
+            .with_columns(
+                pl.col("analysis_step_class").cast(pl.Utf8).str.strip_chars().str.to_lowercase().alias("strategy_label")
             )
-            if not _pl.is_empty():
-                _step_total_unique = int(_pl.filter(pl.col("strategy_label") == "step").select(pl.col("trial_id").n_unique()).item())
-                _nonstep_total_unique = int(_pl.filter(pl.col("strategy_label") == "nonstep").select(pl.col("trial_id").n_unique()).item())
-                _ss = (
-                    _pl.group_by(["group_id", "cluster_id", "strategy_label"])
-                    .agg(pl.col("trial_id").n_unique().alias("n_rows"))
-                )
-                _ct = (
-                    _pl.group_by(["group_id", "cluster_id"])
-                    .agg(pl.col("trial_id").n_unique().alias("cluster_total_rows"))
-                )
-                _ss = _ss.join(_ct, on=["group_id", "cluster_id"], how="left")
-                _ss = _ss.with_columns(
-                    (pl.col("n_rows") / pl.col("cluster_total_rows")).alias("fraction_within_cluster")
-                )
-                strategy_summary = _ss.to_pandas()
+            .filter(pl.col("strategy_label").is_in(["step", "nonstep"]))
+        )
+        if not _pl.is_empty():
+            _step_total_unique = int(_pl.filter(pl.col("strategy_label") == "step").select(pl.col("trial_id").n_unique()).item())
+            _nonstep_total_unique = int(_pl.filter(pl.col("strategy_label") == "nonstep").select(pl.col("trial_id").n_unique()).item())
+            _ss = (
+                _pl.group_by(["group_id", "cluster_id", "strategy_label"])
+                .agg(pl.col("trial_id").n_unique().alias("n_rows"))
+            )
+            _ct = (
+                _pl.group_by(["group_id", "cluster_id"])
+                .agg(pl.col("trial_id").n_unique().alias("cluster_total_rows"))
+            )
+            _ss = _ss.join(_ct, on=["group_id", "cluster_id"], how="left")
+            _ss = _ss.with_columns(
+                (pl.col("n_rows") / pl.col("cluster_total_rows")).alias("fraction_within_cluster")
+            )
+            strategy_summary = _ss.to_pandas()
 
     rendered_paths = {
         "group_figure_paths": [],
