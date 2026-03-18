@@ -293,6 +293,8 @@ def save_within_cluster_strategy_overlay(
     output_path: Path,
     total_trials: Optional[int] = None,
     coverage: Optional[pd.DataFrame] = None,
+    total_step_trials_global: Optional[int] = None,
+    total_nonstep_trials_global: Optional[int] = None,
 ) -> None:
     """Render per-cluster step vs nonstep W bar + H overlay (Figure 05)."""
     import numpy as np
@@ -308,8 +310,12 @@ def save_within_cluster_strategy_overlay(
     if n_clusters == 0:
         return
 
-    total_step_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "step", "n_rows"].sum()) if not strategy_summary.empty else 0
-    total_nonstep_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "nonstep", "n_rows"].sum()) if not strategy_summary.empty else 0
+    total_step_trials = total_step_trials_global if total_step_trials_global is not None else (
+        int(strategy_summary.loc[strategy_summary["strategy_label"] == "step", "n_rows"].sum()) if not strategy_summary.empty else 0
+    )
+    total_nonstep_trials = total_nonstep_trials_global if total_nonstep_trials_global is not None else (
+        int(strategy_summary.loc[strategy_summary["strategy_label"] == "nonstep", "n_rows"].sum()) if not strategy_summary.empty else 0
+    )
 
     if total_step_trials > 0 or total_nonstep_trials > 0:
         n_part = f"  (step n={total_step_trials}, nonstep n={total_nonstep_trials})"
