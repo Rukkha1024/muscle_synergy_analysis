@@ -1,3 +1,0 @@
-﻿trial_id,subject,velocity,trial_num,cluster_id,component_indexes_in_duplicate_set,kept_component_index,excluded_component_indexes,duplicate_component_count
-유병한_v110.0_T6,유병한,110.0,6,6,"[1, 5]",1,[5],2
-조민석_v30.0_T2,조민석,30.0,2,0,"[0, 2]",0,[2],2

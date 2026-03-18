@@ -189,14 +189,12 @@ def ensure_fixture_bundle(base_dir: Path) -> dict[str, Path]:
     emg_df = _build_emg_table(event_df.to_dict(orient="records"))
 
     parquet_path = base_dir / "emg_fixture.parquet"
-    csv_path = base_dir / "emg_fixture.csv"
     xlsm_path = base_dir / "perturb_inform_fixture.xlsm"
     global_config_path = base_dir / "global_config.yaml"
     emg_config_path = base_dir / "emg_pipeline_config.yaml"
     synergy_config_path = base_dir / "synergy_stats_config.yaml"
 
     emg_df.write_parquet(parquet_path)
-    emg_df.to_pandas().to_csv(csv_path, index=False, encoding="utf-8-sig")
     platform_df = event_df.rename(columns={"trial_num": "trial"})
     meta_df = pd.DataFrame(
         {
@@ -299,7 +297,6 @@ def ensure_fixture_bundle(base_dir: Path) -> dict[str, Path]:
 
     return {
         "parquet": parquet_path,
-        "csv": csv_path,
         "xlsm": xlsm_path,
         "global_config": global_config_path,
         "emg_config": emg_config_path,

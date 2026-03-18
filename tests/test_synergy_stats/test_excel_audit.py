@@ -520,8 +520,6 @@ def test_export_results_skips_optional_cross_group_workbook_sheets_when_disabled
                 "metric": "cosine",
                 "threshold": 0.8,
                 "assignment": "linear_sum_assignment",
-                "output_pairwise_csv": True,
-                "output_cluster_decision_csv": True,
                 "output_excel_sheets": False,
             },
             "figures": {"format": "png", "dpi": 150, "overview_columns": 2},

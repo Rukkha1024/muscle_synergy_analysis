@@ -1,7 +1,0 @@
-﻿pipeline_name,state_name,label_space,group_id,k,units_total,duplicate_units,excess_duplicates_total,synergies_total,units_nsyn_gt_k,duplicate_pairs_total,within_unit_pairs_total,scope,duplicate_unit_rate,excess_duplicate_ratio,duplicate_pair_rate,units_nsyn_gt_k_rate
-paper_like,state1_paper_like_unconstrained,canonical_label,global_nonstep,6,72,25,27,270,0,27,408,group,0.3472222222222222,0.1,0.0661764705882353,0.0
-paper_like,state1_paper_like_unconstrained,canonical_label,global_step,11,53,3,3,233,0,3,444,group,0.05660377358490566,0.012875536480686695,0.006756756756756757,0.0
-paper_like,state1_paper_like_unconstrained,canonical_label,__overall__,-1,125,28,30,503,0,30,852,overall,0.224,0.05964214711729622,0.035211267605633804,0.0
-paper_like,state1_paper_like_unconstrained,raw_group_label,global_nonstep,6,72,25,27,270,0,27,408,group,0.3472222222222222,0.1,0.0661764705882353,0.0
-paper_like,state1_paper_like_unconstrained,raw_group_label,global_step,11,53,3,3,233,0,3,444,group,0.05660377358490566,0.012875536480686695,0.006756756756756757,0.0
-paper_like,state1_paper_like_unconstrained,raw_group_label,__overall__,-1,125,28,30,503,0,30,852,overall,0.224,0.05964214711729622,0.035211267605633804,0.0
