@@ -17,6 +17,7 @@ import polars as pl
 
 from .cross_group_similarity import build_cluster_w_matrix
 from .figures import (
+    _build_cluster_coverage,
     figure_suffix,
     save_cluster_strategy_composition,
     save_cross_group_decision_summary,
@@ -344,6 +345,12 @@ def render_figures_from_run_dir(
             and not strategy_h_means.empty
         ):
             fig05_path = tmp_dir / f"05_within_cluster_strategy_overlay{figure_ext}"
+            _pooled_labels = artifacts["labels"].filter(pl.col("group_id") == "pooled_step_nonstep").to_pandas()
+            _pooled_tw = artifacts["trial_windows"].filter(pl.col("group_id") == "pooled_step_nonstep").to_pandas()
+            if not _pooled_labels.empty and not _pooled_tw.empty:
+                _fig05_total_trials, _fig05_total_subjects, _fig05_coverage = _build_cluster_coverage(_pooled_labels, _pooled_tw)
+            else:
+                _fig05_total_trials, _fig05_total_subjects, _fig05_coverage = None, None, None
             save_within_cluster_strategy_overlay(
                 strategy_w_means=strategy_w_means,
                 strategy_h_means=strategy_h_means,
@@ -351,6 +358,9 @@ def render_figures_from_run_dir(
                 muscle_names=muscle_names,
                 cfg=cfg,
                 output_path=fig05_path,
+                total_trials=_fig05_total_trials,
+                total_subjects=_fig05_total_subjects,
+                coverage=_fig05_coverage,
             )
             rendered_paths["pooled_narrative_figure_paths"].append(str(fig05_path))
 

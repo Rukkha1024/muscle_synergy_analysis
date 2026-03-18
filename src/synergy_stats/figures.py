@@ -291,6 +291,7 @@ def save_within_cluster_strategy_overlay(
     output_path: Path,
     total_trials: Optional[int] = None,
     total_subjects: Optional[int] = None,
+    coverage: Optional[pd.DataFrame] = None,
 ) -> None:
     """Render per-cluster step vs nonstep W bar + H overlay (Figure 05)."""
     import numpy as np
@@ -313,7 +314,7 @@ def save_within_cluster_strategy_overlay(
     for row_idx, cid in enumerate(cluster_ids):
         ax_w, ax_h = axes[row_idx]
 
-        # Build subtitle
+        # Build subtitle (same format as Figure 04)
         subtitle = ""
         if not strategy_summary.empty:
             crows = strategy_summary[strategy_summary["cluster_id"] == cid]
@@ -322,7 +323,18 @@ def save_within_cluster_strategy_overlay(
             sn = int(step_row["n_rows"].iloc[0]) if not step_row.empty else 0
             nn = int(nonstep_row["n_rows"].iloc[0]) if not nonstep_row.empty else 0
             ct = sn + nn
-            subtitle = f"\nstep {sn}/{ct}, nonstep {nn}/{ct}"
+            strategy_part = f"step {sn}/{ct}, nonstep {nn}/{ct}"
+            if coverage is not None and total_trials is not None and total_subjects is not None:
+                cov_row = coverage.loc[coverage["cluster_id"] == cid]
+                if not cov_row.empty:
+                    nt = int(cov_row["n_trials"].iloc[0])
+                    ns = int(cov_row["n_subjects"].iloc[0])
+                    tp = float(cov_row["trial_pct"].iloc[0])
+                    subtitle = f"\n{nt}/{total_trials} trials ({tp}%)  |  {ns}/{total_subjects} subjects  |  {strategy_part}"
+                else:
+                    subtitle = f"\n{strategy_part}"
+            else:
+                subtitle = f"\n{strategy_part}"
 
         # Check minimum n
         crows = strategy_summary[strategy_summary["cluster_id"] == cid] if not strategy_summary.empty else pd.DataFrame()
@@ -340,7 +352,7 @@ def save_within_cluster_strategy_overlay(
                 )
                 ax.set_title(f"Cluster {cid}{subtitle}", fontsize=11)
             ax_w.set_ylabel("Mean Weight")
-            ax_h.set_ylabel("Mean Activation (±1 SD)")
+            ax_h.set_ylabel("Mean Activation")
             continue
 
         # W grouped bar
@@ -384,7 +396,7 @@ def save_within_cluster_strategy_overlay(
             margin = (ymax - ymin) * 0.05 if ymax > ymin else 0.1
             ax_h.set_ylim(ymin - margin, ymax + margin)
         ax_h.set_xlim(0.0, 100.0)
-        ax_h.set_ylabel("Mean Activation (±1 SD)")
+        ax_h.set_ylabel("Mean Activation")
         ax_h.set_xlabel("Normalized window (%)")
         ax_h.set_title(f"Cluster {cid}: H{subtitle}", fontsize=11)
         ax_h.legend(fontsize=8)
