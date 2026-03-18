@@ -144,11 +144,12 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
     final_concatenated_alias = repo_root / "outputs" / "final_concatenated.parquet"
     manifest_path = run_dir / "run_manifest.json"
     methods_manifest_path = run_dir / "analysis_methods_manifest.json"
-    summary_path = run_dir / "final_summary.csv"
+    parquet_dir = run_dir / "parquet"
+    summary_path = parquet_dir / "final_summary.parquet"
     interpretation_workbook = run_dir / "results_interpretation.xlsx"
     audit_workbook = run_dir / "clustering_audit.xlsx"
-    root_source_trial_windows_path = run_dir / "all_concatenated_source_trial_windows.csv"
-    root_pooled_strategy_summary_path = run_dir / "pooled_cluster_strategy_summary.csv"
+    root_source_trial_windows_path = parquet_dir / "all_concatenated_source_trial_windows.parquet"
+    root_pooled_strategy_summary_path = parquet_dir / "pooled_cluster_strategy_summary.parquet"
 
     assert manifest_path.exists()
     assert methods_manifest_path.exists()
@@ -161,8 +162,8 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
     assert final_parquet_alias.exists()
     assert final_trialwise_alias.exists()
     assert final_concatenated_alias.exists()
-    assert not (run_dir / "cross_group_w_pairwise_cosine.csv").exists()
-    assert not (run_dir / "cross_group_w_cluster_decision.csv").exists()
+    assert not (parquet_dir / "cross_group_pairwise.parquet").exists()
+    assert not (parquet_dir / "cross_group_decision.parquet").exists()
     assert not (run_dir / "figures").exists()
 
     with manifest_path.open("r", encoding="utf-8-sig") as handle:
@@ -175,7 +176,7 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
     assert methods_manifest["analysis_modes"] == ["trialwise", "concatenated"]
     assert set(methods_manifest["modes"]) == {"trialwise", "concatenated"}
 
-    summary_df = pd.read_csv(summary_path, encoding="utf-8-sig")
+    summary_df = pd.read_parquet(summary_path)
     assert summary_df.shape[0] == 2
     assert set(summary_df["aggregation_mode"].tolist()) == {"trialwise", "concatenated"}
     assert set(summary_df["group_id"].tolist()) == {"pooled_step_nonstep"}
@@ -204,41 +205,39 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
 
     for mode in ("trialwise", "concatenated"):
         mode_dir = run_dir / mode
+        mode_parquet_dir = mode_dir / "parquet"
         assert mode_dir.exists()
         assert (mode_dir / "final.parquet").exists()
-        assert (mode_dir / "final_summary.csv").exists()
-        assert (mode_dir / "all_cluster_labels.csv").exists()
-        assert (mode_dir / "all_clustering_metadata.csv").exists()
-        assert (mode_dir / "all_representative_W_posthoc.csv").exists()
-        assert (mode_dir / "all_representative_H_posthoc_long.csv").exists()
-        assert (mode_dir / "all_minimal_units_W.csv").exists()
-        assert (mode_dir / "all_minimal_units_H_long.csv").exists()
-        assert (mode_dir / "all_trial_window_metadata.csv").exists()
-        assert (mode_dir / "pooled_cluster_strategy_summary.csv").exists()
+        assert (mode_parquet_dir / "final_summary.parquet").exists()
+        assert (mode_parquet_dir / "all_cluster_labels.parquet").exists()
+        assert (mode_parquet_dir / "all_clustering_metadata.parquet").exists()
+        assert (mode_parquet_dir / "all_representative_W_posthoc.parquet").exists()
+        assert (mode_parquet_dir / "all_representative_H_posthoc_long.parquet").exists()
+        assert (mode_parquet_dir / "all_minimal_units_W.parquet").exists()
+        assert (mode_parquet_dir / "all_minimal_units_H_long.parquet").exists()
+        assert (mode_parquet_dir / "all_trial_window_metadata.parquet").exists()
+        assert (mode_parquet_dir / "pooled_cluster_strategy_summary.parquet").exists()
         if mode == "concatenated":
-            assert (mode_dir / "all_concatenated_source_trial_windows.csv").exists()
+            assert (mode_parquet_dir / "all_concatenated_source_trial_windows.parquet").exists()
         else:
-            assert not (mode_dir / "all_concatenated_source_trial_windows.csv").exists()
+            assert not (mode_parquet_dir / "all_concatenated_source_trial_windows.parquet").exists()
         assert (mode_dir / "clustering_audit.xlsx").exists()
         assert (mode_dir / "results_interpretation.xlsx").exists()
-        assert not (mode_dir / "cross_group_w_pairwise_cosine.csv").exists()
-        assert not (mode_dir / "cross_group_w_cluster_decision.csv").exists()
+        assert not (mode_parquet_dir / "cross_group_pairwise.parquet").exists()
+        assert not (mode_parquet_dir / "cross_group_decision.parquet").exists()
         assert (mode_dir / "figures" / "pooled_step_nonstep_clusters.png").exists()
         assert not (mode_dir / "figures" / "cross_group_cosine_heatmap.png").exists()
         assert not (mode_dir / "figures" / "cross_group_matched_w.png").exists()
         assert not (mode_dir / "figures" / "cross_group_matched_h.png").exists()
         assert not (mode_dir / "figures" / "cross_group_decision_summary.png").exists()
 
-    concatenated_labels = pl.read_csv(
-        run_dir / "concatenated" / "all_cluster_labels.csv",
-        encoding="utf8-lossy",
-    )
+    concatenated_labels = pl.read_parquet(run_dir / "concatenated" / "parquet" / "all_cluster_labels.parquet")
     assert concatenated_labels.height > 0
     assert set(concatenated_labels["trial_num"].unique().to_list()) == {"concat_step", "concat_nonstep"}
     assert set(concatenated_labels["aggregation_mode"].unique().to_list()) == {"concatenated"}
     assert set(concatenated_labels["group_id"].unique().to_list()) == {"pooled_step_nonstep"}
 
-    pooled_strategy_summary = pl.read_csv(root_pooled_strategy_summary_path, encoding="utf8-lossy")
+    pooled_strategy_summary = pl.read_parquet(root_pooled_strategy_summary_path)
     assert pooled_strategy_summary.height > 0
     assert set(pooled_strategy_summary["aggregation_mode"].unique().to_list()) == {"trialwise", "concatenated"}
     assert set(pooled_strategy_summary["group_id"].unique().to_list()) == {"pooled_step_nonstep"}
@@ -250,7 +249,7 @@ def test_both_mode_writes_trialwise_and_concatenated_outputs(
         "fraction_within_cluster",
     }.issubset(set(pooled_strategy_summary.columns))
 
-    root_source_trial_windows = pl.read_csv(root_source_trial_windows_path, encoding="utf8-lossy")
+    root_source_trial_windows = pl.read_parquet(root_source_trial_windows_path)
     assert root_source_trial_windows.height > 0
     assert set(root_source_trial_windows["aggregation_mode"].unique().to_list()) == {"concatenated"}
     assert {
@@ -307,5 +306,5 @@ def test_trialwise_only_run_does_not_write_concatenated_source_trial_manifest(
             f"stderr:\n{result.stderr}"
         )
 
-    assert not (run_dir / "all_concatenated_source_trial_windows.csv").exists()
-    assert not (run_dir / "trialwise" / "all_concatenated_source_trial_windows.csv").exists()
+    assert not (run_dir / "parquet" / "all_concatenated_source_trial_windows.parquet").exists()
+    assert not (run_dir / "trialwise" / "parquet" / "all_concatenated_source_trial_windows.parquet").exists()

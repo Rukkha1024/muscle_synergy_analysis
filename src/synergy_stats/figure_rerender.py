@@ -1,13 +1,12 @@
-﻿"""Rerender EMG figure artifacts from saved run CSV outputs.
+﻿"""Rerender EMG figure artifacts from saved run parquet outputs.
 
 This module validates one run directory, reloads the saved
-CSV figure sources with Polars, and rebuilds the full
+parquet figure sources with Polars, and rebuilds the full
 figures tree without rerunning NMF or clustering.
 """
 
 from __future__ import annotations
 
-from io import StringIO
 import logging
 from pathlib import Path
 import shutil
@@ -30,20 +29,20 @@ from .figures import (
 
 
 _CORE_ARTIFACT_FILENAMES = {
-    "rep_w": "all_representative_W_posthoc.csv",
-    "rep_h_long": "all_representative_H_posthoc_long.csv",
-    "minimal_w": "all_minimal_units_W.csv",
-    "minimal_h_long": "all_minimal_units_H_long.csv",
-    "labels": "all_cluster_labels.csv",
-    "trial_windows": "all_trial_window_metadata.csv",
+    "rep_w": "all_representative_W_posthoc.parquet",
+    "rep_h_long": "all_representative_H_posthoc_long.parquet",
+    "minimal_w": "all_minimal_units_W.parquet",
+    "minimal_h_long": "all_minimal_units_H_long.parquet",
+    "labels": "all_cluster_labels.parquet",
+    "trial_windows": "all_trial_window_metadata.parquet",
 }
-_POOLED_STRATEGY_FILENAME = "pooled_cluster_strategy_summary.csv"
-_POOLED_STRATEGY_W_MEANS_FILENAME = "pooled_cluster_strategy_W_means.csv"
-_POOLED_STRATEGY_H_MEANS_FILENAME = "pooled_cluster_strategy_H_means_long.csv"
+_POOLED_STRATEGY_FILENAME = "pooled_cluster_strategy_summary.parquet"
+_POOLED_STRATEGY_W_MEANS_FILENAME = "pooled_cluster_strategy_W_means.parquet"
+_POOLED_STRATEGY_H_MEANS_FILENAME = "pooled_cluster_strategy_H_means_long.parquet"
 
 _CROSS_GROUP_ARTIFACT_FILENAMES = {
-    "cross_group_pairwise": "cross_group_w_pairwise_cosine.csv",
-    "cross_group_decision": "cross_group_w_cluster_decision.csv",
+    "cross_group_pairwise": "cross_group_pairwise.parquet",
+    "cross_group_decision": "cross_group_decision.parquet",
 }
 
 
@@ -79,10 +78,11 @@ def _can_render_cross_group(run_dir: Path, cfg: dict[str, Any], group_ids: list[
         return False
     if not {"global_step", "global_nonstep"}.issubset(set(group_ids)):
         return False
+    parquet_dir = run_dir / "parquet"
     missing = [
         filename
         for filename in _CROSS_GROUP_ARTIFACT_FILENAMES.values()
-        if not (run_dir / filename).exists()
+        if not (parquet_dir / filename).exists()
     ]
     if missing:
         missing_text = ", ".join(sorted(missing))
@@ -92,9 +92,8 @@ def _can_render_cross_group(run_dir: Path, cfg: dict[str, Any], group_ids: list[
     return True
 
 
-def _read_csv_utf8_sig(path: Path) -> pl.DataFrame:
-    text = path.read_text(encoding="utf-8-sig")
-    return pl.read_csv(StringIO(text))
+def _read_parquet(path: Path) -> pl.DataFrame:
+    return pl.read_parquet(path)
 
 
 def _format_filename_value(value: Any) -> str:
@@ -187,8 +186,9 @@ def required_figure_artifacts(
 
     resolved: dict[str, Path] = {}
     missing: list[str] = []
+    parquet_dir = run_dir / "parquet"
     for key, filename in artifact_names.items():
-        path = run_dir / filename
+        path = parquet_dir / filename
         if not path.exists():
             missing.append(filename)
             continue
@@ -208,7 +208,7 @@ def load_figure_artifacts(
     include_cross_group: bool = True,
 ) -> dict[str, object]:
     artifact_paths = required_figure_artifacts(run_dir, include_cross_group=include_cross_group)
-    frames = {key: _read_csv_utf8_sig(path) for key, path in artifact_paths.items()}
+    frames = {key: _read_parquet(path) for key, path in artifact_paths.items()}
     return {
         "paths": artifact_paths,
         **frames,
@@ -233,9 +233,10 @@ def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str,
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
     # Load optional pooled strategy summary
-    strategy_summary_path = run_dir / _POOLED_STRATEGY_FILENAME
+    parquet_dir = run_dir / "parquet"
+    strategy_summary_path = parquet_dir / _POOLED_STRATEGY_FILENAME
     strategy_summary = (
-        _read_csv_utf8_sig(strategy_summary_path).to_pandas()
+        _read_parquet(strategy_summary_path).to_pandas()
         if strategy_summary_path.exists()
         else None
     )
@@ -284,16 +285,16 @@ def render_figures_from_run_dir(run_dir: Path, cfg: dict[str, Any]) -> dict[str,
             rendered_paths["pooled_narrative_figure_paths"].append(str(fig03_path))
 
         # Figure 05: Within-cluster strategy overlay
-        strategy_w_path = run_dir / _POOLED_STRATEGY_W_MEANS_FILENAME
-        strategy_h_path = run_dir / _POOLED_STRATEGY_H_MEANS_FILENAME
+        strategy_w_path = parquet_dir / _POOLED_STRATEGY_W_MEANS_FILENAME
+        strategy_h_path = parquet_dir / _POOLED_STRATEGY_H_MEANS_FILENAME
         if (
             strategy_summary is not None
             and "pooled_step_nonstep" in group_ids
             and strategy_w_path.exists()
             and strategy_h_path.exists()
         ):
-            strategy_w_means = _read_csv_utf8_sig(strategy_w_path).to_pandas()
-            strategy_h_means = _read_csv_utf8_sig(strategy_h_path).to_pandas()
+            strategy_w_means = _read_parquet(strategy_w_path).to_pandas()
+            strategy_h_means = _read_parquet(strategy_h_path).to_pandas()
             fig05_path = tmp_dir / f"05_within_cluster_strategy_overlay{figure_ext}"
             save_within_cluster_strategy_overlay(
                 strategy_w_means=strategy_w_means,

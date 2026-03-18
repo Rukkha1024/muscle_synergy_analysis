@@ -254,6 +254,63 @@ RESULT_SHEET_CONFIGS = (
         notes="먼저 전체 개요를 보고 세부 시트로 내려갈 때 사용합니다.",
         optional=True,
     ),
+    ResultSheetConfig(
+        source_key="pooled_strategy_summary",
+        sheet_name="pooled_strategy",
+        table_name="tbl_pooled_strategy_summary",
+        description="Pooled cluster별 step/nonstep 전략 비율을 요약한 표입니다.",
+        key_columns="group_id, cluster_id, strategy_label, n_rows, fraction_within_cluster",
+        column_help=(
+            "group_id: pooled clustering group 식별자입니다.",
+            "cluster_id: pooled 대표 cluster 번호입니다.",
+            "strategy_label: step 또는 nonstep 전략 라벨입니다.",
+            "fraction_within_cluster: 해당 cluster 안에서 전략이 차지하는 비율입니다.",
+        ),
+        example_lines=(
+            "예를 들어 cluster_id=0 에서 strategy_label=step 비율이 0.80이면, 그 pooled cluster는 step trial 성격이 더 강하다고 볼 수 있습니다.",
+            "step과 nonstep 두 행을 같이 보면 cluster composition을 바로 비교할 수 있습니다.",
+        ),
+        notes="pooled clustering 해석의 첫 진입점으로 사용합니다.",
+        optional=True,
+    ),
+    ResultSheetConfig(
+        source_key="pooled_strategy_w_means",
+        sheet_name="pooled_strategy_W",
+        table_name="tbl_pooled_strategy_w_means",
+        description="Pooled cluster별 strategy 평균 W 패턴을 근육별 long format으로 보여줍니다.",
+        key_columns="group_id, cluster_id, strategy_label, muscle, W_mean",
+        column_help=(
+            "strategy_label: step 또는 nonstep 전략 라벨입니다.",
+            "muscle: 근육 이름입니다.",
+            "W_mean: 해당 전략에서의 평균 W 가중치입니다.",
+            "cluster_id: 비교 기준이 되는 pooled 대표 cluster 번호입니다.",
+        ),
+        example_lines=(
+            "예를 들어 같은 cluster_id 안에서 step과 nonstep의 W_mean 차이를 보면, 같은 pooled cluster 안에서도 전략별 근육 기여 차이를 읽을 수 있습니다.",
+            "근육별로 W_mean이 크게 갈리면 within-cluster strategy contrast가 뚜렷하다는 뜻입니다.",
+        ),
+        notes="within-cluster strategy overlay의 표 형태 근거 자료입니다.",
+        optional=True,
+    ),
+    ResultSheetConfig(
+        source_key="pooled_strategy_h_means",
+        sheet_name="pooled_strategy_H",
+        table_name="tbl_pooled_strategy_h_means",
+        description="Pooled cluster별 strategy 평균 H time profile을 frame 단위 long format으로 보여줍니다.",
+        key_columns="group_id, cluster_id, strategy_label, frame_idx, h_mean",
+        column_help=(
+            "strategy_label: step 또는 nonstep 전략 라벨입니다.",
+            "frame_idx: time-normalized frame index 입니다.",
+            "h_mean: 해당 전략의 평균 activation 크기입니다.",
+            "cluster_id: 비교 기준이 되는 pooled 대표 cluster 번호입니다.",
+        ),
+        example_lines=(
+            "예를 들어 같은 cluster_id 에서 step의 h_mean peak가 더 이르면, activation timing이 전략별로 다르다고 해석할 수 있습니다.",
+            "frame_idx 축을 따라가며 step/nonstep 두 전략의 시간 패턴을 직접 비교하면 됩니다.",
+        ),
+        notes="시간 패턴 차이를 읽는 pooled strategy 상세 시트입니다.",
+        optional=True,
+    ),
 )
 
 

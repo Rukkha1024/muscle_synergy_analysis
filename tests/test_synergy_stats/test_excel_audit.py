@@ -10,7 +10,7 @@ from openpyxl.utils import range_boundaries
 import numpy as np
 import pytest
 
-from src.synergy_stats.artifacts import export_results
+from src.synergy_stats.artifacts import export_from_parquet, export_results
 from src.synergy_stats.clustering import SubjectFeatureResult
 from src.synergy_stats.excel_audit import (
     build_audit_tables,
@@ -400,6 +400,13 @@ def test_export_results_records_clustering_audit_workbook_path(tmp_path: Path, m
         assert set(interpretation_book["table_guide"].tables.keys()) == {"tbl_table_guide"}
     finally:
         interpretation_book.close()
+
+    workbook_path.unlink()
+    interpretation_path.unlink()
+    rebuilt = export_from_parquet(Path(context["config"]["runtime"]["output_dir"]))
+    assert rebuilt["root"] is not None
+    assert workbook_path.exists()
+    assert interpretation_path.exists()
 
 
 def test_export_results_skips_optional_cross_group_workbook_sheets_when_disabled(tmp_path: Path, monkeypatch) -> None:

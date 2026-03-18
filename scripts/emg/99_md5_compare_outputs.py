@@ -8,15 +8,15 @@ from pathlib import Path
 
 
 STABLE_RELATIVE_PATHS = {
-    "all_cluster_labels.csv",
-    "all_clustering_metadata.csv",
-    "all_minimal_units_H_long.csv",
-    "all_minimal_units_W.csv",
-    "pooled_cluster_strategy_summary.csv",
-    "all_representative_H_posthoc_long.csv",
-    "all_representative_W_posthoc.csv",
-    "all_trial_window_metadata.csv",
-    "final_summary.csv",
+    "parquet/all_cluster_labels.parquet",
+    "parquet/all_clustering_metadata.parquet",
+    "parquet/all_minimal_units_H_long.parquet",
+    "parquet/all_minimal_units_W.parquet",
+    "parquet/pooled_cluster_strategy_summary.parquet",
+    "parquet/all_representative_H_posthoc_long.parquet",
+    "parquet/all_representative_W_posthoc.parquet",
+    "parquet/all_trial_window_metadata.parquet",
+    "parquet/final_summary.parquet",
 }
 
 

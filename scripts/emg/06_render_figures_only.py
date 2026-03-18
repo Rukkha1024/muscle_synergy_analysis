@@ -1,7 +1,7 @@
 ﻿"""Rerender saved EMG figures from one existing run directory.
 
-This CLI reloads the figure source CSV artifacts already saved
-under outputs/runs/<run_id> and rebuilds the figures tree in place.
+This CLI reloads the figure source parquet artifacts already
+saved under outputs/runs/<run_id> and rebuilds the figures tree in place.
 """
 
 from __future__ import annotations

@@ -55,7 +55,7 @@ def test_md5_compare_fails_when_same_stable_file_is_missing_from_both_sides(
     new_dir = tmp_path / "new"
     _write_stable_tree(base_dir, md5_module.STABLE_RELATIVE_PATHS)
     _write_stable_tree(new_dir, md5_module.STABLE_RELATIVE_PATHS)
-    missing_path = "all_cluster_labels.csv"
+    missing_path = "parquet/all_cluster_labels.parquet"
     (base_dir / missing_path).unlink()
     (new_dir / missing_path).unlink()
 

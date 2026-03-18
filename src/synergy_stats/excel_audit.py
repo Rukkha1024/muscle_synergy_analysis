@@ -302,9 +302,8 @@ def _table_guide_rows(table_info: list[dict[str, str]]) -> pd.DataFrame:
     )
 
 
-def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str, dict[str, Any]]) -> Path:
-    """Write the audit workbook and validate it after reopening."""
-    tables = build_audit_tables(cluster_group_results)
+def write_clustering_audit_workbook_from_frames(path: Path, tables: dict[str, pd.DataFrame]) -> Path:
+    """Write the audit workbook from prebuilt tables and validate it."""
     selection_frame = tables["selection_summary"]
     k_audit_frame = tables["k_audit"]
     duplicate_trial_frame = tables["duplicate_trial_summary"]
@@ -541,6 +540,12 @@ def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str,
     workbook.close()
     validate_clustering_audit_workbook(path)
     return path
+
+
+def write_clustering_audit_workbook(path: Path, cluster_group_results: dict[str, dict[str, Any]]) -> Path:
+    """Write the audit workbook and validate it after reopening."""
+    tables = build_audit_tables(cluster_group_results)
+    return write_clustering_audit_workbook_from_frames(path, tables)
 
 
 def validate_clustering_audit_workbook(path: Path) -> dict[str, Any]:
