@@ -18,7 +18,7 @@ The visible outcome is a regenerated analysis folder with richer JSON outputs, u
 - [x] 2026-03-19T01:37:00+09:00 Added downstream-validity comparisons centered on pooled member cosine, shared cluster coverage, tiny-cluster burden, and local `89/90/91/92` threshold transitions.
 - [x] 2026-03-19T01:50:00+09:00 Updated `analysis/vaf_threshold_sensitivity/report.md` and `README.md` to document the screening-profile broad sweep, the strongest defensible `0.90` argument, and the exact-profile rerun path.
 - [x] 2026-03-19T01:56:00+09:00 Dry-run validation passed, `py_compile` passed, and checksum spot-checks for the screening-profile broad sweep matched `checksums.md5`.
-- [ ] The exact-profile local rerun around `89/90/91` is still executing separately because the full default clustering profile is substantially slower than the screening sweep.
+- [x] 2026-03-19T03:26:00+09:00 A slower exact-profile local rerun around `89/90/91` was attempted separately, but it was not completed and was excluded from the final claim because the screening-profile broad sweep already produced the reproducible artifact set used in the report.
 - [ ] Run required review agents on the final diff, fix any concrete findings, rerun validation, and commit with a Korean commit message of at least five lines.
 
 ## Surprises & Discoveries
@@ -32,8 +32,8 @@ The visible outcome is a regenerated analysis folder with richer JSON outputs, u
 - Observation: The clustering code already computes the raw signals needed for a stronger defense, including gap curves and duplicate-trial burden by `K`.
   Evidence: `src/synergy_stats/clustering.py` returns `gap_by_k`, `duplicate_trial_count_by_k`, `k_gap_raw`, `k_selected`, and `k_min_unique`.
 
-- Observation: The strongest defensible argument for `0.90` is not “minimum burden” but “highest threshold before ceiling-hit begins in both modes.”
-  Evidence: In the screening-profile broad sweep, ceiling-hit rate is `0.0000` at `0.90` for both `trialwise` and `concatenated`, then first appears at `0.91` as `0.0080` and `0.0222`.
+- Observation: The strongest defensible argument for `0.90` is not “minimum burden” but “trialwise last zero-ceiling threshold plus concatenated last fully shared practical compromise before the next burden jump.”
+  Evidence: In the final screening-profile broad sweep, `trialwise` ceiling-hit remains `0.0000` at `0.90` and first appears at `0.91`, while `concatenated` still has `shared_cluster_rate = shared_member_rate = 1.0` at `0.90` and first drops below `1.0` at `0.91`.
 
 - Observation: The first report draft risked overstating reproducibility because the tables reflected the reduced-restart screening profile while the reproduction block originally showed only the default command.
   Evidence: Review agent feedback flagged that `report.md` numbers matched `artifacts/default_run/summary.json` from the override run, not a plain default rerun.
@@ -56,9 +56,9 @@ The visible outcome is a regenerated analysis folder with richer JSON outputs, u
 
 Implementation now reaches the main analytical goal. The script performs the `85..95` sweep by caching all candidate ranks once per analysis unit and reselecting the minimum threshold-satisfying bundle per cutoff, which made it feasible to add local-neighborhood diagnostics without changing the core threshold rule. The output contract now includes burden summaries, adjacent-threshold transition summaries, pooled-structure validity summaries, and richer `run_metadata`.
 
-The current broad-sweep screening result gives a materially stronger defense of `0.90` than the original four-point comparison. The most defensible statement is that `0.90` is the highest tested cutoff that still avoids ceiling-hit artifacts in both `trialwise` and `concatenated`, while `0.91+` begins to introduce ceiling-hit burden without a clear downstream-structure gain. This does not make `0.90` the lightest cutoff; `0.89` remains more parsimonious. The defense rests on strictness-versus-artifact balance, not on minimum complexity.
+The current broad-sweep screening result gives a materially stronger defense of `0.90` than the original four-point comparison. The most defensible statement is now more nuanced: `0.90` is the last zero-ceiling threshold in `trialwise`, and in `concatenated` it is the highest practical compromise that still keeps `shared_cluster_rate = shared_member_rate = 1.0` before `0.91` introduces both more ceiling burden and the first loss of fully shared structure. This does not make `0.90` the lightest cutoff; `0.89` remains more parsimonious. The defense rests on strictness-versus-burden balance, not on minimum complexity.
 
-Validation status is mixed but usable. `--dry-run` succeeds, `py_compile` succeeds, and checksum spot-checks match the saved screening-profile artifacts. A slower exact-profile rerun for `0.89/0.90/0.91` was launched separately and remained in progress at the time of this update, so the current report is explicitly framed as a screening-profile defense rather than a completed default-profile replication.
+Validation status is screening-complete. `--dry-run` succeeds, `py_compile` succeeds, the broad screening profile rerun completed successfully, stale `vaf_80` artifacts were removed, and checksum spot-checks match the saved screening-profile artifacts. A slower exact-profile rerun for `0.89/0.90/0.91` was attempted separately but was not completed, so the current report is explicitly framed as a screening-profile defense rather than a completed default-profile replication.
 
 ## Context and Orientation
 

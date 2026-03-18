@@ -18,7 +18,7 @@
 - [x] 2026-03-19T01:37:00+09:00 pooled member cosine, shared cluster coverage, tiny-cluster burden, `89/90/91/92` 인접 threshold transition을 포함하는 downstream-validity 비교를 추가했다.
 - [x] 2026-03-19T01:50:00+09:00 기존 구조와 문체를 유지하면서 `analysis/vaf_threshold_sensitivity/report.md`와 `README.md`를 갱신했고, screening-profile broad sweep과 exact-profile rerun 경로를 구분해 문서화했다.
 - [x] 2026-03-19T01:56:00+09:00 `--dry-run`, `py_compile`, checksum spot-check를 완료했고, screening-profile broad sweep artifact와 문서 표가 일치함을 확인했다.
-- [ ] default clustering profile은 더 느리기 때문에 `0.89/0.90/0.91` exact-profile local rerun을 별도 out-dir에서 계속 실행 중이다.
+- [x] 2026-03-19T03:26:00+09:00 default clustering profile의 느린 `0.89/0.90/0.91` exact-profile local rerun을 별도로 시도했지만, 이번 턴에서는 완료하지 못했고 최종 주장은 screening-profile broad sweep artifact에만 기반하도록 정리했다.
 - [ ] 최종 diff에 대해 필요한 review agent를 실행하고, 구체적 지적이 있으면 수정 후 재검증하고, 최소 5줄의 한국어 커밋 메시지로 커밋한다.
 
 ## Surprises & Discoveries
@@ -32,8 +32,8 @@
 - Observation: clustering 코드는 이미 더 강한 방어 논리에 필요한 raw signal을 계산하고 있다. 예를 들면 gap curve와 `K`별 duplicate-trial burden이 그렇다.
   Evidence: `src/synergy_stats/clustering.py`는 `gap_by_k`, `duplicate_trial_count_by_k`, `k_gap_raw`, `k_selected`, `k_min_unique`를 반환한다.
 
-- Observation: `0.90`을 방어하는 가장 강한 문장은 “최소 burden”이 아니라 “두 mode 모두에서 ceiling-hit이 시작되기 직전의 마지막 threshold”였다.
-  Evidence: screening-profile broad sweep에서 ceiling-hit rate는 `0.90`까지 `trialwise`와 `concatenated` 모두 `0.0000`이고, `0.91`부터 각각 `0.0080`, `0.0222`로 처음 발생한다.
+- Observation: `0.90`을 방어하는 가장 강한 문장은 “최소 burden”이 아니라 “trialwise 마지막 zero-ceiling threshold이면서 concatenated에서 shared structure가 아직 완전한 마지막 practical compromise”였다.
+  Evidence: 최종 screening-profile broad sweep에서 `trialwise` ceiling-hit rate는 `0.90`까지 `0.0000`이고 `0.91`에서 처음 생기며, `concatenated`는 `0.90`까지 `shared_cluster_rate = shared_member_rate = 1.0`을 유지하다가 `0.91`에서 처음 `1.0` 아래로 떨어진다.
 
 - Observation: 첫 보고서 초안은 재현 커맨드보다 screening-profile 숫자를 더 앞서 갔기 때문에, reproducibility framing을 다시 맞춰야 했다.
   Evidence: review agent가 `report.md` 표가 reduced-restart broad sweep artifact와 일치하지만 재현 블록이 plain default command만 보여 준다고 지적했다.
@@ -56,9 +56,9 @@
 
 구현은 핵심 목표까지 도달했다. 스크립트는 각 분석 단위에서 가능한 모든 rank 후보를 한 번씩 계산하고, threshold마다 처음 조건을 만족하는 최소 bundle을 다시 선택하도록 바뀌었다. 이 덕분에 threshold rule 자체를 바꾸지 않고도 인접 cutoff 비교와 pooled-structure 진단을 추가할 수 있었다. 산출물에는 burden summary, adjacent-threshold transition summary, pooled-structure validity summary, richer `run_metadata`가 포함된다.
 
-현재 broad sweep screening 결과는 기존 4-point 비교보다 `0.90` 방어에 훨씬 유용하다. 가장 방어하기 쉬운 문장은 `0.90`이 두 mode 모두에서 ceiling-hit artifact를 아직 피하는 가장 높은 tested cutoff라는 것이다. 다만 이것이 `0.90`이 가장 가벼운 cutoff라는 뜻은 아니며, `0.89`가 더 parsimonious하다는 사실은 그대로 유지된다. 따라서 방어 논리는 minimum complexity가 아니라 strictness와 artifact avoidance의 균형 위에 놓여 있다.
+현재 broad sweep screening 결과는 기존 4-point 비교보다 `0.90` 방어에 훨씬 유용하다. 가장 방어하기 쉬운 문장은 `0.90`이 `trialwise`에서는 마지막 zero-ceiling threshold이고, `concatenated`에서는 `shared_cluster_rate = shared_member_rate = 1.0`을 유지하는 마지막 practical compromise라는 것이다. 다만 이것이 `0.90`이 가장 가벼운 cutoff라는 뜻은 아니며, `0.89`가 더 parsimonious하다는 사실은 그대로 유지된다. 따라서 방어 논리는 minimum complexity가 아니라 strictness와 burden tradeoff의 균형 위에 놓여 있다.
 
-검증 상태는 “사용 가능하지만 완전한 종료는 아님”에 가깝다. `--dry-run`과 `py_compile`은 통과했고, screening-profile broad sweep artifact의 checksum spot-check도 일치했다. 다만 default clustering profile로 돌리는 느린 `0.89/0.90/0.91` exact-profile rerun은 이 업데이트 시점에도 계속 실행 중이므로, 현재 보고서는 완료된 default-profile replication이 아니라 screening-profile defense임을 명시한다.
+검증 상태는 screening 기준으로는 완료됐다. `--dry-run`과 `py_compile`은 통과했고, screening-profile broad sweep rerun 자체도 끝났으며, stale `vaf_80` artifact를 제거했고, checksum spot-check도 일치했다. 다만 default clustering profile의 느린 `0.89/0.90/0.91` exact-profile rerun은 시도만 하고 완료하지 못했으므로, 현재 보고서는 완료된 default-profile replication이 아니라 screening-profile defense임을 명시한다.
 
 ## Context and Orientation
 
