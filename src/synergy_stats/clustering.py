@@ -431,6 +431,10 @@ def _duplicate_resolution(cfg: dict[str, Any]) -> str:
     return str(cfg.get("duplicate_resolution", "none")).strip().lower() or "none"
 
 
+def _allow_pooled_k_range_extension(group_id: str) -> bool:
+    return str(group_id).strip().lower() == "pooled_step_nonstep"
+
+
 def _fit_best_kmeans_result(
     data: np.ndarray,
     n_clusters: int,
@@ -701,34 +705,64 @@ def cluster_feature_group(
                 selected_k = int(n_clusters)
                 break
         if selected_k < 0:
-            return {
-                "status": "failed",
-                "group_id": group_id,
-                "reason": f"No zero-duplicate clustering solution found in K=[{k_gap_raw},{k_max}]",
-                "duplicate_trials": feasible_summary_by_k.get(k_gap_raw, {}).get("representative_duplicate_trials", []),
-                "sample_map": sample_map,
-                "n_trials": len(feature_rows),
-                "n_components": int(data.shape[0]),
-                "selection_method": selection_method,
-                "selection_status": "failed_no_zero_duplicate_at_or_above_gap_k",
-                "duplicate_resolution": duplicate_resolution,
-                "require_zero_duplicate_solution": require_zero_duplicate,
-                "k_lb": k_min,
-                "k_gap_raw": k_gap_raw,
-                "k_selected": np.nan,
-                "k_min_unique": float(k_min_unique) if k_min_unique is not None else np.nan,
-                "gap_ref_n": gap_ref_n,
-                "gap_ref_restarts": gap_ref_restarts,
-                "repeats": repeats,
-                "uniqueness_candidate_restarts": uniqueness_candidate_restarts,
-                "gap_by_k": gap_result["gap_by_k"],
-                "gap_sd_by_k": gap_result["gap_sd_by_k"],
-                "observed_objective_by_k": gap_result["observed_objective_by_k"],
-                "feasible_objective_by_k": feasible_objective_by_k,
-                "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
-                "duplicate_trial_evidence_by_k": duplicate_trial_evidence_by_k,
-            }
-        selection_status = "success_gap_unique" if selected_k == k_gap_raw else "success_gap_escalated_unique"
+            if _allow_pooled_k_range_extension(group_id):
+                extension_upper = int(data.shape[0])
+                for n_clusters in range(k_max + 1, extension_upper + 1):
+                    feasible_summary = _search_zero_duplicate_candidate_at_k(
+                        data,
+                        sample_map,
+                        n_clusters,
+                        cfg,
+                        observed_result=None,
+                    )
+                    feasible_summary_by_k[n_clusters] = feasible_summary
+                    feasible_objective_by_k[n_clusters] = feasible_summary["feasible_objective"]
+                    duplicate_trial_count_by_k[n_clusters] = int(feasible_summary["min_duplicate_trial_count"])
+                    duplicate_trial_evidence_by_k[n_clusters] = list(
+                        feasible_summary.get("representative_duplicate_evidence", [])
+                    )
+                    if (
+                        k_min_unique is None
+                        and feasible_summary["best_zero_duplicate_result"] is not None
+                    ):
+                        k_min_unique = int(n_clusters)
+                    if n_clusters >= k_gap_raw and feasible_summary["best_zero_duplicate_result"] is not None:
+                        selected_k = int(n_clusters)
+                        k_max = int(n_clusters)
+                        break
+            if selected_k < 0:
+                return {
+                    "status": "failed",
+                    "group_id": group_id,
+                    "reason": f"No zero-duplicate clustering solution found in K=[{k_gap_raw},{k_max}]",
+                    "duplicate_trials": feasible_summary_by_k.get(k_gap_raw, {}).get("representative_duplicate_trials", []),
+                    "sample_map": sample_map,
+                    "n_trials": len(feature_rows),
+                    "n_components": int(data.shape[0]),
+                    "selection_method": selection_method,
+                    "selection_status": "failed_no_zero_duplicate_at_or_above_gap_k",
+                    "duplicate_resolution": duplicate_resolution,
+                    "require_zero_duplicate_solution": require_zero_duplicate,
+                    "k_lb": k_min,
+                    "k_gap_raw": k_gap_raw,
+                    "k_selected": np.nan,
+                    "k_min_unique": float(k_min_unique) if k_min_unique is not None else np.nan,
+                    "gap_ref_n": gap_ref_n,
+                    "gap_ref_restarts": gap_ref_restarts,
+                    "repeats": repeats,
+                    "uniqueness_candidate_restarts": uniqueness_candidate_restarts,
+                    "gap_by_k": gap_result["gap_by_k"],
+                    "gap_sd_by_k": gap_result["gap_sd_by_k"],
+                    "observed_objective_by_k": gap_result["observed_objective_by_k"],
+                    "feasible_objective_by_k": feasible_objective_by_k,
+                    "duplicate_trial_count_by_k": duplicate_trial_count_by_k,
+                    "duplicate_trial_evidence_by_k": duplicate_trial_evidence_by_k,
+                }
+        selection_status = (
+            "success_gap_unique"
+            if selected_k == k_gap_raw
+            else ("success_gap_escalated_unique" if selected_k <= max(k_values) else "success_gap_extended_unique")
+        )
         selected_result = feasible_summary_by_k[selected_k]["best_zero_duplicate_result"]
         labels = np.asarray(selected_result["labels"], dtype=np.int32)
         duplicate_trials = []
