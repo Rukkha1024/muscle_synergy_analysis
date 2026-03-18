@@ -331,13 +331,14 @@ def _build_pooled_cluster_strategy_H_means_long(
     if merged.empty:
         return pd.DataFrame()
 
-    result = (
+    agg = (
         merged.groupby(["group_id", "cluster_id", "strategy_label", "frame_idx"], dropna=False)["h_value"]
-        .mean()
-        .rename("h_mean")
+        .agg(["mean", "std"])
         .reset_index()
     )
-    return result
+    agg.columns = [*agg.columns[:-2], "h_mean", "h_std"]
+    agg["h_std"] = agg["h_std"].fillna(0.0)
+    return agg
 
 
 def _build_cross_group_artifacts(

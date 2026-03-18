@@ -319,6 +319,24 @@ def render_figures_from_run_dir(
         # Figure 05: Within-cluster strategy overlay
         strategy_w_means = bundle.get(POOLED_CLUSTER_STRATEGY_W_MEANS_KEY, pd.DataFrame())
         strategy_h_means = bundle.get(POOLED_CLUSTER_STRATEGY_H_MEANS_KEY, pd.DataFrame())
+        # Recompute h_std from minimal data if missing
+        if not strategy_h_means.empty and "h_std" not in strategy_h_means.columns:
+            _labels = bundle.get("labels", pd.DataFrame())
+            _min_h = bundle.get("minimal_H_long", pd.DataFrame())
+            if not _labels.empty and not _min_h.empty:
+                _pl = _labels.loc[_labels["group_id"].astype(str) == "pooled_step_nonstep"].copy()
+                if not _pl.empty:
+                    _pl["strategy_label"] = _pl["analysis_step_class"].astype(str).str.strip().str.lower()
+                    _pl = _pl.loc[_pl["strategy_label"].isin(["step", "nonstep"])]
+                    _mk = ["group_id", "trial_id", "component_index"]
+                    _mg = _min_h.merge(_pl[_mk + ["cluster_id", "strategy_label"]], on=_mk, how="inner")
+                    if not _mg.empty:
+                        strategy_h_means = (
+                            _mg.groupby(["group_id", "cluster_id", "strategy_label", "frame_idx"], dropna=False)["h_value"]
+                            .agg(["mean", "std"]).reset_index()
+                        )
+                        strategy_h_means.columns = [*strategy_h_means.columns[:-2], "h_mean", "h_std"]
+                        strategy_h_means["h_std"] = strategy_h_means["h_std"].fillna(0.0)
         if (
             strategy_summary is not None
             and "pooled_step_nonstep" in group_ids

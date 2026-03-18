@@ -359,15 +359,27 @@ def save_within_cluster_strategy_overlay(
         ax_w.set_title(f"Cluster {cid}: W{subtitle}", fontsize=11)
         ax_w.legend(fontsize=8)
 
-        # H overlay lines
+        # H overlay lines with SD shading
         cluster_h = strategy_h_means[strategy_h_means["cluster_id"] == cid]
+        mean_collections: list[np.ndarray] = []
         for strategy in ["step", "nonstep"]:
             sh = cluster_h[cluster_h["strategy_label"] == strategy].sort_values("frame_idx")
             if sh.empty:
                 continue
             frames = sh["frame_idx"].to_numpy(dtype=float)
             x_pct = 100.0 * frames / frames.max() if len(frames) > 1 and frames.max() > 0 else frames
-            ax_h.plot(x_pct, sh["h_mean"].to_numpy(dtype=float), color=STRATEGY_COLORS[strategy], linewidth=2.0, label=strategy)
+            mean_vals = sh["h_mean"].to_numpy(dtype=float)
+            if "h_std" in sh.columns:
+                std_vals = sh["h_std"].to_numpy(dtype=float)
+                ax_h.fill_between(x_pct, mean_vals - std_vals, mean_vals + std_vals,
+                                  color=STRATEGY_COLORS[strategy], alpha=0.2)
+            ax_h.plot(x_pct, mean_vals, color=STRATEGY_COLORS[strategy], linewidth=3.0, label=strategy)
+            mean_collections.append(mean_vals)
+        if mean_collections:
+            all_means = np.concatenate(mean_collections)
+            ymin, ymax = float(np.nanmin(all_means)), float(np.nanmax(all_means))
+            margin = (ymax - ymin) * 0.05 if ymax > ymin else 0.1
+            ax_h.set_ylim(ymin - margin, ymax + margin)
         ax_h.set_xlim(0.0, 100.0)
         ax_h.set_ylabel("Activation")
         ax_h.set_xlabel("Normalized window (%)")
