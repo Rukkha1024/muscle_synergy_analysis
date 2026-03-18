@@ -311,7 +311,12 @@ def save_within_cluster_strategy_overlay(
     total_step_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "step", "n_rows"].sum()) if not strategy_summary.empty else 0
     total_nonstep_trials = int(strategy_summary.loc[strategy_summary["strategy_label"] == "nonstep", "n_rows"].sum()) if not strategy_summary.empty else 0
 
-    n_part = f"  (n={total_trials} trials)" if total_trials is not None else ""
+    if total_step_trials > 0 or total_nonstep_trials > 0:
+        n_part = f"  (step n={total_step_trials}, nonstep n={total_nonstep_trials})"
+    elif total_trials is not None:
+        n_part = f"  (n={total_trials} trials)"
+    else:
+        n_part = ""
     fig, axes = plt.subplots(n_clusters, 2, figsize=(14, 3.5 * n_clusters), squeeze=False)
     fig.suptitle(f"Within-cluster strategy overlay (step vs nonstep){n_part}", fontsize=14, fontweight="bold", y=0.995)
 
