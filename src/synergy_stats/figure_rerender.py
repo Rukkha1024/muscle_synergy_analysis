@@ -24,6 +24,7 @@ from .figures import (
     save_cross_group_matched_h,
     save_cross_group_matched_w,
     save_group_cluster_figure,
+    save_trial_composition_figure,
     save_trial_nmf_figure,
     save_within_cluster_strategy_overlay,
 )
@@ -31,6 +32,7 @@ from .single_parquet import (
     POOLED_CLUSTER_STRATEGY_H_MEANS_KEY,
     POOLED_CLUSTER_STRATEGY_SUMMARY_KEY,
     POOLED_CLUSTER_STRATEGY_W_MEANS_KEY,
+    SOURCE_TRIAL_WINDOWS_FRAME_KEY,
     load_single_parquet_bundle,
     resolve_single_parquet_path,
 )
@@ -262,6 +264,22 @@ def render_figures_from_run_dir(
         "pooled_narrative_figure_paths": [],
     }
     try:
+        # Figure 01: Trial composition (concatenated mode only)
+        source_trial_windows_frame = bundle.get(SOURCE_TRIAL_WINDOWS_FRAME_KEY, None)
+        if source_trial_windows_frame is not None and not source_trial_windows_frame.empty:
+            pooled_tw = artifacts["trial_windows"].filter(
+                pl.col("group_id") == "pooled_step_nonstep"
+            ).to_pandas() if "pooled_step_nonstep" in group_ids else pd.DataFrame()
+            if not pooled_tw.empty:
+                fig01_path = tmp_dir / f"01_trial_composition{figure_ext}"
+                save_trial_composition_figure(
+                    trial_windows=pooled_tw,
+                    source_trial_windows=source_trial_windows_frame,
+                    cfg=cfg,
+                    output_path=fig01_path,
+                )
+                rendered_paths["pooled_narrative_figure_paths"].append(str(fig01_path))
+
         for group_id in group_ids:
             output_path = tmp_dir / f"{group_id}_clusters{figure_ext}"
             group_strategy = (

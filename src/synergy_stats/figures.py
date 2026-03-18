@@ -752,6 +752,87 @@ def save_cross_group_decision_summary(
     plt.close(fig)
 
 
+def save_trial_composition_figure(
+    trial_windows: pd.DataFrame,
+    source_trial_windows: pd.DataFrame,
+    cfg: dict,
+    output_path: Path,
+) -> None:
+    """Render Figure 01: grouped bar chart showing source windows per concatenated trial.
+
+    Visualises how *n* source gait-cycle windows were aggregated into
+    *m* concatenated trials, grouped by subject and coloured by strategy.
+    """
+    import numpy as np
+    from matplotlib.patches import Patch
+
+    plt = _pyplot()
+    _configure_fonts()
+
+    if trial_windows.empty:
+        return
+
+    n_source = len(source_trial_windows)
+    n_concat = len(trial_windows)
+    n_subjects = int(trial_windows["subject"].nunique())
+
+    tw_sorted = trial_windows.sort_values(["subject", "velocity", "trial_num"])
+
+    x_positions: list[float] = []
+    heights: list[int] = []
+    colors: list[str] = []
+    subject_centers: dict[str, list[float]] = {}
+    pos = 0.0
+    prev_subject: str | None = None
+
+    for _, row in tw_sorted.iterrows():
+        subj = str(row["subject"])
+        if prev_subject is not None and subj != prev_subject:
+            pos += 0.5
+        subject_centers.setdefault(subj, [])
+
+        is_step = str(row["trial_num"]) == "concat_step"
+        heights.append(int(row["analysis_source_trial_count"]))
+        colors.append(STRATEGY_COLORS["step"] if is_step else STRATEGY_COLORS["nonstep"])
+        x_positions.append(pos)
+        subject_centers[subj].append(pos)
+        pos += 1.0
+        prev_subject = subj
+
+    fig, ax = plt.subplots(figsize=(max(14, n_concat * 0.4), 6))
+    ax.bar(x_positions, heights, color=colors, width=0.7, edgecolor="white", linewidth=0.5)
+
+    for xp, h in zip(x_positions, heights):
+        ax.text(xp, h + 0.1, str(h), ha="center", va="bottom", fontsize=7)
+
+    subject_tick_pos = [float(np.mean(ps)) for ps in subject_centers.values()]
+    ax.set_xticks(subject_tick_pos)
+    ax.set_xticklabels(list(subject_centers.keys()), rotation=45, ha="right", fontsize=8)
+    ax.set_ylabel("Source windows per concatenated trial")
+    ax.set_ylim(0, max(heights) + 1.5)
+
+    step_count = int((tw_sorted["trial_num"] == "concat_step").sum())
+    nonstep_count = n_concat - step_count
+    ax.legend(
+        handles=[
+            Patch(color=STRATEGY_COLORS["step"], label=f"step ({step_count} trials)"),
+            Patch(color=STRATEGY_COLORS["nonstep"], label=f"nonstep ({nonstep_count} trials)"),
+        ],
+        loc="upper right",
+        fontsize=9,
+    )
+    ax.set_title(
+        f"Trial composition: {n_source} source windows \u2192 {n_concat} concatenated trials ({n_subjects} subjects)",
+        fontsize=13,
+        fontweight="bold",
+    )
+
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=_figure_dpi(cfg), format=_normalized_figure_format(cfg), bbox_inches="tight")
+    plt.close(fig)
+
+
 def save_subject_cluster_figure(
     subject_id: str,
     rep_w: pd.DataFrame,
