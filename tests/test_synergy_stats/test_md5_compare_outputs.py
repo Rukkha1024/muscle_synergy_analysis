@@ -94,3 +94,30 @@ def test_md5_compare_ignores_figure_only_differences(repo_root: Path, tmp_path: 
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "MD5 comparison passed for curated stable files." in result.stdout
+
+
+def test_md5_compare_can_optionally_fail_on_figure_only_differences(repo_root: Path, tmp_path: Path) -> None:
+    """The optional figure comparison should fail when only figure bytes differ."""
+    md5_module = _load_md5_module(repo_root)
+    base_dir = tmp_path / "base"
+    new_dir = tmp_path / "new"
+    _write_stable_tree(base_dir, md5_module.STABLE_RELATIVE_PATHS)
+    _write_stable_tree(new_dir, md5_module.STABLE_RELATIVE_PATHS)
+    (base_dir / "figures").mkdir(parents=True, exist_ok=True)
+    (new_dir / "figures").mkdir(parents=True, exist_ok=True)
+    rel_path = Path("figures") / "global_step_clusters.png"
+    (base_dir / rel_path).write_text("old-figure\n", encoding="utf-8-sig")
+    (new_dir / rel_path).write_text("new-figure\n", encoding="utf-8-sig")
+
+    result = repo_python(
+        repo_root,
+        "scripts/emg/99_md5_compare_outputs.py",
+        "--base",
+        str(base_dir),
+        "--new",
+        str(new_dir),
+        "--include-figures",
+    )
+
+    assert result.returncode == 1
+    assert f"DIFF {rel_path.as_posix()}" in result.stdout

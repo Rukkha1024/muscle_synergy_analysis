@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +19,14 @@ def _artifact_path(run_dir: Path, filename: str) -> Path:
 def _write_parquet(rows: list[dict[str, object]], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_parquet(path, index=False)
+
+
+def _figure_md5_map(figure_dir: Path) -> dict[str, str]:
+    return {
+        str(path.relative_to(figure_dir)): hashlib.md5(path.read_bytes()).hexdigest()
+        for path in sorted(figure_dir.rglob("*"))
+        if path.is_file()
+    }
 
 
 def _sample_cfg() -> dict[str, object]:
@@ -507,6 +516,23 @@ def test_rerender_rebuilds_expected_figure_tree(tmp_path: Path) -> None:
     assert len(list((figure_dir / "nmf_trials").glob("*.png"))) == 2
     assert not (figure_dir / "obsolete.txt").exists()
     assert all(Path(path).exists() for paths in rendered.values() for path in paths)
+
+
+def test_rerender_is_byte_stable_for_same_saved_parquet_inputs(tmp_path: Path) -> None:
+    """Rerendering twice from the same parquet artifacts should reproduce identical figure bytes."""
+    run_dir = tmp_path / "stable_run"
+    _write_minimal_run_artifacts(run_dir)
+
+    first_render = render_figures_from_run_dir(run_dir, _sample_cfg())
+    assert sum(len(paths) for paths in first_render.values()) == 8
+    figure_dir = run_dir / "figures"
+    first_hashes = _figure_md5_map(figure_dir)
+
+    second_render = render_figures_from_run_dir(run_dir, _sample_cfg())
+    assert sum(len(paths) for paths in second_render.values()) == 8
+    second_hashes = _figure_md5_map(figure_dir)
+
+    assert second_hashes == first_hashes
 
 
 def test_rerender_cleans_staging_dir_when_plotting_fails(tmp_path: Path, monkeypatch) -> None:
