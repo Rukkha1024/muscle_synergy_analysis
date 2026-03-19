@@ -1,7 +1,8 @@
 ﻿thresholds:
-  - 0.89
+  - 0.80
+  - 0.85
   - 0.90
-  - 0.91
+  - 0.95
 local_vaf_floor: 0.75
 variance_epsilon: 1.0e-8
 null_methods:
@@ -10,4 +11,6 @@ null_repeats_screening: 100
 null_repeats_exact: 500
 holdout_min_trials: 2
 seed: 42
-out_dir: analysis/vaf_threshold_sensitivity/artifacts/validity_screening_89_91
+out_dir: analysis/vaf_threshold_sensitivity/artifacts/validity_screening_80_95
+null_progress_every: 5
+holdout_progress_every: 10

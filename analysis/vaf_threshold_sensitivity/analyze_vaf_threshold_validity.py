@@ -50,6 +50,8 @@ from analysis.vaf_threshold_sensitivity.validation_helpers import (
 DEFAULT_VALIDATION_CONFIG = SCRIPT_DIR / "config_validation.yaml"
 DEFAULT_OUT_DIR = SCRIPT_DIR / "artifacts" / "validity_default_run"
 STEP_CLASS_ORDER = ("step", "nonstep")
+DEFAULT_NULL_PROGRESS_EVERY = 5
+DEFAULT_HOLDOUT_PROGRESS_EVERY = 10
 
 
 @dataclass
@@ -240,6 +242,8 @@ def _load_validation_config(path: Path) -> dict[str, Any]:
     payload.setdefault("holdout_min_trials", 2)
     payload.setdefault("seed", 42)
     payload.setdefault("out_dir", str(DEFAULT_OUT_DIR))
+    payload.setdefault("null_progress_every", DEFAULT_NULL_PROGRESS_EVERY)
+    payload.setdefault("holdout_progress_every", DEFAULT_HOLDOUT_PROGRESS_EVERY)
     return payload
 
 
@@ -260,7 +264,13 @@ def _resolve_validation_settings(args: argparse.Namespace, payload: dict[str, An
     settings["local_vaf_floor"] = float(payload["local_vaf_floor"])
     settings["variance_epsilon"] = float(payload["variance_epsilon"])
     settings["holdout_min_trials"] = int(payload["holdout_min_trials"])
+    settings["null_progress_every"] = int(payload["null_progress_every"])
+    settings["holdout_progress_every"] = int(payload["holdout_progress_every"])
     return settings
+
+
+def _threshold_items(thresholds: list[float]) -> list[tuple[float, str]]:
+    return [(float(value), _format_threshold(float(value))) for value in thresholds]
 
 
 def _source_trial_detail(trial: Any, source_trial_order: int, step_class: str) -> dict[str, Any]:
@@ -712,12 +722,14 @@ def evaluate_null_model(
     null_repeats: int,
     base_cfg: dict[str, Any],
     seed: int,
+    progress_every: int,
 ) -> dict[str, Any]:
     """Run source-trial-safe null-model reruns and compare with observed data."""
     unit_rows: list[dict[str, Any]] = []
     subject_repeat_rows: list[dict[str, Any]] = []
     subject_summary_rows: list[dict[str, Any]] = []
     summary_rows: list[dict[str, Any]] = []
+    threshold_items = _threshold_items(thresholds)
 
     observed_unit_lookup: dict[tuple[str, str, str], dict[str, Any]] = {}
     for row in observed_local_vaf["trialwise_unit_rows"]:
@@ -725,29 +737,34 @@ def evaluate_null_model(
     for row in observed_local_vaf["concatenated"]["subject_muscle_channel_unit_rows"]:
         observed_unit_lookup[("concatenated", row["threshold_label"], row["unit_id"])] = row
 
-    for threshold_index, threshold in enumerate(thresholds):
-        threshold_label = _format_threshold(threshold)
-        for mode_index, mode in enumerate(("trialwise", "concatenated")):
-            units = mode_units[mode]
-            for method_index, null_method in enumerate(null_methods):
-                rng = np.random.default_rng(
-                    int(seed) + (threshold_index * 100_000) + (mode_index * 10_000) + (method_index * 1_000)
-                )
-                current_subject_repeat_rows: list[dict[str, Any]] = []
-                current_unit_rows: list[dict[str, Any]] = []
-                for repeat_index in range(int(null_repeats)):
-                    repeat_rows: list[dict[str, Any]] = []
-                    for unit in units:
-                        null_sources = [
-                            generate_null_trial(source_trial.matrix, null_method, rng)
-                            for source_trial in unit.source_trials
-                        ]
-                        x_null = (
-                            null_sources[0]
-                            if len(null_sources) == 1
-                            else np.concatenate(null_sources, axis=0)
-                        )
-                        null_candidates, elapsed_sec = _fit_rank_candidates(x_null, base_cfg)
+    for mode_index, mode in enumerate(("trialwise", "concatenated")):
+        units = mode_units[mode]
+        for method_index, null_method in enumerate(null_methods):
+            rng = np.random.default_rng(
+                int(seed) + (mode_index * 10_000) + (method_index * 1_000)
+            )
+            current_subject_repeat_rows_by_threshold: dict[str, list[dict[str, Any]]] = {
+                threshold_label: []
+                for _, threshold_label in threshold_items
+            }
+            repeat_start = time.perf_counter()
+            for repeat_index in range(int(null_repeats)):
+                repeat_rows_by_threshold: dict[str, list[dict[str, Any]]] = {
+                    threshold_label: []
+                    for _, threshold_label in threshold_items
+                }
+                for unit in units:
+                    null_sources = [
+                        generate_null_trial(source_trial.matrix, null_method, rng)
+                        for source_trial in unit.source_trials
+                    ]
+                    x_null = (
+                        null_sources[0]
+                        if len(null_sources) == 1
+                        else np.concatenate(null_sources, axis=0)
+                    )
+                    null_candidates, elapsed_sec = _fit_rank_candidates(x_null, base_cfg)
+                    for threshold, threshold_label in threshold_items:
                         selected = _select_candidate_for_threshold(null_candidates, threshold)
                         x_hat = np.asarray(selected.H_time @ selected.W_muscle.T, dtype=np.float32)
                         local_summary = compute_local_vaf(
@@ -778,18 +795,19 @@ def evaluate_null_model(
                             "observed_selected_rank": float(observed_unit["selected_rank"]),
                             "observed_muscle_pass_rate_75": observed_unit["muscle_pass_rate_75"],
                         }
-                        repeat_rows.append(row)
-                        current_unit_rows.append(row)
+                        repeat_rows_by_threshold[threshold_label].append(row)
+                        unit_rows.append(row)
 
+                for threshold, threshold_label in threshold_items:
                     rows_by_subject: dict[str, list[dict[str, Any]]] = defaultdict(list)
-                    for row in repeat_rows:
+                    for row in repeat_rows_by_threshold[threshold_label]:
                         rows_by_subject[str(row["subject"])].append(row)
                     for subject, rows in sorted(rows_by_subject.items()):
                         observed_rows = [
                             observed_unit_lookup[(mode, threshold_label, row["unit_id"])]
                             for row in rows
                         ]
-                        current_subject_repeat_rows.append(
+                        current_subject_repeat_rows_by_threshold[threshold_label].append(
                             {
                                 "mode": mode,
                                 "threshold": float(threshold),
@@ -819,7 +837,24 @@ def evaluate_null_model(
                             }
                         )
 
-                unit_rows.extend(current_unit_rows)
+                if progress_every > 0 and (
+                    repeat_index == 0
+                    or (repeat_index + 1) % int(progress_every) == 0
+                    or (repeat_index + 1) == int(null_repeats)
+                ):
+                    elapsed = time.perf_counter() - repeat_start
+                    repeats_done = repeat_index + 1
+                    repeats_left = int(null_repeats) - repeats_done
+                    avg_sec_per_repeat = elapsed / repeats_done
+                    eta_sec = avg_sec_per_repeat * repeats_left
+                    print(
+                        f"[null] mode={mode} method={null_method} "
+                        f"repeat={repeats_done}/{int(null_repeats)} "
+                        f"elapsed={elapsed:.1f}s eta={eta_sec:.1f}s"
+                    )
+
+            for threshold, threshold_label in threshold_items:
+                current_subject_repeat_rows = current_subject_repeat_rows_by_threshold[threshold_label]
                 subject_repeat_rows.extend(current_subject_repeat_rows)
                 rows_by_subject: dict[str, list[dict[str, Any]]] = defaultdict(list)
                 for row in current_subject_repeat_rows:
@@ -954,12 +989,14 @@ def evaluate_holdout_and_cross_condition(
     local_vaf_floor: float,
     variance_epsilon: float,
     holdout_min_trials: int,
+    progress_every: int,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Run within-condition hold-out and opposite-condition cross reconstruction."""
     group_map = {
         (unit.subject, unit.velocity, unit.step_class): unit
         for unit in concatenated_units
     }
+    threshold_items = _threshold_items(thresholds)
     eligible_group_rows: list[dict[str, Any]] = []
     fold_rows: list[dict[str, Any]] = []
     holdout_summary_rows: list[dict[str, Any]] = []
@@ -978,11 +1015,19 @@ def evaluate_holdout_and_cross_condition(
             }
         )
 
-    for threshold in thresholds:
-        threshold_label = _format_threshold(threshold)
-        threshold_fold_rows: list[dict[str, Any]] = []
-        threshold_cross_rows: list[dict[str, Any]] = []
-        threshold_eligible_rows: list[dict[str, Any]] = []
+    threshold_eligible_rows_by_label: dict[str, list[dict[str, Any]]] = {
+        threshold_label: []
+        for _, threshold_label in threshold_items
+    }
+    threshold_fold_rows_by_label: dict[str, list[dict[str, Any]]] = {
+        threshold_label: []
+        for _, threshold_label in threshold_items
+    }
+    threshold_cross_rows_by_label: dict[str, list[dict[str, Any]]] = {
+        threshold_label: []
+        for _, threshold_label in threshold_items
+    }
+    for threshold, threshold_label in threshold_items:
         for group_row in base_group_rows:
             eligible_row = dict(group_row)
             eligible_row.update(
@@ -991,20 +1036,29 @@ def evaluate_holdout_and_cross_condition(
                     "threshold_label": threshold_label,
                 }
             )
-            threshold_eligible_rows.append(eligible_row)
+            threshold_eligible_rows_by_label[threshold_label].append(eligible_row)
 
-        for (subject, velocity, step_class), unit in sorted(
+    eligible_units = [
+        item
+        for item in sorted(
             group_map.items(),
             key=lambda item: (_sort_key(item[0][0]), _sort_key(item[0][1]), item[0][2]),
-        ):
-            source_trials = unit.source_trials
-            if len(source_trials) < int(holdout_min_trials):
-                continue
-            opposite_trials = group_map.get((subject, velocity, _opposite_step_class(step_class)))
-            for held_out_index, held_out_trial in enumerate(source_trials):
-                train_trials = [trial for index, trial in enumerate(source_trials) if index != held_out_index]
-                train_matrix = np.concatenate([trial.matrix for trial in train_trials], axis=0)
-                train_candidates, elapsed_sec = _fit_rank_candidates(train_matrix, base_cfg)
+        )
+        if len(item[1].source_trials) >= int(holdout_min_trials)
+    ]
+    total_folds = int(sum(len(unit.source_trials) for _, unit in eligible_units))
+    processed_folds = 0
+    fold_start = time.perf_counter()
+
+    for (subject, velocity, step_class), unit in eligible_units:
+        source_trials = unit.source_trials
+        opposite_trials = group_map.get((subject, velocity, _opposite_step_class(step_class)))
+        for held_out_index, held_out_trial in enumerate(source_trials):
+            processed_folds += 1
+            train_trials = [trial for index, trial in enumerate(source_trials) if index != held_out_index]
+            train_matrix = np.concatenate([trial.matrix for trial in train_trials], axis=0)
+            train_candidates, elapsed_sec = _fit_rank_candidates(train_matrix, base_cfg)
+            for threshold, threshold_label in threshold_items:
                 selected = _select_candidate_for_threshold(train_candidates, threshold)
                 within_h, within_x_hat = reconstruct_with_fixed_w(held_out_trial.matrix, selected.W_muscle)
                 within_local = compute_local_vaf(
@@ -1029,7 +1083,7 @@ def evaluate_holdout_and_cross_condition(
                     "within_test_min_local_vaf": within_local["min_local_vaf"],
                     "within_test_median_local_vaf": within_local["median_local_vaf"],
                 }
-                threshold_fold_rows.append(fold_row)
+                threshold_fold_rows_by_label[threshold_label].append(fold_row)
 
                 if opposite_trials is None:
                     continue
@@ -1050,7 +1104,7 @@ def evaluate_holdout_and_cross_condition(
                             cross_h,
                         )
                     )
-                    threshold_cross_rows.append(
+                    threshold_cross_rows_by_label[threshold_label].append(
                         {
                             "threshold": float(threshold),
                             "threshold_label": threshold_label,
@@ -1092,6 +1146,24 @@ def evaluate_holdout_and_cross_condition(
                         }
                     )
 
+            if progress_every > 0 and (
+                processed_folds == 1
+                or processed_folds % int(progress_every) == 0
+                or processed_folds == total_folds
+            ):
+                elapsed = time.perf_counter() - fold_start
+                folds_left = total_folds - processed_folds
+                avg_sec_per_fold = elapsed / processed_folds
+                eta_sec = avg_sec_per_fold * folds_left
+                print(
+                    f"[holdout] fold={processed_folds}/{total_folds} "
+                    f"elapsed={elapsed:.1f}s eta={eta_sec:.1f}s"
+                )
+
+    for threshold, threshold_label in threshold_items:
+        threshold_eligible_rows = threshold_eligible_rows_by_label[threshold_label]
+        threshold_fold_rows = threshold_fold_rows_by_label[threshold_label]
+        threshold_cross_rows = threshold_cross_rows_by_label[threshold_label]
         eligible_group_rows.extend(threshold_eligible_rows)
         fold_rows.extend(threshold_fold_rows)
         cross_pair_rows.extend(threshold_cross_rows)
@@ -1370,6 +1442,8 @@ def build_validation_payload(
             "null_methods": [str(value) for value in validation_settings["null_methods"]],
             "null_repeats": int(validation_settings["null_repeats"]),
             "holdout_min_trials": int(validation_settings["holdout_min_trials"]),
+            "null_progress_every": int(validation_settings["null_progress_every"]),
+            "holdout_progress_every": int(validation_settings["holdout_progress_every"]),
             "seed": int(validation_settings["seed"]),
         },
         "input": {
@@ -1412,7 +1486,7 @@ def _write_threshold_summaries(out_dir: Path, payload: dict[str, Any]) -> list[P
 
 def _write_checksums(out_dir: Path, paths: list[Path]) -> Path:
     checksum_path = out_dir / "checksums.md5"
-    checksum_path.write_text("\n".join(_checksum_lines(out_dir, paths)) + "\n", encoding="utf-8-sig")
+    checksum_path.write_text("\n".join(_checksum_lines(out_dir, paths)) + "\n", encoding="utf-8")
     return checksum_path
 
 
@@ -1532,6 +1606,8 @@ def main() -> None:
     print(f"Thresholds: {[ _format_threshold(value) for value in validation_settings['thresholds'] ]}")
     print(f"Null methods: {validation_settings['null_methods']}")
     print(f"Null repeats: {validation_settings['null_repeats']}")
+    print(f"Null progress every: {validation_settings['null_progress_every']}")
+    print(f"Hold-out progress every: {validation_settings['holdout_progress_every']}")
     print(f"Seed: {validation_settings['seed']}")
     print(f"Artifact dir: {validation_settings['out_dir']}")
 
@@ -1564,6 +1640,7 @@ def main() -> None:
         null_repeats=validation_settings["null_repeats"],
         base_cfg=cfg,
         seed=validation_settings["seed"],
+        progress_every=validation_settings["null_progress_every"],
     )
 
     _print_section("Hold-out and cross-condition reconstruction")
@@ -1575,6 +1652,7 @@ def main() -> None:
         local_vaf_floor=validation_settings["local_vaf_floor"],
         variance_epsilon=validation_settings["variance_epsilon"],
         holdout_min_trials=validation_settings["holdout_min_trials"],
+        progress_every=validation_settings["holdout_progress_every"],
     )
 
     payload = build_validation_payload(

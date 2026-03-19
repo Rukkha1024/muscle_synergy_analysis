@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-VAF 기준값을 85%부터 95%까지 1% 단위로 바꿔 본 결과, **90%는 concatenated에서 shared structure가 완전한 마지막 기준**이었습니다. 89%는 더 가볍지만 다소 느슨하고, 91%부터는 concatenated에서 shared structure가 처음으로 깨지고 K burden과 duplicate burden이 동시에 커지기 시작합니다. 따라서 90%는 "엄격함을 한 단계 더 올리되, 비용이 동시에 커지기 직전에서 멈춘 기준"으로 방어할 수 있습니다.
+VAF 기준값을 85%부터 95%까지 1% 단위로 바꿔 본 broad sweep에서는 **90%가 concatenated에서 shared structure가 완전한 마지막 기준**이었습니다. 여기에 추가 검증(screening `80/85/90/95` + exact `90%`)을 얹어 보니, 80%와 85%는 local VAF와 hold-out reconstruction이 더 약했고, 95%는 재구성은 더 좋아지지만 null 대비 압축 이점과 rank burden 측면에서 90%보다 설득력이 커지지 않았습니다. exact 90% run에서도 `circular_shift`와 `time_shuffle` 모두에서 observed > null advantage가 유지돼, 현재 데이터 기준으로는 **90% 유지**가 가장 방어 가능한 결론입니다.
 
 ---
 
@@ -268,48 +268,85 @@ conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/
 ---
 
 <!-- AUTO_APPEND: validity-implementation-2026-03-19 -->
-## 추가 검증 구현 상태
+## 추가 검증 결과
 
-이번 턴에서는 broad sweep 해석을 바꾸지 않고, 그 위에 **local VAF + null model + hold-out + cross-condition** 검증 레이어를 실행할 수 있는 새 스크립트를 구현했다.
+이번 추가 검증은 broad sweep 위에 **local VAF + null model + hold-out + cross-condition** 레이어를 얹어, `0.80`, `0.85`, `0.90`, `0.95`를 다시 비교하고 `0.90`은 exact run으로 한 번 더 검증했다.
 
-구현 검증은 아래 smoke run으로 수행했다.
+실제 실행은 아래 두 run을 기준으로 했다.
 
 ```bash
 python3 analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py \
   --config configs/global_config.yaml \
   --validation-config analysis/vaf_threshold_sensitivity/config_validation.yaml \
-  --thresholds 0.89 0.90 0.91 \
-  --null-repeats 1 \
-  --out-dir analysis/vaf_threshold_sensitivity/artifacts/validity_smoke_89_91
+  --thresholds 0.80 0.85 0.90 0.95 \
+  --null-method circular_shift \
+  --null-repeats 100 \
+  --out-dir analysis/vaf_threshold_sensitivity/artifacts/validity_screening_80_95
+
+python3 analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py \
+  --config configs/global_config.yaml \
+  --validation-config analysis/vaf_threshold_sensitivity/config_validation.yaml \
+  --thresholds 0.90 \
+  --null-method circular_shift time_shuffle \
+  --null-repeats 500 \
+  --out-dir analysis/vaf_threshold_sensitivity/artifacts/validity_exact_090
 ```
 
-이 run은 **end-to-end smoke run**이다. 즉, 코드 경로와 artifact 생성이 정상인지 확인하는 용도이며, 최종 논문용 결론을 대신하지는 않는다. 최종 해석은 `null_repeats=100` screening run과 `null_repeats=500` exact 90% run을 다시 돌린 뒤 작성해야 한다.
+참고로 이번 workload에서는 Torch/TorchNMF CUDA 경로보다 `python3` CPU fallback이 더 빨랐다. `null_repeats=1` benchmark 기준으로 CPU fallback은 `19.79초`, `conda run -n cuda` 경로는 `170.43초`가 지나도 끝나지 않아 중단했다. 따라서 실제 screening / exact run은 모두 `python3`로 수행했다.
 
-### smoke run에서 확인한 점
+### screening run에서 본 threshold 비교
 
-1. `summary.json`, `by_threshold/vaf_89/summary.json`, `by_threshold/vaf_90/summary.json`, `by_threshold/vaf_91/summary.json`, `checksums.md5`가 모두 생성되었다.
-2. concatenated local VAF는 계획대로 두 층으로 저장되었다.
-   - `subject_muscle_channel_summary`
-   - `source_trial_split_summary`
-3. `null_model`, `holdout`, `cross_condition` 블록이 모두 채워졌다.
+| Threshold | Trialwise local pass rate (`>= 0.75`) | Concatenated primary local pass rate (`>= 0.75`) | Hold-out global VAF mean | Hold-out local pass rate mean | Trialwise circular-shift compression advantage | Concatenated circular-shift compression advantage |
+|------|-----|-----|-----|-----|-----|-----|
+| `80%` | 0.6135 | 0.5722 | 0.7784 | 0.4591 | 1.4375 | 2.25 |
+| `85%` | 0.7045 | 0.6972 | 0.8147 | 0.5463 | 1.6905 | 2.5 |
+| `90%` | 0.8235 | 0.7972 | 0.8541 | 0.6320 | 1.8452 | 2.0 |
+| `95%` | 0.9145 | 0.8958 | 0.8984 | 0.7263 | 1.5 | 0.75 |
 
-### smoke run의 빠른 관찰
+이 표가 보여 주는 핵심은 다음과 같다.
 
-- **local VAF**: `89% -> 90% -> 91%`로 갈수록 trialwise와 concatenated primary local VAF는 전반적으로 개선됐다. 예를 들어 trialwise `muscle_pass_rate_75`는 `0.794 -> 0.8235 -> 0.842`, concatenated primary는 `0.775 -> 0.7972 -> 0.8361`로 상승했다.
-- **source-trial split local VAF**: secondary diagnostic이 실제로 필요하다는 점이 확인됐다. concatenated primary는 양호해 보여도 source-trial split에서는 최소 local VAF가 크게 음수인 trial이 나타났다(`89%`: `-6.3554`, `91%`: `-7.3260`).
-- **null model**: smoke run에서도 observed가 null보다 더 압축적이라는 신호는 유지됐다. 예를 들어 concatenated `compression_advantage_median`은 `89%`에서 `2.5`, `90%`와 `91%`에서 `2.0`이었다.
-- **hold-out reconstruction**: within-condition hold-out 성능은 threshold가 올라갈수록 개선됐다. `within_test_global_vaf_mean`은 `0.8452 -> 0.8541 -> 0.8644`, `within_test_local_pass_rate_75_mean`은 `0.6083 -> 0.6320 -> 0.6595`였다.
-- **cross-condition reconstruction**: `step -> nonstep`은 within 대비 거의 보존됐지만, `nonstep -> step`은 세 threshold 모두에서 약 `-0.05` 수준의 penalty가 유지됐다.
+1. **80%와 85%는 재구성이 더 약하다.** threshold를 낮추면 시너지 수는 줄지만, local VAF와 hold-out reconstruction이 분명히 떨어진다. 예를 들어 hold-out global VAF mean은 `80%`에서 `0.7784`, `85%`에서 `0.8147`이지만 `90%`에서 `0.8541`까지 올라간다.
+2. **90%는 재구성 품질과 null 대비 구조성을 함께 확보한다.** trialwise circular-shift compression advantage는 `1.8452`, concatenated는 `2.0`으로 여전히 observed가 null보다 더 압축적이다.
+3. **95%는 더 잘 맞지만, 90%보다 명백한 승자는 아니다.** local VAF와 hold-out은 더 좋아지지만, concatenated circular-shift compression advantage가 `2.0 -> 0.75`로 크게 떨어진다. 즉, 더 많은 rank를 써서 재구성을 끌어올리지만 null 대비 "진짜 구조"의 우위가 더 좋아진다고 말하기는 어렵다.
 
-### 현재 해석
+### secondary diagnostic: source-trial split local VAF
 
-이 smoke run만 놓고도 "`90%`가 null보다 약하고 hold-out에서 무너진다"는 신호는 보이지 않았다. 다만 이것만으로 "`90% 유지`"를 최종 결론으로 확정하면 안 된다. 이유는 다음과 같다.
+concatenated primary local VAF만 보면 `90%`와 `95%`가 모두 양호해 보이지만, source-trial split diagnostic을 보면 극단값이 여전히 거칠다. screening run에서 concatenated split `min_local_vaf`는 `80%`와 `85%`, `90%`에서 모두 `-6.3554`, `95%`에서는 `-7.3321`이었다.
 
-- null 반복 수가 `1`이라 통계적으로 너무 얕다.
-- secondary surrogate(`time_shuffle`)를 아직 넣지 않았다.
-- source-trial split local VAF의 극단값을 안정적으로 해석하려면 screening / exact run이 더 필요하다.
+즉, 이번 검증은 "concatenated super-trial 전체 평균"만 보면 안 되고, **source trial로 다시 잘라 본 2차 local VAF 진단이 계속 필요하다**는 점도 함께 확인했다.
 
-따라서 현재 상태의 가장 정확한 문장은 다음과 같다.
+### hold-out / cross-condition reconstruction 해석
 
-> 구현은 완료됐고, smoke run에서는 `89 / 90 / 91` 비교와 artifact 생성이 정상 동작했다.  
-> 최종 결론은 screening / exact run을 다시 수행한 뒤 `90% 유지 / 90% 약화 / 결론 유예` 중 하나로 정리해야 한다.
+hold-out reconstruction은 threshold가 올라갈수록 좋아졌다. 하지만 cross-condition은 모든 threshold에서 방향 비대칭이 유지됐다.
+
+- `step -> nonstep`은 `80%`부터 `95%`까지 within 대비 거의 보존됐다 (`+0.0029`, `+0.0031`, `-0.0014`, `-0.0028`).
+- `nonstep -> step`은 전 구간에서 penalty가 남았다 (`-0.0596`, `-0.0534`, `-0.0489`, `-0.0392`).
+
+이 패턴은 `90%`만의 실패가 아니라, 같은 subject / same mixed velocity 안에서도 **nonstep basis가 step trial을 완전히 대체하지는 못한다**는 데이터 특성에 더 가깝다. 따라서 `90%`의 방어 여부는 cross-condition penalty의 존재 자체보다, 그 penalty가 다른 threshold보다 특별히 나쁜지로 봐야 한다. screening 결과에서 `90%`는 그 기준에서 불리하지 않았다.
+
+### exact 90% run
+
+screening 뒤에는 `0.90` 하나만 골라 `null_repeats=500` exact run을 수행했다. 여기서는 `circular_shift`뿐 아니라 `time_shuffle`까지 함께 봤다.
+
+| Mode | Null method | Compression advantage median | Local advantage median |
+|------|------|------|------|
+| `trialwise` | `circular_shift` | 1.8333 | 0.1042 |
+| `trialwise` | `time_shuffle` | 3.0 | 0.2773 |
+| `concatenated` | `circular_shift` | 2.0 | 0.1562 |
+| `concatenated` | `time_shuffle` | 2.75 | 0.2812 |
+
+이 exact run은 두 가지를 보여 준다.
+
+1. **90%는 exact run에서도 null보다 강하다.** `circular_shift`와 `time_shuffle` 모두에서 compression/local advantage가 양수였고, 특히 `time_shuffle`에서는 advantage가 더 커졌다.
+2. **screening 90%의 deterministic block은 exact와 일관된다.** local VAF, hold-out, cross-condition 요약은 screening `90%`와 exact `90%`에서 완전히 같았고, 달라진 것은 반복 수를 늘린 null summary뿐이었다.
+
+### 추가 검증 기준 최종 판단
+
+추가 검증까지 포함한 현재 결론은 **`90% 유지`**다. 이유는 다음과 같다.
+
+1. `80%`, `85%`보다 local VAF와 hold-out reconstruction이 확실히 좋다.
+2. `95%`보다 재구성 자체는 약간 낮지만, null 대비 압축 이점은 더 낫거나 최소한 더 해석 가능하다.
+3. exact `90%` run에서도 `circular_shift`와 `time_shuffle` 둘 다 observed > null advantage가 유지된다.
+4. cross-condition의 `nonstep -> step` penalty는 `90%`만의 문제라기보다 전체 threshold 구간에서 공통으로 남는 비대칭이다.
+
+따라서 이번 validation layer가 broad sweep 결론을 뒤집지는 않았다. 오히려 **90%는 "80/85보다 충분히 엄격하고, 95%처럼 rank burden을 더 올리지 않으면서도, null 대비 구조성과 hold-out reconstruction을 함께 방어하는 cutoff"**라는 해석을 더 단단하게 만들어 줬다.

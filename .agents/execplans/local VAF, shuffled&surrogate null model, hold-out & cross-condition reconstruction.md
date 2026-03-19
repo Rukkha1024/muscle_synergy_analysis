@@ -57,7 +57,7 @@ source-trial split local VAF는 여전히 필요하다. 이유는 concatenated s
 ## Progress / 진행상황
 
 - [x] 범위 확정: `local VAF`, `shuffled/surrogate null`, `hold-out reconstruction`, `cross-condition reconstruction`
-- [x] threshold 비교값 확정: `0.89`, `0.90`, `0.91`
+- [x] threshold 비교값 확정: `0.80`, `0.85`, `0.90`, `0.95`
 - [x] concatenated local VAF 정의 수정:
   - 1차 요약 = subject-muscle channel
   - 2차 보조 진단 = source trial split local VAF
@@ -66,10 +66,10 @@ source-trial split local VAF는 여전히 필요하다. 이유는 concatenated s
 - [x] `analysis/vaf_threshold_sensitivity/validation_helpers.py` 추가
 - [x] `analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py` 추가
 - [x] `--dry-run` 검증
-- [x] smoke run 수행 (`0.89`, `0.90`, `0.91`, `null_repeats=1`)
-- [ ] screening run 수행 (`0.89`, `0.90`, `0.91`)
-- [ ] exact run 수행 (`0.90`, null repeat 증가)
-- [x] `report.md`에 구현 상태와 smoke run 결과 반영
+- [x] smoke run 수행 (`null_repeats=1`)
+- [x] screening run 수행 (`0.80`, `0.85`, `0.90`, `0.95`, `null_repeats=100`)
+- [x] exact run 수행 (`0.90`, `circular_shift + time_shuffle`, `null_repeats=500`)
+- [x] `report.md`에 실제 screening / exact 결과 반영
 - [x] checksum / reproducibility 확인 (smoke run artifact)
 
 ---
@@ -101,6 +101,11 @@ source-trial split local VAF의 최소값은 큰 음수까지 내려갔다.
 `null_repeats=1` smoke run은 코드 경로와 artifact 구조를 확인하는 데는 충분했지만,  
 `90% 유지` 같은 최종 결론을 쓰기에는 반복 수가 너무 적다.  
 따라서 screening / exact run은 그대로 남겨 둔다.
+
+### 7. 이번 workload에서는 CUDA보다 CPU fallback이 더 빨랐다
+같은 스크립트를 `null_repeats=1`로 benchmark했을 때,  
+`python3` CPU fallback은 `19.79초`였고 `conda run -n cuda` 경로는 `170.43초`가 지나도 끝나지 않았다.  
+즉, 이 추가 검증은 작은 NMF fit를 아주 많이 반복하기 때문에 GPU 오버헤드가 더 크게 작용했다.
 
 ---
 
@@ -179,18 +184,20 @@ cross-muscle synchrony를 깨뜨릴 수 있어 해석이 더 좋다.
 ---
 
 ### Decision 7
-**이번 턴의 실데이터 검증은 smoke run까지만 수행한다.**
-
-구체적으로:
-
-- thresholds = `0.89`, `0.90`, `0.91`
-- primary null = `circular_shift`
-- `null_repeats = 1`
-- out-dir = `analysis/vaf_threshold_sensitivity/artifacts/validity_smoke_89_91`
+**실제 threshold 비교는 `0.80`, `0.85`, `0.90`, `0.95`로 수행한다.**
 
 **이유**  
-구현 검증과 artifact contract 확인은 end-to-end smoke run으로 충분했다.  
-반면 screening / exact run은 계산량이 더 크고, 결과 해석도 별도 검토가 필요하므로 다음 단계로 남겨 둔다.
+사용자가 `0.90`을 `0.95`, `0.85`처럼 `0.05` 단위 기준과 비교하는 편이 더 적절하다고 지정했다.  
+따라서 추가 검증의 screening 기준은 `89 / 90 / 91`이 아니라 `80 / 85 / 90 / 95`로 확정했다.
+
+---
+
+### Decision 8
+**실제 screening / exact run은 `python3` CPU fallback으로 수행한다.**
+
+**이유**  
+이번 workload에서는 Torch/TorchNMF CUDA 경로보다 CPU fallback이 더 빨랐다.  
+따라서 "Torch를 썼는가?"보다 "어떤 경로가 실제로 더 빠르고 안정적인가?"가 더 중요했고, benchmark 결과에 따라 CPU를 선택했다.
 
 ---
 
@@ -199,7 +206,7 @@ cross-muscle synchrony를 깨뜨릴 수 있어 해석이 더 좋다.
 이 작업이 성공적으로 끝난 상태는 다음과 같다.
 
 1. `analysis/vaf_threshold_sensitivity/` 내부에서 새 validation 스크립트가 실행된다.
-2. `0.89`, `0.90`, `0.91` 각각에 대해
+2. `0.80`, `0.85`, `0.90`, `0.95` 각각에 대해
    - local VAF
    - null model
    - hold-out
@@ -216,8 +223,9 @@ cross-muscle synchrony를 깨뜨릴 수 있어 해석이 더 좋다.
 - 구현 완료
 - dry-run 완료
 - smoke run 완료
-- screening / exact run은 아직 미완료
-- 따라서 현재 결론 상태는 **결론 유예**다.
+- screening run 완료
+- exact 90% run 완료
+- 따라서 현재 결론 상태는 **90% 유지**다.
 
 ---
 
@@ -238,7 +246,7 @@ artifact는 기존 `artifacts/` 하위에 추가한다.
 
 예시:
 - `analysis/vaf_threshold_sensitivity/artifacts/default_run/`
-- `analysis/vaf_threshold_sensitivity/artifacts/validity_screening_89_91/`
+- `analysis/vaf_threshold_sensitivity/artifacts/validity_screening_80_95/`
 - `analysis/vaf_threshold_sensitivity/artifacts/validity_exact_090/`
 
 즉, 기존 broad sweep artifact는 그대로 두고,  
