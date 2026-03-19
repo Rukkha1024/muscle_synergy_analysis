@@ -134,3 +134,96 @@ conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/
 | `artifacts/exact_89_91/` | 89~91% 주변 정밀 rerun 결과 저장 폴더 (선택) | 정밀 비교가 필요할 때 |
 
 각 `summary.json`에는 `run_metadata`가 포함되어 있습니다. 여기에는 clustering restart override 사용 여부와 base/effective 설정값이 기록되어 있어, 어떤 설정으로 실행했는지 추적할 수 있습니다.
+
+---
+
+## 추가 검증 실행 방법
+
+기존 broad sweep만으로는 "`90%`가 정말 방어 가능한 cutoff인가?"라는 질문에 충분히 답하기 어렵습니다. 그래서 같은 폴더 안에 **추가 검증 전용 entry script**를 새로 두었습니다.
+
+이 추가 검증은 다음 네 가지를 함께 확인합니다.
+
+- local VAF
+- shuffled / surrogate null model
+- hold-out reconstruction
+- cross-condition reconstruction
+
+### 1단계: 추가 검증 dry-run
+
+이 command는 데이터를 다시 읽어 와서 trial selection과 hold-out eligible count를 확인합니다. 실제 null 반복이나 hold-out reconstruction은 실행하지 않으므로, "실행 준비가 됐는지" 빠르게 점검할 때 사용합니다.
+
+```bash
+conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py \
+  --config configs/global_config.yaml \
+  --validation-config analysis/vaf_threshold_sensitivity/config_validation.yaml \
+  --dry-run
+```
+
+### 2단계: screening run
+
+기본 screening 설정은 `0.89`, `0.90`, `0.91`을 비교하고 primary null로 `circular_shift`를 사용합니다. `config_validation.yaml`의 `null_repeats_screening` 값을 기준으로 반복 수를 설정합니다.
+
+```bash
+conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py \
+  --config configs/global_config.yaml \
+  --validation-config analysis/vaf_threshold_sensitivity/config_validation.yaml \
+  --thresholds 0.89 0.90 0.91 \
+  --null-method circular_shift \
+  --null-repeats 100 \
+  --out-dir analysis/vaf_threshold_sensitivity/artifacts/validity_screening_89_91
+```
+
+### 3단계: exact 90% run
+
+정확한 90% 검증에서는 null 반복 수를 늘리고 secondary surrogate(`time_shuffle`)까지 함께 봅니다. 이 run은 screening보다 훨씬 오래 걸리지만, 최종 해석에는 이쪽이 더 중요합니다.
+
+```bash
+conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py \
+  --config configs/global_config.yaml \
+  --validation-config analysis/vaf_threshold_sensitivity/config_validation.yaml \
+  --thresholds 0.90 \
+  --null-method circular_shift time_shuffle \
+  --null-repeats 500 \
+  --out-dir analysis/vaf_threshold_sensitivity/artifacts/validity_exact_090
+```
+
+### 선택: smoke run
+
+구현 직후에는 end-to-end 경로가 정상 동작하는지만 먼저 확인하는 경우가 있습니다. 그럴 때는 `null_repeats=1` 같은 아주 작은 값으로 smoke run을 수행할 수 있습니다.
+
+```bash
+conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py \
+  --config configs/global_config.yaml \
+  --validation-config analysis/vaf_threshold_sensitivity/config_validation.yaml \
+  --thresholds 0.89 0.90 0.91 \
+  --null-repeats 1 \
+  --out-dir analysis/vaf_threshold_sensitivity/artifacts/validity_smoke_89_91
+```
+
+이 smoke run은 **구현 검증용**입니다. 논문용 결론을 내릴 때는 screening / exact run을 다시 수행해야 합니다.
+
+---
+
+## 추가 검증 산출물
+
+| 파일 | 설명 | 언제 확인하나 |
+|------|------|--------------|
+| `config_validation.yaml` | 추가 검증 파라미터 source of truth | threshold, null, seed를 바꾸고 싶을 때 |
+| `analyze_vaf_threshold_validity.py` | 추가 검증 entry script | local/null/hold-out/cross-condition을 재실행할 때 |
+| `artifacts/validity_screening_89_91/summary.json` | screening run 전체 요약 | 89/90/91 전체 비교를 볼 때 |
+| `artifacts/validity_screening_89_91/by_threshold/vaf_90/summary.json` | 특정 threshold 상세 요약 | 90%만 깊이 볼 때 |
+| `artifacts/validity_exact_090/summary.json` | exact 90% 정밀 검증 | 최종 해석을 쓸 때 |
+| `artifacts/validity_smoke_89_91/summary.json` | 구현 smoke run 요약 | 코드가 end-to-end로 도는지 확인할 때 |
+| `artifacts/*/checksums.md5` | 해당 run 산출물의 MD5 체크섬 | 재현성 확인이 필요할 때 |
+
+추가 검증 `summary.json`에는 반드시 아래 블록이 들어갑니다.
+
+- `local_vaf`
+- `null_model`
+- `holdout`
+- `cross_condition`
+
+특히 concatenated local VAF는 한 층으로 끝내지 않고 아래 두 층을 모두 저장합니다.
+
+- `subject_muscle_channel_summary`
+- `source_trial_split_summary`

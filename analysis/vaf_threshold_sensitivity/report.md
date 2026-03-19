@@ -264,3 +264,52 @@ conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/
 
 - `analysis/vaf_threshold_sensitivity/artifacts/default_run/summary.json`
 - `analysis/vaf_threshold_sensitivity/artifacts/default_run/checksums.md5`
+
+---
+
+<!-- AUTO_APPEND: validity-implementation-2026-03-19 -->
+## 추가 검증 구현 상태
+
+이번 턴에서는 broad sweep 해석을 바꾸지 않고, 그 위에 **local VAF + null model + hold-out + cross-condition** 검증 레이어를 실행할 수 있는 새 스크립트를 구현했다.
+
+구현 검증은 아래 smoke run으로 수행했다.
+
+```bash
+python3 analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py \
+  --config configs/global_config.yaml \
+  --validation-config analysis/vaf_threshold_sensitivity/config_validation.yaml \
+  --thresholds 0.89 0.90 0.91 \
+  --null-repeats 1 \
+  --out-dir analysis/vaf_threshold_sensitivity/artifacts/validity_smoke_89_91
+```
+
+이 run은 **end-to-end smoke run**이다. 즉, 코드 경로와 artifact 생성이 정상인지 확인하는 용도이며, 최종 논문용 결론을 대신하지는 않는다. 최종 해석은 `null_repeats=100` screening run과 `null_repeats=500` exact 90% run을 다시 돌린 뒤 작성해야 한다.
+
+### smoke run에서 확인한 점
+
+1. `summary.json`, `by_threshold/vaf_89/summary.json`, `by_threshold/vaf_90/summary.json`, `by_threshold/vaf_91/summary.json`, `checksums.md5`가 모두 생성되었다.
+2. concatenated local VAF는 계획대로 두 층으로 저장되었다.
+   - `subject_muscle_channel_summary`
+   - `source_trial_split_summary`
+3. `null_model`, `holdout`, `cross_condition` 블록이 모두 채워졌다.
+
+### smoke run의 빠른 관찰
+
+- **local VAF**: `89% -> 90% -> 91%`로 갈수록 trialwise와 concatenated primary local VAF는 전반적으로 개선됐다. 예를 들어 trialwise `muscle_pass_rate_75`는 `0.794 -> 0.8235 -> 0.842`, concatenated primary는 `0.775 -> 0.7972 -> 0.8361`로 상승했다.
+- **source-trial split local VAF**: secondary diagnostic이 실제로 필요하다는 점이 확인됐다. concatenated primary는 양호해 보여도 source-trial split에서는 최소 local VAF가 크게 음수인 trial이 나타났다(`89%`: `-6.3554`, `91%`: `-7.3260`).
+- **null model**: smoke run에서도 observed가 null보다 더 압축적이라는 신호는 유지됐다. 예를 들어 concatenated `compression_advantage_median`은 `89%`에서 `2.5`, `90%`와 `91%`에서 `2.0`이었다.
+- **hold-out reconstruction**: within-condition hold-out 성능은 threshold가 올라갈수록 개선됐다. `within_test_global_vaf_mean`은 `0.8452 -> 0.8541 -> 0.8644`, `within_test_local_pass_rate_75_mean`은 `0.6083 -> 0.6320 -> 0.6595`였다.
+- **cross-condition reconstruction**: `step -> nonstep`은 within 대비 거의 보존됐지만, `nonstep -> step`은 세 threshold 모두에서 약 `-0.05` 수준의 penalty가 유지됐다.
+
+### 현재 해석
+
+이 smoke run만 놓고도 "`90%`가 null보다 약하고 hold-out에서 무너진다"는 신호는 보이지 않았다. 다만 이것만으로 "`90% 유지`"를 최종 결론으로 확정하면 안 된다. 이유는 다음과 같다.
+
+- null 반복 수가 `1`이라 통계적으로 너무 얕다.
+- secondary surrogate(`time_shuffle`)를 아직 넣지 않았다.
+- source-trial split local VAF의 극단값을 안정적으로 해석하려면 screening / exact run이 더 필요하다.
+
+따라서 현재 상태의 가장 정확한 문장은 다음과 같다.
+
+> 구현은 완료됐고, smoke run에서는 `89 / 90 / 91` 비교와 artifact 생성이 정상 동작했다.  
+> 최종 결론은 screening / exact run을 다시 수행한 뒤 `90% 유지 / 90% 약화 / 결론 유예` 중 하나로 정리해야 한다.
