@@ -523,7 +523,6 @@ def _overall_mode_summary_row(result: ThresholdModeResult, max_components_to_try
     duplicate_trial_count_by_k = {
         int(key): int(value) for key, value in (cluster_result.get("duplicate_trial_count_by_k") or {}).items()
     }
-    ceiling_hit_count = sum(1 for value in component_counts if value >= max_components_to_try)
     return {
         "mode": result.mode,
         "threshold": result.threshold,
@@ -536,8 +535,6 @@ def _overall_mode_summary_row(result: ThresholdModeResult, max_components_to_try
         "component_min": min(component_counts),
         "component_max": max(component_counts),
         "max_components_to_try": int(max_components_to_try),
-        "component_ceiling_hit_count": int(ceiling_hit_count),
-        "component_ceiling_hit_rate": round(ceiling_hit_count / len(component_counts), 4),
         "vaf_mean": round(sum(vaf_values) / len(vaf_values), 6),
         "vaf_min": round(min(vaf_values), 6),
         "vaf_max": round(max(vaf_values), 6),
@@ -1057,11 +1054,6 @@ def _build_report_payload(
                     row[f"{step_class}_component_min"],
                     row[f"{step_class}_component_max"],
                 )
-                row[f"{step_class}_ceiling_hit_count"] = int(sum(1 for value in component_values if value >= max_components_to_try))
-                row[f"{step_class}_ceiling_hit_rate"] = round(
-                    row[f"{step_class}_ceiling_hit_count"] / len(component_values),
-                    4,
-                )
             threshold_component_rows.append(row)
 
     transition_rows: list[dict[str, Any]] = []
@@ -1092,18 +1084,6 @@ def _build_report_payload(
                     "component_mean_delta": round(component_delta, 4),
                     "vaf_mean_delta": round(vaf_delta, 6),
                     "vaf_gain_per_component": _round_or_none(_safe_divide(vaf_delta, component_delta), 6),
-                    "component_ceiling_hit_rate_delta": round(
-                        right_overall["component_ceiling_hit_rate"] - left_overall["component_ceiling_hit_rate"],
-                        4,
-                    ),
-                    "step_ceiling_hit_rate_delta": round(
-                        right_component["step_ceiling_hit_rate"] - left_component["step_ceiling_hit_rate"],
-                        4,
-                    ),
-                    "nonstep_ceiling_hit_rate_delta": round(
-                        right_component["nonstep_ceiling_hit_rate"] - left_component["nonstep_ceiling_hit_rate"],
-                        4,
-                    ),
                     "k_selected_delta": int(right_overall["k_selected"] - left_overall["k_selected"]),
                     "k_selected_minus_gap_raw_delta": int(
                         right_overall["k_selected_minus_gap_raw"] - left_overall["k_selected_minus_gap_raw"]
@@ -1272,11 +1252,9 @@ def _print_payload_summary(payload: dict[str, Any]) -> None:
                 "step_subject_count",
                 "step_component_mean_sd",
                 "step_component_range",
-                "step_ceiling_hit_rate",
                 "nonstep_subject_count",
                 "nonstep_component_mean_sd",
                 "nonstep_component_range",
-                "nonstep_ceiling_hit_rate",
             ],
         )
     )
