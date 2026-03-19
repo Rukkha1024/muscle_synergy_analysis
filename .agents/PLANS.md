@@ -12,6 +12,12 @@ When discussing an executable specification (ExecPlan), record decisions in a lo
 
 When researching a design with challenging requirements or significant unknowns, use milestones to implement proof of concepts, "toy implementations", etc., that allow validating whether the user's proposal is feasible. Read the source code of libraries by finding or acquiring them, research deeply, and include prototypes to guide a fuller implementation.
 
+## ExecPlan Implementation Review Gate
+
+When an ExecPlan is in the implementation phase and code files were modified, run three parallel review agents (`execplan_review_a`=gpt-5.4/high, `execplan_review_b`=gpt-5.3-codex/xhigh, `execplan_review_c`=gpt-5.3-codex-spark/xhigh) checking correctness, regressions, security, and missing tests with explicit pass/fail.
+Define them as custom subagents in `~/.codex/agents/*.toml`; if custom agent_type is unsupported, fall back to reviewer/default base types with pinned model and reasoning effort.
+If any reviewer fails, fix and rerun all three; the gate is satisfied only when all three pass.
+
 ## Requirements
 
 NON-NEGOTIABLE REQUIREMENTS:

@@ -16,3 +16,5 @@ tests/fixtures/emg_fixture.csv
 tests/fixtures/emg_fixture.parquet
 tests/fixtures/perturb_inform_fixture.xlsm
 tests/reference_outputs/reference_baseline/
+
+archive/
