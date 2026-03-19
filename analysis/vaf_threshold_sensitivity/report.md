@@ -1,83 +1,132 @@
-﻿# VAF Threshold Sensitivity
+# VAF 기준값 민감도 분석
 
-## Research Question
+## 한 줄 요약
 
-**"VAF 기준값을 85%부터 95%까지 1% 단위로 바꾸면, subject와 step/nonstep 기준의 NMF 시너지 수와 pooled k-means의 K는 어떻게 달라지며, 그중 `90%`를 cutoff로 방어할 수 있는가?"**
+VAF 기준값을 85%부터 95%까지 1% 단위로 바꿔 본 결과, **90%는 ceiling-hit이 본격적으로 시작되기 직전의 마지막 안전한 기준**이었습니다. 89%는 더 가볍지만 다소 느슨하고, 91%부터는 trialwise에서 ceiling-hit이 처음 발생하고 concatenated에서 shared structure가 처음으로 깨지기 시작합니다. 따라서 90%는 "엄격함을 한 단계 더 올리되, 비용이 동시에 커지기 직전에서 멈춘 기준"으로 방어할 수 있습니다.
 
-이번 분석은 EMG synergy main pipeline의 trial selection과 pooled clustering 규칙을 재사용하고, NMF는 같은 low-level rank fitting / VAF 계산 규칙을 캐시 기반으로 재조합한 민감도 점검이다. 결과는 `trialwise`와 `concatenated` 두 mode 모두에 대해 비교한다.
+---
 
-## Data Summary
+## 배경: 이 분석이 필요한 이유
 
-- Selected trials: `125`개
-- Subject 수: `24`
-- Step trials: `53`
-- Nonstep trials: `72`
-- Data source: `configs/global_config.yaml`의 `input.emg_parquet_path`
-- Trial classification: `configs/global_config.yaml`의 `input.event_xlsm_path`
-- Analysis modes: `trialwise`, `concatenated`
+NMF 시너지 분석에서 VAF 기준값은 "시너지 몇 개면 충분한가?"를 결정하는 핵심 파라미터입니다.
 
-## Analysis Methodology
+- **기준이 너무 낮으면** (예: 80%): 적은 수의 시너지로도 기준을 통과하므로, 중요한 근육 활동 패턴을 놓칠 수 있습니다.
+- **기준이 너무 높으면** (예: 95%): 시너지 수가 과도하게 늘어나고, 최대 시너지 수(8개)로도 기준을 달성하지 못하는 ceiling-hit이 빈번해집니다. 이렇게 되면 결과의 신뢰도가 떨어집니다.
 
-- **Analysis window**: main pipeline의 event metadata preparation과 `build_trial_records()` slicing 규칙을 그대로 사용
-- **Trial selection**: `analysis_selected_group == True`
-- **NMF selection rule**: 각 분석 단위마다 가능한 모든 rank를 한 번씩 fit하고, 각 threshold에서는 그중 처음 threshold를 만족하는 최소 rank를 선택
-- **Concatenated mode**: `(subject, velocity, step_class)` 단위 super-trial을 구성한 뒤, 각 source trial의 averaged activation profile을 다시 분리해 threshold별 feature row를 만든다.
-- **Clustering rule**: mode별 단일 `pooled_step_nonstep` 공간에서 `cluster_feature_group()`를 호출하고, `gap statistic + zero-duplicate feasibility`로 `K`를 선택
-- **Thresholds compared**: `85%`부터 `95%`까지 `1%` 단위
-- **Broad sweep clustering setting**: `85%`부터 `95%`까지의 전 구간 탐색은 계산 시간을 관리하기 위해 clustering restart 수만 줄여서 rerun했다.
-- **Logic-lock note**: trial selection, NMF rank selection, pooled clustering, gap statistic, zero-duplicate feasibility 규칙은 유지하고, broad sweep에서는 restart 수만 screening 목적에 맞게 축소했다.
-- **Coordinate & sign conventions**:
+현재 메인 파이프라인은 90%를 사용합니다. 이 분석은 "90%가 정말 적절한가?"를 **데이터로 검증**하기 위해, 85~95% 범위를 체계적으로 탐색합니다.
 
-  - Axis & Direction Sign
+> 배경 개념(NMF, VAF, 시너지, pooled clustering, gap statistic 등)에 대한 자세한 설명은 [README.md](README.md)의 **배경지식** 섹션을 참조하세요.
 
-    | Axis | Positive (+) | Negative (-) | 대표 변수 |
-    |------|---------------|---------------|-----------|
-    | AP (X) | `+X = Anterior` | `-X = Posterior` | 해당 없음 |
-    | ML (Y) | `+Y = Left` | `-Y = Right` | 해당 없음 |
-    | Vertical (Z) | `+Z = Up` | `-Z = Down` | 해당 없음 |
+---
 
-  - Signed Metrics Interpretation
+## 연구 질문
 
-    | Metric | (+) meaning | (-) meaning | 판정 기준/참조 |
-    |--------|--------------|--------------|----------------|
-    | 해당 없음 | 해당 없음 | 해당 없음 | 본 분석은 NMF rank와 cluster count만 다룸 |
-    | 해당 없음 | 해당 없음 | 해당 없음 | 본 분석은 좌표 기반 signed metric을 직접 사용하지 않음 |
-    | 해당 없음 | 해당 없음 | 해당 없음 | 본 분석은 좌표 기반 signed metric을 직접 사용하지 않음 |
+이 분석은 다음 세 가지 하위 질문을 다룹니다.
 
-  - Joint/Force/Torque Sign Conventions
+1. **시너지 수 변화**: VAF 기준값을 85~95%로 바꾸면 시너지 수(rank)가 어떻게 달라지는가?
+2. **클러스터 K 변화**: pooled k-means의 K가 기준값에 따라 어떻게 달라지며, 어디서부터 K burden이 급격히 커지는가?
+3. **90% 방어**: 위 결과를 종합했을 때, 90%를 cutoff로 방어할 수 있는가? 89%나 91%가 아닌 이유는 무엇인가?
 
-    | Variable group | (+)/(-) meaning | 추가 규칙 |
-    |----------------|------------------|-----------|
-    | EMG synergy weights | 부호 없음 | NMF 입력은 0 이상 값만 사용 |
-    | Cluster labels | 부호 없음 | cluster id는 식별자이며 방향 의미 없음 |
-    | VAF threshold | 부호 없음 | threshold 상향 시 더 높은 재현율 요구 |
+---
 
-## Results
+## 데이터 요약
 
-`85%`부터 `95%`까지 `1%` 단위 broad sweep을 rerun한 결과, threshold가 올라갈수록 두 mode 모두 평균 시너지 수와 평균 VAF가 단조 증가했다. 아래 표의 숫자는 **screening profile**인 reduced-restart broad sweep 결과를 기준으로 한다. `trialwise`는 평균 시너지 수가 `2.768 → 6.032`, 평균 VAF가 `0.875728 → 0.956781`로 상승했고, `concatenated`는 평균 시너지 수가 `3.4444 → 7.2000`, 평균 VAF가 `0.872686 → 0.950773`으로 상승했다.
+이 분석은 24명의 피험자로부터 수집한 125개 시험(trial)을 대상으로 합니다. 각 시험은 외란(perturbation)에 대한 반응 유형에 따라 **step**(발을 디딘 경우)과 **nonstep**(발을 디디지 않은 경우)으로 분류됩니다.
 
-이 증가 자체만 보면 threshold를 더 높일수록 더 엄격한 재구성 기준을 적용하는 것이므로 당연한 방향이다. 따라서 `90%`를 방어하려면 단순히 mean component count가 늘었다는 사실보다, `90%`가 **ceiling artifact가 시작되기 직전의 마지막 cutoff인지**, 그리고 `90%` 이후가 **일부 지표 개선이 남아 있더라도 ceiling-hit과 clustering burden이 더 먼저 커지기 시작하는 구간인지**를 함께 봐야 한다.
+| 항목 | 값 |
+|------|-----|
+| 피험자 수 | 24 |
+| 선택된 시험 수 | 125 |
+| Step 시험 | 53 |
+| Nonstep 시험 | 72 |
+| 분석 mode | `trialwise`, `concatenated` |
+| 데이터 출처 | `configs/global_config.yaml`의 `input.emg_parquet_path` |
+| 시험 분류 출처 | `configs/global_config.yaml`의 `input.event_xlsm_path` |
 
-### 1. Broad sweep component and burden summary
+**Trialwise**에서는 125개 시험을 각각 독립적으로 분석합니다. **Concatenated**에서는 같은 사람·같은 속도·같은 반응 유형의 시험을 이어 붙여 45개 분석 단위로 줄여서 분석합니다.
+
+---
+
+## 분석 방법
+
+- **Analysis window**: 메인 파이프라인의 event metadata preparation과 `build_trial_records()` slicing 규칙을 그대로 사용했습니다.
+- **Trial selection**: `analysis_selected_group == True`인 시험만 선택했습니다.
+- **NMF selection rule**: 각 분석 단위마다 1~8개 rank를 모두 한 번씩 fit하고, 각 threshold에서 "처음 기준을 만족하는 최소 rank"를 선택했습니다.
+- **Concatenated mode**: `(subject, velocity, step_class)` 단위로 super-trial을 구성한 뒤, 각 source trial의 averaged activation profile을 다시 분리해 threshold별 feature row를 만들었습니다.
+- **Clustering rule**: mode별 단일 `pooled_step_nonstep` 공간에서 `cluster_feature_group()`를 호출하고, `gap statistic + zero-duplicate feasibility`로 K를 선택했습니다.
+- **Thresholds**: `85%`부터 `95%`까지 `1%` 단위 (총 11개).
+- **Broad sweep clustering setting**: 전 구간 탐색은 계산 시간을 관리하기 위해 clustering restart 수를 줄인 screening profile로 수행했습니다 (repeats=100, gap_ref_n=100, gap_ref_restarts=20, uniqueness_candidate_restarts=100).
+
+---
+
+## 결과
+
+`85%`부터 `95%`까지 `1%` 단위 broad sweep을 수행한 결과, threshold가 올라갈수록 두 mode 모두 평균 시너지 수와 평균 VAF가 단조 증가했습니다. `trialwise`는 평균 시너지 수가 `2.768 → 6.032`, 평균 VAF가 `0.875728 → 0.956781`로, `concatenated`는 평균 시너지 수가 `3.4444 → 7.2000`, 평균 VAF가 `0.872686 → 0.950773`으로 상승했습니다.
+
+이 증가 자체는 threshold를 올리면 더 엄격한 재구성을 요구하므로 당연한 방향입니다. 따라서 90%를 방어하려면 단순히 시너지 수 증가가 아니라, **90%가 ceiling-hit이 시작되기 직전의 마지막 cutoff인지**, 그리고 **91% 이후에 burden이 더 빠르게 커지기 시작하는지**를 함께 봐야 합니다.
+
+### 1. Broad sweep: 시너지 수와 burden 요약
+
+> **이 표 읽는 법**
+>
+> | 컬럼 | 의미 | 예시 |
+> |------|------|------|
+> | Mode | 분석 방식. `trialwise`(시험별 독립 분석) 또는 `concatenated`(이어붙인 분석) | `trialwise` |
+> | VAF | 이 행에서 사용한 VAF 기준값 | `90%` |
+> | Total components | 해당 기준에서 모든 분석 단위의 시너지 수를 합한 값 | 496 |
+> | Mean components | 분석 단위당 평균 시너지 수 | 3.968 |
+> | Mean VAF | 분석 단위별 실제 달성 VAF의 평균 | 0.916088 |
+> | `k_gap_raw` | gap statistic이 처음 제시한 클러스터 수 K | 14 |
+> | `k_selected` | 중복 시너지를 제거한 뒤 최종 선택된 K | 21 |
+> | `k_selected - k_gap_raw` | 중복 제거를 위해 K를 얼마나 올려야 했는지. 이 값이 클수록 clustering burden이 큼 | 7 |
+> | Ceiling-hit rate | 최대 시너지 수(8개)로도 기준을 달성하지 못한 분석 단위의 비율. 0이면 모두 달성 | 0.0000 |
 
 | Mode | VAF | Total components | Mean components | Mean VAF | `k_gap_raw` | `k_selected` | `k_selected - k_gap_raw` | Ceiling-hit rate |
 |------|-----|------------------|-----------------|----------|-------------|--------------|--------------------------|------------------|
 | `trialwise` | `85%` | 346 | 2.768 | 0.875728 | 11 | 11 | 0 | 0.0000 |
+| `trialwise` | `86%` | 375 | 3.000 | 0.884373 | 13 | 13 | 0 | 0.0000 |
+| `trialwise` | `87%` | 400 | 3.200 | 0.891681 | 13 | 13 | 0 | 0.0000 |
+| `trialwise` | `88%` | 426 | 3.408 | 0.899022 | 13 | 13 | 0 | 0.0000 |
 | `trialwise` | `89%` | 465 | 3.720 | 0.909410 | 15 | 16 | 1 | 0.0000 |
 | `trialwise` | `90%` | 496 | 3.968 | 0.916088 | 14 | 21 | 7 | 0.0000 |
 | `trialwise` | `91%` | 541 | 4.328 | 0.925731 | 14 | 21 | 7 | 0.0080 |
 | `trialwise` | `92%` | 580 | 4.640 | 0.933098 | 16 | 27 | 11 | 0.0080 |
+| `trialwise` | `93%` | 632 | 5.056 | 0.941858 | 17 | 27 | 10 | 0.0160 |
+| `trialwise` | `94%` | 690 | 5.520 | 0.949467 | 17 | 37 | 20 | 0.0960 |
 | `trialwise` | `95%` | 754 | 6.032 | 0.956781 | 17 | 54 | 37 | 0.1600 |
 | `concatenated` | `85%` | 155 | 3.4444 | 0.872686 | 9 | 11 | 2 | 0.0000 |
+| `concatenated` | `86%` | 164 | 3.6444 | 0.878863 | 9 | 11 | 2 | 0.0000 |
+| `concatenated` | `87%` | 176 | 3.9111 | 0.886427 | 9 | 10 | 1 | 0.0000 |
+| `concatenated` | `88%` | 191 | 4.2444 | 0.894882 | 11 | 13 | 2 | 0.0000 |
 | `concatenated` | `89%` | 207 | 4.6000 | 0.903979 | 12 | 13 | 1 | 0.0000 |
 | `concatenated` | `90%` | 222 | 4.9333 | 0.912506 | 13 | 14 | 1 | 0.0222 |
 | `concatenated` | `91%` | 242 | 5.3778 | 0.923427 | 15 | 16 | 1 | 0.0444 |
 | `concatenated` | `92%` | 260 | 5.7778 | 0.929632 | 14 | 21 | 7 | 0.0667 |
+| `concatenated` | `93%` | 285 | 6.3333 | 0.939028 | 13 | 25 | 12 | 0.1556 |
+| `concatenated` | `94%` | 306 | 6.8000 | 0.945816 | 15 | 24 | 9 | 0.3778 |
 | `concatenated` | `95%` | 324 | 7.2000 | 0.950773 | 15 | 29 | 14 | 0.5778 |
 
-위 표에서 가장 중요한 패턴은 `90%`가 `trialwise`에서는 **ceiling-hit rate = 0**인 마지막 threshold이고, `concatenated`에서는 ceiling-hit이 아주 작게 시작되더라도(`1/45 = 0.0222`) 아직 `shared_cluster_rate = shared_member_rate = 1.0`을 유지하는 practical neighborhood의 끝점이라는 점이다. `91%`로 올리면 `trialwise`는 ceiling-hit이 처음 발생하고(`1/125 = 0.0080`), `concatenated`는 ceiling-hit이 `0.0444`로 커지면서 shared structure가 처음으로 완전성에서 이탈한다(`shared_cluster_rate = 0.9375`, `shared_member_rate = 0.9876`). 이후 `95%`에서는 `trialwise 20/125`, `concatenated 26/45`가 상한(`max_components_to_try = 8`)에 도달했다.
+이 표에서 가장 중요한 패턴은 다음과 같습니다.
 
-### 2. Adjacent-threshold diagnostic around 90%
+- **Trialwise 90%는 ceiling-hit rate = 0인 마지막 threshold입니다.** 쉽게 말하면, 125개 시험 모두 8개 이내 시너지로 90% VAF를 달성했다는 뜻입니다. 91%에서는 ceiling-hit이 처음 발생합니다(1/125 = 0.0080).
+- **Concatenated 90%는 ceiling-hit이 아주 작게 시작되지만** (1/45 = 0.0222), 아래 표 3에서 보듯이 shared structure는 아직 완전합니다. 91%로 올리면 ceiling-hit이 0.0444로 커지고, shared structure도 처음으로 깨집니다.
+- **95%는 방어가 어렵습니다.** Trialwise 20/125, concatenated 26/45가 상한(max_components_to_try = 8)에 도달했습니다.
+
+### 2. 인접 threshold 진단: 90% 전후 비교
+
+> **이 표 읽는 법**
+>
+> | 컬럼 | 의미 |
+> |------|------|
+> | Mode | 분석 방식 |
+> | Transition | 어디서 어디로 threshold를 올렸는지 |
+> | Mean component delta | 평균 시너지 수가 얼마나 늘었는지 |
+> | Mean VAF delta | 평균 VAF가 얼마나 올랐는지 |
+> | VAF gain per component | 시너지 1개를 추가할 때 VAF가 얼마나 올라가는지. 이 값이 높을수록 효율적 |
+> | `k_selected` delta | 최종 K가 얼마나 변했는지 |
+> | Ceiling-hit delta | ceiling-hit rate가 얼마나 변했는지. 양수면 ceiling-hit이 늘어난 것 |
+> | Duplicate-at-gap delta | gap statistic K에서 발견된 중복 시너지 수 변화 |
+> | Pooled cosine delta | 클러스터 내부 코사인 유사도 평균의 변화. 양수면 클러스터가 더 응집됨 |
 
 | Mode | Transition | Mean component delta | Mean VAF delta | VAF gain per component | `k_selected` delta | Ceiling-hit delta | Duplicate-at-gap delta | Pooled cosine delta |
 |------|------------|----------------------|----------------|------------------------|--------------------|-------------------|------------------------|---------------------|
@@ -88,9 +137,27 @@
 | `concatenated` | `90% -> 91%` | 0.4445 | 0.010921 | 0.024569 | 2 | 0.0222 | -1 | 0.0092 |
 | `concatenated` | `91% -> 92%` | 0.4000 | 0.006205 | 0.015513 | 5 | 0.0223 | 4 | 0.0131 |
 
-`89% -> 90%`와 `90% -> 91%`의 VAF gain per component는 비슷한 수준이지만, `91%`부터는 burden escalation이 더 분명해진다. `trialwise`에서는 `90% -> 91%`에서 ceiling-hit이 처음 생기고 duplicate burden이 `+3` 늘어난다. `concatenated`에서는 `90% -> 91%`의 pooled cosine mean 자체는 약간 좋아지지만, shared structure가 처음으로 완전성에서 벗어나고 ceiling-hit도 `0.0222 -> 0.0444`로 늘어난다. 즉 `91%`는 설명력 증가가 완전히 없지는 않지만, `90%`보다 분명히 더 비싼 영역으로 진입하는 시작점이다.
+**89% → 90%와 90% → 91% 비교:**
 
-### 3. Pooled-structure validity summary
+- **VAF gain per component**는 비슷한 수준입니다(trialwise에서 0.026927 vs 0.026786). 즉 시너지를 추가했을 때 얻는 VAF 개선 효율은 아직 비슷합니다.
+- 그러나 **91%부터는 비용이 분명히 커집니다.** Trialwise에서는 `90% → 91%`에서 ceiling-hit이 처음 생기고(+0.0080), gap K에서의 중복 burden이 +3 늘어납니다. Concatenated에서는 `90% → 91%`의 pooled cosine 자체는 약간 좋아지지만, shared structure가 처음으로 깨지고(아래 표 3 참조) ceiling-hit도 0.0222 → 0.0444로 늘어납니다.
+- **91% → 92%**에서는 VAF gain per component가 눈에 띄게 떨어집니다(trialwise 0.023612, concatenated 0.015513). 효율이 확 낮아지는 것입니다.
+
+쉽게 말하면, 91%는 설명력 증가가 완전히 없지는 않지만 90%보다 분명히 더 비싼 영역으로 진입하는 시작점입니다.
+
+### 3. Pooled structure 유효성 요약
+
+> **이 표 읽는 법**
+>
+> | 컬럼 | 의미 |
+> |------|------|
+> | Mode | 분석 방식 |
+> | VAF | VAF 기준값 |
+> | Shared cluster rate | step 시너지와 nonstep 시너지가 모두 포함된 클러스터의 비율. 1.0이면 모든 클러스터가 양쪽을 공유 |
+> | Shared member rate | 전체 시너지 중 shared cluster에 속한 비율. 1.0이면 모든 시너지가 shared cluster에 소속 |
+> | Pooled member cosine mean | 클러스터 내부에서 시너지 벡터 간 코사인 유사도의 평균. 높을수록 같은 클러스터의 시너지가 서로 비슷 |
+> | Shared subcentroid cosine mean | shared cluster에서 step과 nonstep 각각의 중심점(subcentroid) 간 코사인 유사도. 높을수록 step과 nonstep의 시너지가 서로 비슷 |
+> | Tiny cluster rate | 매우 작은 클러스터(3개 이하 멤버)의 비율 |
 
 | Mode | VAF | Shared cluster rate | Shared member rate | Pooled member cosine mean | Shared subcentroid cosine mean | Tiny cluster rate |
 |------|-----|---------------------|--------------------|---------------------------|--------------------------------|-------------------|
@@ -105,33 +172,76 @@
 | `concatenated` | `92%` | 1.0000 | 1.0000 | 0.9033 | 0.9480 | 0.0000 |
 | `concatenated` | `95%` | 1.0000 | 1.0000 | 0.9145 | 0.9452 | 0.0000 |
 
-shared cluster rate와 shared member rate는 `trialwise`에서는 계속 포화되어 있었지만, `concatenated`에서는 `91%`에서 처음으로 `1.0` 아래로 떨어졌다. 반면 `89%`와 `90%`는 둘 다 `shared_cluster_rate = shared_member_rate = 1.0`을 유지했다. 따라서 이번 run에서는 `pooled member cosine mean` 하나만으로 cutoff를 고르기보다, `trialwise` ceiling-hit onset, `concatenated` shared-structure retention, `k_selected - k_gap_raw` escalation을 함께 보는 쪽이 더 유용했다.
+**핵심 발견:**
 
-### 4. What supports `90%`
+- **Trialwise**에서는 shared cluster rate와 shared member rate가 85~95% 전 구간에서 계속 1.0(포화)입니다.
+- **Concatenated 91%에서 shared structure가 처음으로 깨집니다.** Shared cluster rate가 1.0에서 0.9375로, shared member rate가 1.0에서 0.9876으로 떨어졌습니다. 이는 16개 클러스터 중 1개가 step 또는 nonstep 전용 클러스터가 되었다는 뜻입니다.
+- 89%와 90%는 둘 다 `shared_cluster_rate = shared_member_rate = 1.0`을 유지했습니다.
 
-현재 broad sweep 결과만 놓고 보면, `90%`를 지지하는 가장 강한 근거는 **"trialwise에서는 마지막 zero-ceiling threshold이고, concatenated에서는 shared structure가 아직 완전한 상태로 남아 있는 가장 높은 practical compromise"**라는 점이다. `89%`는 더 parsimonious하지만 덜 엄격하고, `91%`는 mean VAF를 더 올리더라도 `trialwise` ceiling-hit onset과 `concatenated` shared-structure erosion이 함께 시작된다.
+따라서 이번 run에서는 pooled member cosine 하나만으로 cutoff를 고르기보다, trialwise ceiling-hit onset, concatenated shared-structure retention, `k_selected - k_gap_raw` escalation을 함께 보는 쪽이 더 유용했습니다.
 
-특히 `trialwise`에서는 `90% -> 91%`에서 `k_selected`가 더 좋아지지 않는데도 ceiling-hit이 처음 생기고 duplicate burden이 `+3` 늘어난다. `concatenated`에서는 `90%`가 이미 아주 작은 ceiling-hit을 보이지만(`0.0222`), `shared_cluster_rate = shared_member_rate = 1.0`은 유지한다. 반면 `91%`는 ceiling-hit이 `0.0444`로 커지고 shared structure가 `0.9375 / 0.9876`으로 처음 무너진다. `92%`부터는 `k_selected`가 `16 -> 21`로 다시 크게 올라가므로, `90%`는 `89%`와 `91%` 사이의 현실적인 타협점으로 해석할 수 있다.
+### 4. 핵심 비교: 89% vs 90% vs 91%
 
-## Interpretation
+아래 표는 세 threshold의 핵심 지표를 나란히 비교합니다.
 
-이번 결과는 "`90%`가 최소 burden cutoff"라는 뜻은 아니다. 실제로 burden만 보면 `89%`가 더 가볍다. 그러나 사용자 질문은 **왜 `90%`를 써야 하는가**에 가깝고, 그 질문에 대한 가장 설득력 있는 답은 "`90%`가 과도하게 느슨한 `89%`보다 더 엄격하면서도, `91%`에서 시작되는 trialwise ceiling-hit과 concatenated shared-structure 저하가 아직 본격화되기 전의 cutoff"라는 operational sweet spot 논리다.
+| 지표 | 89% (trialwise / concat) | 90% (trialwise / concat) | 91% (trialwise / concat) |
+|------|--------------------------|--------------------------|--------------------------|
+| Mean components | 3.720 / 4.6000 | 3.968 / 4.9333 | 4.328 / 5.3778 |
+| Ceiling-hit rate | 0.0000 / 0.0000 | 0.0000 / 0.0222 | 0.0080 / 0.0444 |
+| `k_selected` | 16 / 13 | 21 / 14 | 21 / 16 |
+| `k_selected - k_gap_raw` | 1 / 1 | 7 / 1 | 7 / 1 |
+| Shared cluster rate (concat) | 1.0000 | 1.0000 | 0.9375 |
+| Shared member rate (concat) | 1.0000 | 1.0000 | 0.9876 |
 
-또한 `95%`는 broad sweep만으로도 방어하기 어렵다. `trialwise`는 ceiling-hit rate가 `0.1600`, `concatenated`는 `0.5778`까지 올라가서, 높은 재구성 기준이라기보다 `max_components_to_try=8` 상한의 영향을 강하게 받는 구간으로 보인다. `92%` 이상도 이 방향으로 빠르게 이동하므로, 실질적 선택지는 `89%`, `90%`, `91%` 근방으로 좁혀진다.
+- **89%**: 가장 가벼운 설정입니다. 모든 지표가 양호하지만, 기준이 다소 느슨합니다.
+- **90%**: trialwise에서 ceiling-hit이 아직 0이고, concatenated에서 shared structure가 아직 완전합니다(1.0). 단, concatenated ceiling-hit이 아주 작게 시작됩니다(1/45).
+- **91%**: trialwise에서 ceiling-hit이 처음 발생하고(1/125), concatenated에서 shared structure가 처음으로 무너집니다(0.9375 / 0.9876).
 
-현 단계에서 가장 정직한 해석은 다음과 같다. `89%`는 더 가볍지만 다소 느슨하고, `91%`는 더 엄격하지만 `trialwise` ceiling-hit과 `concatenated` 구조 저하가 함께 시작된다. 따라서 `90%`는 "strictness를 한 단계 더 올리되, 두 mode에서 비용 신호가 동시에 더 나빠지기 직전에서 멈춘 cutoff"로 가장 방어하기 쉽다.
+---
 
-### Conclusion
+### 90%를 지지하는 근거
 
-1. `85% -> 95%` broad sweep에서 mean component count와 mean VAF는 두 mode 모두 단조 증가했다.
-2. `90%`는 `trialwise`에서는 ceiling-hit rate가 아직 `0`인 마지막 threshold였고, `concatenated`에서는 shared structure가 여전히 완전한(`shared_cluster_rate = shared_member_rate = 1.0`) 마지막 practical compromise였다.
-3. `91%`는 설명력을 조금 더 올리지만 `trialwise`에서는 ceiling-hit이 시작되고, `concatenated`에서는 shared structure가 처음으로 완전성에서 이탈했다.
-4. `92%` 이상은 `K` burden과 ceiling-hit이 더 빠르게 커졌고, `95%`는 상한 포화의 영향이 명확했다.
-5. 따라서 현재 결과에서 `90%`를 방어하는 가장 강한 문장은 "`90%`는 더 엄격한 reconstruction criterion을 확보하면서도, `91%`에서 시작되는 trialwise ceiling-hit과 concatenated 구조 저하가 동시에 커지기 직전의 cutoff"라는 것이다.
+현재 broad sweep 결과를 놓고 보면, 90%를 지지하는 가장 강한 근거는 세 가지입니다.
 
-## Reproduction
+1. **Trialwise에서 마지막 zero-ceiling threshold입니다.** 90%까지는 125개 시험 모두 8개 이내 시너지로 기준을 달성했습니다. 91%에서는 1개 시험이 처음으로 ceiling-hit을 기록하고, 95%에서는 20개 시험(16%)이 ceiling-hit합니다.
 
-`report.md`의 표와 결론은 아래 **screening profile** broad sweep command를 기준으로 작성했다.
+2. **Concatenated에서 shared structure가 완전한 마지막 practical compromise입니다.** 90%에서는 shared_cluster_rate = shared_member_rate = 1.0을 유지하지만, 91%에서는 처음으로 1.0 아래로 떨어집니다(0.9375 / 0.9876). 이는 step과 nonstep이 공유하지 않는 독립 클러스터가 처음 나타났다는 의미입니다.
+
+3. **비용 신호가 동시에 악화되는 직전 지점입니다.** `90% → 91%` 전환에서 trialwise ceiling-hit onset(+0.0080), concatenated shared-structure erosion(-0.0124), trialwise duplicate burden 증가(+3)가 **함께** 발생합니다. 어느 한 지표만 나빠진 것이 아니라 여러 지표가 동시에 나빠지는 첫 번째 threshold가 91%입니다.
+
+---
+
+## 해석
+
+이번 결과는 "90%가 최소 burden cutoff"라는 뜻은 아닙니다. 실제로 burden만 보면 89%가 더 가볍습니다.
+
+그러나 사용자 질문은 **"왜 90%를 써야 하는가"**에 가깝고, 그 질문에 대한 가장 설득력 있는 답은 다음과 같습니다.
+
+> 90%는 과도하게 느슨한 89%보다 더 엄격하면서도, 91%에서 시작되는 trialwise ceiling-hit과 concatenated shared-structure 저하가 아직 본격화되기 전의 cutoff입니다.
+
+쉽게 말하면, 90%는 **"한 단계 더 높은 기준을 설정하되, 아직 괜찮은 마지막 지점"**입니다.
+
+또한 95%는 broad sweep만으로도 방어하기 어렵습니다. Trialwise는 ceiling-hit rate가 0.1600, concatenated는 0.5778까지 올라가서, "높은 재구성 기준"이라기보다 max_components_to_try = 8 상한의 영향을 강하게 받는 구간입니다. 92% 이상도 이 방향으로 빠르게 이동하므로, 실질적 선택지는 89%, 90%, 91% 근방으로 좁혀집니다.
+
+---
+
+## 결론
+
+1. **단조 증가**: `85% → 95%` broad sweep에서 mean component count와 mean VAF는 두 mode 모두 단조 증가했습니다. (기준이 엄격해지면 시너지가 늘어나는 것은 자연스러운 현상입니다.)
+
+2. **90% = 마지막 안전 지점**: Trialwise에서는 ceiling-hit rate가 아직 0인 마지막 threshold였고, concatenated에서는 shared structure가 여전히 완전한(shared_cluster_rate = shared_member_rate = 1.0) 마지막 practical compromise였습니다.
+
+3. **91% = 비용 시작점**: 설명력을 조금 더 올리지만, trialwise에서는 ceiling-hit이 시작되고 concatenated에서는 shared structure가 처음으로 완전성에서 이탈했습니다.
+
+4. **92% 이상 = 급격한 비용 증가**: K burden과 ceiling-hit이 더 빠르게 커졌고, 95%는 상한 포화의 영향이 명확했습니다.
+
+5. **90% 방어 문장**: "90%는 더 엄격한 reconstruction criterion을 확보하면서도, 91%에서 시작되는 trialwise ceiling-hit과 concatenated 구조 저하가 동시에 커지기 직전의 cutoff"입니다.
+
+---
+
+## 재현 방법
+
+`report.md`의 표와 결론은 아래 **screening profile** broad sweep command를 기준으로 작성했습니다. 먼저 dry-run으로 설정을 확인한 뒤, screening profile로 실행합니다.
 
 ```bash
 conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_sensitivity.py --dry-run
@@ -142,7 +252,7 @@ conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/
   --uniqueness-candidate-restarts 100
 ```
 
-아래 command는 같은 스크립트를 default clustering profile로 rerun하는 방법이며, restart 수가 더 크기 때문에 broad sweep 숫자가 본문 표와 완전히 같지 않을 수 있다.
+아래 command는 같은 스크립트를 default clustering profile로 rerun하는 방법이며, restart 수가 더 크기 때문에 broad sweep 숫자가 본문 표와 완전히 같지 않을 수 있습니다.
 
 ```bash
 conda run --no-capture-output -n cuda python analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_sensitivity.py
