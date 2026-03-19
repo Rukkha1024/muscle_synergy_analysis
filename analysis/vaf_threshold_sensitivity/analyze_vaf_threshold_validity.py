@@ -26,6 +26,7 @@ if str(REPO_ROOT) not in sys.path:
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import yaml
 
 from src.emg_pipeline import (
@@ -1334,11 +1335,83 @@ def _checksum_lines(base_dir: Path, paths: list[Path]) -> list[str]:
     return lines
 
 
-def _write_json(path: Path, payload: dict[str, Any]) -> Path:
+_PARQUET_ROW_THRESHOLD = 50
+
+
+def _normalize_row_values(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert numpy types in row dicts to native Python types for Polars."""
+    cleaned: list[dict[str, Any]] = []
+    for row in rows:
+        new_row: dict[str, Any] = {}
+        for k, v in row.items():
+            if isinstance(v, (np.integer,)):
+                new_row[k] = int(v)
+            elif isinstance(v, (np.floating,)):
+                new_row[k] = float(v) if np.isfinite(v) else None
+            elif isinstance(v, (np.bool_,)):
+                new_row[k] = bool(v)
+            elif isinstance(v, np.ndarray):
+                new_row[k] = v.tolist()
+            elif isinstance(v, Path):
+                new_row[k] = str(v)
+            elif isinstance(v, set):
+                new_row[k] = sorted(v)
+            else:
+                new_row[k] = v
+        cleaned.append(new_row)
+    return cleaned
+
+
+def _extract_rows_to_parquet(
+    payload: dict[str, Any],
+    parquet_dir: Path,
+    prefix: str = "",
+) -> tuple[dict[str, Any], list[Path]]:
+    """Recursively walk *payload* and save large list[dict] as Parquet.
+
+    Returns ``(trimmed_payload, list_of_written_parquet_paths)``.
+    The JSON payload replaces each extracted list with a lightweight stub:
+    ``{"__parquet__": "<filename>", "__rows__": <int>}``.
+    """
+    result: dict[str, Any] = {}
+    parquet_paths: list[Path] = []
+    for key, value in payload.items():
+        path_key = f"{prefix}{key}" if prefix else key
+        if isinstance(value, dict) and not any(k.startswith("__") for k in value):
+            child, child_paths = _extract_rows_to_parquet(value, parquet_dir, f"{path_key}/")
+            result[key] = child
+            parquet_paths.extend(child_paths)
+        elif (
+            isinstance(value, list)
+            and len(value) > _PARQUET_ROW_THRESHOLD
+            and value
+            and isinstance(value[0], dict)
+        ):
+            parquet_name = path_key.replace("/", "__") + ".parquet"
+            parquet_path = parquet_dir / parquet_name
+            parquet_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                df = pl.DataFrame(_normalize_row_values(value))
+                df.write_parquet(parquet_path)
+                result[key] = {"__parquet__": parquet_name, "__rows__": len(value)}
+                parquet_paths.append(parquet_path)
+            except Exception:
+                result[key] = value
+        else:
+            result[key] = value
+    return result, parquet_paths
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> list[Path]:
+    """Write *payload* as JSON, extracting large row lists to Parquet.
+
+    Returns a list of all files written (JSON first, then Parquet files).
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
+    trimmed, parquet_paths = _extract_rows_to_parquet(payload, path.parent)
     with path.open("w", encoding="utf-8-sig") as handle:
-        json.dump(payload, handle, ensure_ascii=False, indent=2, default=_json_default)
-    return path
+        json.dump(trimmed, handle, ensure_ascii=False, indent=2, default=_json_default)
+    return [path, *parquet_paths]
 
 
 def _filter_rows_by_threshold(rows: list[dict[str, Any]], threshold_label: str) -> list[dict[str, Any]]:
@@ -1471,7 +1544,7 @@ def build_validation_payload(
     }
 
 
-def _write_summary(out_dir: Path, payload: dict[str, Any]) -> Path:
+def _write_summary(out_dir: Path, payload: dict[str, Any]) -> list[Path]:
     return _write_json(out_dir / "summary.json", payload)
 
 
@@ -1480,7 +1553,7 @@ def _write_threshold_summaries(out_dir: Path, payload: dict[str, Any]) -> list[P
     for threshold in payload["thresholds"]:
         threshold_payload = _build_threshold_payload(payload, float(threshold))
         threshold_slug = f"vaf_{int(round(float(threshold) * 100)):02d}"
-        written_paths.append(_write_json(out_dir / "by_threshold" / threshold_slug / "summary.json", threshold_payload))
+        written_paths.extend(_write_json(out_dir / "by_threshold" / threshold_slug / "summary.json", threshold_payload))
     return written_paths
 
 
@@ -1669,18 +1742,19 @@ def main() -> None:
         cross_condition=cross_condition,
     )
     out_dir = Path(validation_settings["out_dir"])
-    summary_path = _write_summary(out_dir, payload)
+    summary_paths = _write_summary(out_dir, payload)
     threshold_paths = _write_threshold_summaries(out_dir, payload)
-    checksum_path = _write_checksums(out_dir, [summary_path, *threshold_paths])
+    all_artifact_paths = [*summary_paths, *threshold_paths]
+    checksum_path = _write_checksums(out_dir, all_artifact_paths)
 
     _print_payload_summary(payload)
 
     print("\nArtifacts")
     print("---------")
-    print(f"summary.json: {summary_path}")
-    for threshold_path in threshold_paths:
-        print(f"threshold summary: {threshold_path}")
-    print(f"checksums.md5: {checksum_path}")
+    for p in all_artifact_paths:
+        suffix_label = "parquet" if p.suffix == ".parquet" else "json"
+        print(f"  [{suffix_label}] {p}")
+    print(f"  checksums.md5: {checksum_path}")
 
 
 if __name__ == "__main__":
