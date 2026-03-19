@@ -8,7 +8,7 @@ This document follows `.agents/PLANS.md`. It is written for a novice who only ha
 
 After this change, a user can answer a very specific question without changing the main pipeline: "What K would we get if we ignore the gap statistic and instead choose the first K that has zero duplicate trials?" The analysis runs from a pipeline final parquet file, reconstructs the pooled clustering input offline, and reports the first zero-duplicate K. For the current user question, the expected observable outcome is that the rerun reports `k_selected=13` for the relevant bundle instead of the gap-driven value `15`.
 
-The easiest way to see the behavior is to run one analysis script under `analysis/`, point it at a single final parquet file such as `outputs/final_trialwise.parquet`, and confirm that the script prints a K scan summary, writes a small artifact bundle under its own analysis folder, and states that it did not call the gap-statistic path.
+The easiest way to see the behavior is to run one analysis script under `analysis/`, point it at a single final parquet file such as `outputs/final_concatenated.parquet`, and confirm that the script prints a K scan summary, writes a pipeline-like artifact bundle under its own analysis folder, and states that it did not call the gap-statistic path.
 
 ## Progress
 
@@ -20,7 +20,9 @@ The easiest way to see the behavior is to run one analysis script under `analysi
 - [x] (2026-03-19 01:34Z) Added `tests/test_analysis/test_first_zero_duplicate_k_rerun.py` and verified the synthetic contract path with `2 passed`.
 - [x] (2026-03-19 01:15Z) Ran `--dry-run` against `outputs/final_concatenated.parquet` and confirmed the live bundle metadata `k_gap_raw=15`, `k_selected=15`, `k_min_unique=13`.
 - [x] (2026-03-19 01:16Z) Ran two full reruns against `outputs/final_concatenated.parquet`; both reported `k_selected_first_zero_duplicate=13`.
-- [x] (2026-03-19 01:17Z) Verified reproducibility by matching MD5 for `summary.json`, `k_scan.json`, and `k_duplicate_burden.png` across `default_run` and `recheck_run`.
+- [x] (2026-03-19 04:27Z) Expanded the analysis export so the rerun now writes `final.parquet`, `final_concatenated.parquet`, `concatenated/*.xlsx`, and `concatenated/figures/*.png` inside the analysis workdir.
+- [x] (2026-03-19 04:34Z) Normalized `analysis_methods_manifest.json` to output-dir-relative paths so it becomes reproducible across reruns.
+- [x] (2026-03-19 04:35Z) Verified reproducibility by matching MD5 for `summary.json`, `k_scan.json`, `k_duplicate_burden.png`, `final.parquet`, `final_concatenated.parquet`, `analysis_methods_manifest.json`, and mode figure PNG files across `default_run` and `recheck_run`.
 
 ## Surprises & Discoveries
 
@@ -42,6 +44,12 @@ The easiest way to see the behavior is to run one analysis script under `analysi
 - Observation: Output reproducibility initially failed only because `summary.json` stored an absolute figure path.
   Evidence: The first MD5 comparison showed `k_scan.json` and the figure bytes matched, while `summary.json` differed only at `figure_path`; switching that field to the filename made all three files match.
 
+- Observation: `analysis_methods_manifest.json` also differed across reruns at first, but only because it embedded the output directory name in saved paths.
+  Evidence: A direct diff between `default_run` and `recheck_run` showed only path-string differences for parquet and workbook locations; rewriting those fields relative to the analysis output root made the manifest MD5 match.
+
+- Observation: The `.xlsx` workbooks are content-stable but not byte-stable.
+  Evidence: Inspecting the zipped workbook internals showed that `openpyxl` rewrites `docProps/core.xml` creation and modification timestamps on each save.
+
 ## Decision Log
 
 - Decision: The new work will live in `analysis/first_zero_duplicate_k_rerun/`.
@@ -60,9 +68,13 @@ The easiest way to see the behavior is to run one analysis script under `analysi
   Rationale: The user explicitly rejected adding a menu to the main pipeline.
   Date/Author: 2026-03-19 / Codex
 
+- Decision: The analysis should save not only JSON diagnostics but also pipeline-like parquet/workbook/figure outputs inside the analysis workdir.
+  Rationale: The user clarified that if the no-gap rerun yields `K=13`, they want the result saved in the working folder in the same form factor as pipeline outputs.
+  Date/Author: 2026-03-19 / Codex
+
 ## Outcomes & Retrospective
 
-The plan is now implemented for the requested analysis-only scope. The repository has a self-contained folder `analysis/first_zero_duplicate_k_rerun/` with a runnable script, a README, a report, and reproducible artifacts. When run against `outputs/final_concatenated.parquet`, the analysis reports `k_selected_first_zero_duplicate=13`, while the pipeline metadata still reports the gap-driven value `15`. This directly answers the user's current `13 vs 15` question without changing `main.py` or the production pipeline.
+The plan is now implemented for the requested analysis-only scope. The repository has a self-contained folder `analysis/first_zero_duplicate_k_rerun/` with a runnable script, a README, a report, and reproducible artifacts. When run against `outputs/final_concatenated.parquet`, the analysis reports `k_selected_first_zero_duplicate=13`, while the pipeline metadata still reports the gap-driven value `15`. The rerun also saves that no-gap result back into `analysis/first_zero_duplicate_k_rerun/artifacts/default_run/` as `final.parquet`, `final_concatenated.parquet`, workbooks, and figures. This directly answers the user's current `13 vs 15` question without changing `main.py` or the production pipeline, and it leaves the result in the same general output shape the user already expects.
 
 ## Context and Orientation
 
@@ -85,7 +97,7 @@ The script should accept one pipeline final parquet input path, an output direct
 
 For K selection, the script should not call `compute_gap_statistic`. Instead, it should derive `k_min` from the reconstructed pooled rows, derive `k_max` from the available component count and an explicit CLI or config-backed ceiling, and scan K upward. At each K, it should use the same restart behavior as the production clustering code and record at least these fields: candidate K, whether a zero-duplicate solution exists, duplicate-trial count for the best searched candidate, searched restart count, and objective value of the best zero-duplicate candidate when it exists. The script should stop at the first K with zero duplicate trials and report that as `k_selected_first_zero_duplicate`.
 
-The output must remain analysis-scoped. Write artifacts under `analysis/first_zero_duplicate_k_rerun/artifacts/<run_name>/`. Keep the artifact set small and reproducible: a `summary.json`, a `k_scan.json`, a `checksums.md5`, and optionally one diagnostic figure such as `k_duplicate_burden.png`. Do not write Excel or CSV files. Update `report.md` so it explains the research question, the offline reconstruction method, the exact no-gap selection rule, the observed K scan, and the final answer for the current bundle.
+The output must remain analysis-scoped. Write artifacts under `analysis/first_zero_duplicate_k_rerun/artifacts/<run_name>/`. The artifact set should include both the analysis diagnostics and pipeline-like exports: `summary.json`, `k_scan.json`, `checksums.md5`, `k_duplicate_burden.png`, `final.parquet`, `final_concatenated.parquet`, `concatenated/clustering_audit.xlsx`, `concatenated/results_interpretation.xlsx`, and `concatenated/figures/*.png`. Update `report.md` so it explains the research question, the offline reconstruction method, the exact no-gap selection rule, the observed K scan, and the final answer for the current bundle.
 
 ## Concrete Steps
 

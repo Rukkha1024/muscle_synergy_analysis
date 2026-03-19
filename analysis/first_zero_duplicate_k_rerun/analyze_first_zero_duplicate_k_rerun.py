@@ -13,6 +13,7 @@ import json
 import math
 import shutil
 import sys
+from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -32,62 +33,24 @@ from matplotlib import pyplot as plt
 import numpy as np
 import polars as pl
 
+from src.emg_pipeline.config import load_pipeline_config
+from src.synergy_stats.artifacts import export_results
+from src.synergy_stats.artifacts import _write_mode_figures_from_source
 from src.synergy_stats.clustering import (
     SubjectFeatureResult,
     _search_zero_duplicate_candidate_at_k,
     _stack_weight_vectors,
     _subject_hmax,
 )
-from src.synergy_stats.single_parquet import load_single_parquet_bundle
+from src.synergy_stats.single_parquet import load_single_parquet_bundle, write_single_parquet_bundle
 
 
 DEFAULT_SOURCE_PARQUET = REPO_ROOT / "outputs" / "final_concatenated.parquet"
+DEFAULT_CONFIG = REPO_ROOT / "configs" / "global_config.yaml"
 DEFAULT_OUT_DIR = SCRIPT_DIR / "artifacts" / "default_run"
 DEFAULT_GROUP_ID = "pooled_step_nonstep"
-ID_COLUMNS = {
-    "aggregation_mode",
-    "group_id",
-    "n_components",
-    "status",
-    "subject",
-    "velocity",
-    "trial_num",
-    "trial_id",
-    "component_index",
-    "vaf",
-    "extractor_type",
-    "extractor_backend",
-    "extractor_torch_device",
-    "extractor_torch_dtype",
-    "analysis_unit_id",
-    "source_trial_nums_csv",
-    "analysis_source_trial_count",
-    "analysis_window_onset_column",
-    "analysis_window_offset_column",
-    "analysis_window_start",
-    "analysis_window_end",
-    "analysis_window_start_device",
-    "analysis_window_end_device",
-    "analysis_window_duration_device_frames",
-    "analysis_step_class",
-    "analysis_is_step",
-    "analysis_is_nonstep",
-    "analysis_is_mixed_flag",
-    "analysis_window_source",
-    "analysis_window_is_surrogate",
-    "analysis_state",
-    "analysis_state_norm",
-    "analysis_stance_side",
-    "analysis_dominant_side",
-    "analysis_age_group",
-    "analysis_selected_group",
-    "analysis_selection_rule",
-    "analysis_major_step_side",
-    "analysis_subject_mean_step_onset",
-    "analysis_subject_mean_step_latency",
-    "muscle",
-    "W_value",
-}
+DEFAULT_FIGURE_FORMAT = "png"
+DEFAULT_FIGURE_DPI = 150
 
 
 def parse_args() -> argparse.Namespace:
@@ -98,6 +61,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_SOURCE_PARQUET,
         help="Single final parquet bundle written by the main pipeline.",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_CONFIG,
+        help="Global pipeline config used to mirror workbook/figure export settings.",
     )
     parser.add_argument(
         "--group-id",
@@ -201,6 +170,14 @@ def _write_checksums(paths: list[Path], output_path: Path) -> None:
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
 
 
+def _path_relative_to(base_dir: Path, raw_path: str) -> str:
+    path = Path(raw_path)
+    try:
+        return str(path.resolve().relative_to(base_dir.resolve()))
+    except Exception:
+        return str(path)
+
+
 def _scalar_to_int(value: Any, default: int | None = None) -> int | None:
     if value is None:
         return default
@@ -243,7 +220,7 @@ def _load_source_bundle(source_parquet: Path) -> dict[str, Any]:
     if not source_parquet.exists():
         raise FileNotFoundError(f"Source parquet does not exist: {source_parquet}")
     bundle = load_single_parquet_bundle(source_parquet)
-    required_frames = ("minimal_W", "metadata", "final_summary")
+    required_frames = ("minimal_W", "minimal_H_long", "metadata", "final_summary")
     missing_frames = [frame_key for frame_key in required_frames if bundle.get(frame_key) is None or bundle[frame_key].empty]
     if missing_frames:
         raise ValueError(f"Source parquet is missing required frames: {missing_frames}")
@@ -276,10 +253,26 @@ def _muscle_order(minimal_w_pl: pl.DataFrame) -> list[str]:
     )
 
 
-def _rebuild_feature_rows(minimal_w_frame: Any, group_id: str) -> tuple[list[SubjectFeatureResult], list[str]]:
+def _mode_from_bundle(bundle: dict[str, Any], group_id: str) -> str:
+    summary_pl = pl.from_pandas(bundle["final_summary"])
+    filtered = summary_pl.filter(pl.col("group_id").cast(pl.Utf8) == group_id)
+    if filtered.is_empty():
+        raise ValueError(f"Group `{group_id}` was not found in the final_summary frame.")
+    mode = filtered.get_column("aggregation_mode").cast(pl.Utf8).to_list()[0]
+    return str(mode).strip().lower() or "concatenated"
+
+
+def _rebuild_feature_rows(
+    minimal_w_frame: Any,
+    minimal_h_frame: Any,
+    group_id: str,
+) -> tuple[list[SubjectFeatureResult], list[str]]:
     minimal_w_pl = pl.from_pandas(minimal_w_frame).filter(pl.col("group_id").cast(pl.Utf8) == group_id)
+    minimal_h_pl = pl.from_pandas(minimal_h_frame).filter(pl.col("group_id").cast(pl.Utf8) == group_id)
     if minimal_w_pl.is_empty():
         raise ValueError(f"Group `{group_id}` was not found in the minimal_W frame.")
+    if minimal_h_pl.is_empty():
+        raise ValueError(f"Group `{group_id}` was not found in the minimal_H_long frame.")
 
     muscle_names = _muscle_order(minimal_w_pl)
     key_columns = [
@@ -297,18 +290,31 @@ def _rebuild_feature_rows(minimal_w_frame: Any, group_id: str) -> tuple[list[Sub
             trial_pl = minimal_w_pl.filter(
                 pl.col("analysis_unit_id").cast(pl.Utf8) == str(analysis_unit_id)
             )
+            trial_h_pl = minimal_h_pl.filter(
+                pl.col("analysis_unit_id").cast(pl.Utf8) == str(analysis_unit_id)
+            )
         else:
             trial_pl = minimal_w_pl.filter(
                 _same_scalar_expression("subject", trial_key["subject"])
                 & _same_scalar_expression("velocity", trial_key["velocity"])
                 & _same_scalar_expression("trial_num", trial_key["trial_num"])
             )
+            trial_h_pl = minimal_h_pl.filter(
+                _same_scalar_expression("subject", trial_key["subject"])
+                & _same_scalar_expression("velocity", trial_key["velocity"])
+                & _same_scalar_expression("trial_num", trial_key["trial_num"])
+            )
         trial_pdf = trial_pl.to_pandas()
+        trial_h_pdf = trial_h_pl.to_pandas()
         component_ids = sorted({int(float(value)) for value in trial_pdf["component_index"].tolist()})
         pivot = trial_pdf.pivot(index="muscle", columns="component_index", values="W_value")
         pivot = pivot.reindex(index=muscle_names, columns=component_ids)
         if pivot.isnull().values.any():
             raise ValueError(f"Null W values found while reconstructing trial `{trial_key['trial_id']}`.")
+        h_pivot = trial_h_pdf.pivot(index="frame_idx", columns="component_index", values="h_value")
+        h_pivot = h_pivot.sort_index().reindex(columns=component_ids)
+        if h_pivot.isnull().values.any():
+            raise ValueError(f"Null H values found while reconstructing trial `{trial_key['trial_id']}`.")
         meta = {
             column_name: trial_pdf.iloc[0][column_name]
             for column_name in trial_pdf.columns
@@ -321,7 +327,7 @@ def _rebuild_feature_rows(minimal_w_frame: Any, group_id: str) -> tuple[list[Sub
                 trial_num=trial_key["trial_num"],
                 bundle=SimpleNamespace(
                     W_muscle=pivot.to_numpy(dtype=np.float32),
-                    H_time=None,
+                    H_time=h_pivot.to_numpy(dtype=np.float32),
                     meta=meta,
                 ),
             )
@@ -375,6 +381,8 @@ def scan_first_zero_duplicate_k(
 
     scan_rows: list[dict[str, Any]] = []
     selected_row: dict[str, Any] | None = None
+    selected_candidate: dict[str, Any] | None = None
+    selected_sample_map: list[dict[str, Any]] | None = None
     for n_clusters in range(k_min, resolved_k_max + 1):
         candidate = _search_zero_duplicate_candidate_at_k(
             data,
@@ -403,6 +411,8 @@ def scan_first_zero_duplicate_k(
         scan_rows.append(row)
         if zero_duplicate and selected_row is None:
             selected_row = row
+            selected_candidate = candidate["best_zero_duplicate_result"]
+            selected_sample_map = sample_map
             break
 
     return {
@@ -413,8 +423,197 @@ def scan_first_zero_duplicate_k(
         "k_max": int(resolved_k_max),
         "selected_k": int(selected_row["k"]) if selected_row is not None else None,
         "selected_row": selected_row,
+        "selected_candidate": selected_candidate,
+        "sample_map": selected_sample_map,
         "scan_rows": scan_rows,
     }
+
+
+def _combine_duplicate_counts(
+    pipeline_duplicate_counts: dict[str, Any],
+    scan_rows: list[dict[str, Any]],
+) -> dict[int, int]:
+    merged = {int(key): int(value) for key, value in pipeline_duplicate_counts.items()}
+    for row in scan_rows:
+        merged[int(row["k"])] = int(row["duplicate_trial_count"])
+    return dict(sorted(merged.items()))
+
+
+def _cluster_result_from_scan(
+    *,
+    metadata_row: dict[str, Any],
+    scan_result: dict[str, Any],
+    pipeline_duplicate_counts: dict[str, Any],
+) -> dict[str, Any]:
+    selected_candidate = scan_result.get("selected_candidate")
+    if selected_candidate is None or scan_result.get("selected_k") is None:
+        raise ValueError("No zero-duplicate candidate was selected for export.")
+    duplicate_count_by_k = _combine_duplicate_counts(pipeline_duplicate_counts, scan_result["scan_rows"])
+    feasible_objective_by_k = {
+        int(row["k"]): (float(row["objective"]) if row.get("objective") is not None else np.nan)
+        for row in scan_result["scan_rows"]
+    }
+    return {
+        "status": "success",
+        "group_id": scan_result["group_id"],
+        "n_trials": scan_result["trial_count"],
+        "n_components": scan_result["vector_count"],
+        "n_clusters": int(scan_result["selected_k"]),
+        "labels": np.asarray(selected_candidate["labels"], dtype=np.int32),
+        "inertia": float(selected_candidate["objective"]),
+        "duplicate_trials": [],
+        "algorithm_used": selected_candidate.get("algorithm_used", ""),
+        "torch_device": selected_candidate.get("torch_device", ""),
+        "torch_dtype": selected_candidate.get("torch_dtype", ""),
+        "sample_map": list(scan_result["sample_map"] or []),
+        "selection_method": "first_zero_duplicate",
+        "selection_status": "success_first_zero_duplicate",
+        "duplicate_resolution": _scalar_to_str(metadata_row.get("duplicate_resolution"), "none") or "none",
+        "require_zero_duplicate_solution": True,
+        "k_lb": int(scan_result["k_min"]),
+        "k_gap_raw": _scalar_to_int(metadata_row.get("k_gap_raw"), scan_result["selected_k"]),
+        "k_selected": int(scan_result["selected_k"]),
+        "k_min_unique": int(scan_result["selected_k"]),
+        "gap_ref_n": _scalar_to_int(metadata_row.get("gap_ref_n"), 0) or 0,
+        "gap_ref_restarts": _scalar_to_int(metadata_row.get("gap_ref_restarts"), 0) or 0,
+        "repeats": _scalar_to_int(metadata_row.get("repeats"), 0) or 0,
+        "uniqueness_candidate_restarts": _scalar_to_int(metadata_row.get("uniqueness_candidate_restarts"), 0) or 0,
+        "gap_by_k": _parse_metric_json(metadata_row.get("gap_by_k_json")),
+        "gap_sd_by_k": _parse_metric_json(metadata_row.get("gap_sd_by_k_json")),
+        "observed_objective_by_k": _parse_metric_json(metadata_row.get("observed_objective_by_k_json")),
+        "feasible_objective_by_k": feasible_objective_by_k,
+        "duplicate_trial_count_by_k": duplicate_count_by_k,
+        "duplicate_trial_evidence_by_k": {
+            int(row["k"]): row.get("representative_duplicate_evidence", [])
+            for row in scan_result["scan_rows"]
+        },
+    }
+
+
+def _export_cfg(
+    *,
+    base_cfg_path: Path,
+    out_dir: Path,
+    mode: str,
+    muscle_names: list[str],
+) -> dict[str, Any]:
+    cfg = deepcopy(load_pipeline_config(base_cfg_path))
+    cfg.setdefault("muscles", {})["names"] = list(muscle_names)
+    cfg.setdefault("synergy_analysis", {})["mode"] = mode
+    cfg.setdefault("figures", {}).setdefault("format", DEFAULT_FIGURE_FORMAT)
+    cfg.setdefault("figures", {}).setdefault("dpi", DEFAULT_FIGURE_DPI)
+    runtime_cfg = cfg.setdefault("runtime", {})
+    runtime_cfg["output_dir"] = str(out_dir)
+    runtime_cfg["run_id"] = out_dir.name
+    runtime_cfg["manifest_path"] = str(out_dir / "run_manifest.json")
+    runtime_cfg["log_path"] = str(out_dir / "logs" / "run.log")
+    runtime_cfg["analysis_methods_manifest_path"] = str(out_dir / "analysis_methods_manifest.json")
+    runtime_cfg["final_parquet_path"] = str(out_dir / "final.parquet")
+    runtime_cfg["combined_final_parquet_path"] = str(out_dir / "final.parquet")
+    runtime_cfg["final_parquet_alias_paths"] = {
+        mode: str(out_dir / f"final_{mode}.parquet"),
+    }
+    return cfg
+
+
+def _export_pipeline_like_outputs(
+    *,
+    out_dir: Path,
+    mode: str,
+    cfg: dict[str, Any],
+    feature_rows: list[SubjectFeatureResult],
+    cluster_result: dict[str, Any],
+    group_id: str,
+) -> dict[str, Any]:
+    context = {
+        "config": cfg,
+        "analysis_modes": [mode],
+        "analysis_mode_feature_rows": {mode: feature_rows},
+        "analysis_mode_cluster_group_results": {
+            mode: {
+                group_id: {
+                    "group_id": group_id,
+                    "aggregation_mode": mode,
+                    "feature_rows": feature_rows,
+                    "cluster_result": cluster_result,
+                }
+            }
+        },
+        "cluster_group_results": {
+            group_id: {
+                "group_id": group_id,
+                "aggregation_mode": mode,
+                "feature_rows": feature_rows,
+                "cluster_result": cluster_result,
+            }
+        },
+        "artifacts": {"steps": []},
+    }
+    return export_results(context)
+
+
+def _inject_source_trial_windows_and_rerender(
+    *,
+    bundle: dict[str, Any],
+    out_dir: Path,
+    cfg: dict[str, Any],
+    mode: str,
+) -> None:
+    source_trial_windows = bundle.get("source_trial_windows")
+    if source_trial_windows is None or source_trial_windows.empty:
+        return
+    parquet_targets = [out_dir / "final.parquet"]
+    alias_path = out_dir / f"final_{mode}.parquet"
+    if alias_path.exists():
+        parquet_targets.append(alias_path)
+    for parquet_path in parquet_targets:
+        rewritten = load_single_parquet_bundle(parquet_path)
+        rewritten["source_trial_windows"] = source_trial_windows.copy()
+        write_single_parquet_bundle(rewritten, parquet_path)
+    _write_mode_figures_from_source(
+        mode_output_dir=out_dir / mode,
+        cfg=cfg,
+        mode=mode,
+        source_path=alias_path if alias_path.exists() else out_dir / "final.parquet",
+    )
+
+
+def _normalize_analysis_methods_manifest(out_dir: Path) -> None:
+    manifest_path = out_dir / "analysis_methods_manifest.json"
+    if not manifest_path.exists():
+        return
+    with manifest_path.open("r", encoding="utf-8-sig") as handle:
+        payload = json.load(handle)
+    if isinstance(payload.get("combined_final_parquet_path"), str):
+        payload["combined_final_parquet_path"] = _path_relative_to(out_dir, payload["combined_final_parquet_path"])
+    if isinstance(payload.get("final_parquet_path"), str):
+        payload["final_parquet_path"] = _path_relative_to(out_dir, payload["final_parquet_path"])
+    alias_paths = payload.get("final_parquet_alias_paths")
+    if isinstance(alias_paths, dict):
+        payload["final_parquet_alias_paths"] = {
+            str(key): _path_relative_to(out_dir, str(value))
+            for key, value in alias_paths.items()
+        }
+    modes = payload.get("modes")
+    if isinstance(modes, dict):
+        normalized_modes: dict[str, Any] = {}
+        for mode_name, mode_payload in modes.items():
+            if not isinstance(mode_payload, dict):
+                normalized_modes[str(mode_name)] = mode_payload
+                continue
+            normalized_mode = dict(mode_payload)
+            for field_name in (
+                "output_dir",
+                "final_alias_path",
+                "clustering_audit_workbook_path",
+                "results_interpretation_workbook_path",
+            ):
+                raw_value = normalized_mode.get(field_name)
+                if isinstance(raw_value, str):
+                    normalized_mode[field_name] = _path_relative_to(out_dir, raw_value)
+            normalized_modes[str(mode_name)] = normalized_mode
+        payload["modes"] = normalized_modes
+    _write_json(manifest_path, payload)
 
 
 def _plot_duplicate_burden(
@@ -470,11 +669,14 @@ def main() -> None:
     print(f"Date: 2026-03-19")
     print(f"Source parquet: {args.source_parquet}")
     print(f"Group: {args.group_id}")
+    print(f"Export config: {args.config}")
 
     _print_section("[M1] Load Source Bundle")
     bundle = _load_source_bundle(args.source_parquet)
     available_frames = sorted(frame_key for frame_key, frame in bundle.items() if frame is not None and not frame.empty)
     print("Restored frames:", ", ".join(available_frames))
+    mode = _mode_from_bundle(bundle, args.group_id)
+    print(f"Resolved mode: {mode}")
 
     metadata_row = _group_metadata_row(bundle, args.group_id)
     pipeline_duplicate_counts = _parse_metric_json(metadata_row.get("duplicate_trial_count_by_k_json"))
@@ -489,7 +691,7 @@ def main() -> None:
     )
 
     _print_section("[M2] Rebuild Pooled Feature Rows")
-    feature_rows, muscle_names = _rebuild_feature_rows(bundle["minimal_W"], args.group_id)
+    feature_rows, muscle_names = _rebuild_feature_rows(bundle["minimal_W"], bundle["minimal_H_long"], args.group_id)
     print(f"Trials reconstructed: {len(feature_rows)}")
     print(f"Muscles per vector: {len(muscle_names)}")
     print(f"Subject Hmax: {_subject_hmax(feature_rows)}")
@@ -525,11 +727,70 @@ def main() -> None:
         )
     if scan_result["selected_k"] is None:
         print("No zero-duplicate solution was found in the scanned range.")
+        summary_payload = {
+            "source_parquet": str(args.source_parquet.resolve()),
+            "group_id": args.group_id,
+            "analysis_date": "2026-03-19",
+            "resolved_mode": mode,
+            "vector_count": scan_result["vector_count"],
+            "trial_count": scan_result["trial_count"],
+            "muscle_count": len(muscle_names),
+            "k_min": scan_result["k_min"],
+            "k_max": scan_result["k_max"],
+            "selection_method": "first_zero_duplicate",
+            "gap_statistic_used": False,
+            "k_selected_first_zero_duplicate": None,
+            "pipeline_k_gap_raw": pipeline_k_gap_raw,
+            "pipeline_k_selected": pipeline_k_selected,
+            "pipeline_k_min_unique": pipeline_k_min_unique,
+            "duplicate_trial_count_by_k": {str(row["k"]): int(row["duplicate_trial_count"]) for row in scan_result["scan_rows"]},
+            "pipeline_duplicate_trial_count_by_k": {str(key): int(value) for key, value in pipeline_duplicate_counts.items()},
+            "scan_cfg": scan_cfg,
+        }
+        k_scan_payload = {
+            "selection_method": "first_zero_duplicate",
+            "gap_statistic_used": False,
+            "scan_rows": scan_result["scan_rows"],
+        }
+        _ensure_clean_dir(args.out_dir, overwrite=args.overwrite)
+        summary_path = args.out_dir / "summary.json"
+        k_scan_path = args.out_dir / "k_scan.json"
+        _write_json(summary_path, summary_payload)
+        _write_json(k_scan_path, k_scan_payload)
+        checksum_path = args.out_dir / "checksums.md5"
+        _write_checksums([summary_path, k_scan_path], checksum_path)
+        raise SystemExit(1)
     else:
         print(f"First zero-duplicate K: {scan_result['selected_k']}")
 
-    _print_section("[M4] Write Artifacts")
+    _print_section("[M4] Export Pipeline-Like Outputs")
     _ensure_clean_dir(args.out_dir, overwrite=args.overwrite)
+    cluster_result = _cluster_result_from_scan(
+        metadata_row=metadata_row,
+        scan_result=scan_result,
+        pipeline_duplicate_counts=pipeline_duplicate_counts,
+    )
+    export_cfg = _export_cfg(
+        base_cfg_path=args.config,
+        out_dir=args.out_dir,
+        mode=mode,
+        muscle_names=muscle_names,
+    )
+    export_context = _export_pipeline_like_outputs(
+        out_dir=args.out_dir,
+        mode=mode,
+        cfg=export_cfg,
+        feature_rows=feature_rows,
+        cluster_result=cluster_result,
+        group_id=args.group_id,
+    )
+    _inject_source_trial_windows_and_rerender(
+        bundle=bundle,
+        out_dir=args.out_dir,
+        cfg=export_cfg,
+        mode=mode,
+    )
+    _normalize_analysis_methods_manifest(args.out_dir)
     figure_path = _plot_duplicate_burden(
         scan_result["scan_rows"],
         pipeline_duplicate_counts,
@@ -547,6 +808,7 @@ def main() -> None:
         "source_parquet": str(args.source_parquet.resolve()),
         "group_id": args.group_id,
         "analysis_date": "2026-03-19",
+        "resolved_mode": mode,
         "vector_count": scan_result["vector_count"],
         "trial_count": scan_result["trial_count"],
         "muscle_count": len(muscle_names),
@@ -562,16 +824,47 @@ def main() -> None:
         "pipeline_duplicate_trial_count_by_k": {str(key): int(value) for key, value in pipeline_duplicate_counts.items()},
         "scan_cfg": scan_cfg,
         "figure_path": figure_path.name,
+        "pipeline_like_output_dir": ".",
+        "final_parquet_path": _path_relative_to(args.out_dir, export_context["artifacts"]["final_parquet_path"]),
+        "final_parquet_alias_paths": export_context["artifacts"]["final_parquet_alias_paths"],
+        "mode_output_dirs": export_context["artifacts"]["mode_output_dirs"],
+        "clustering_audit_workbook_path": _path_relative_to(
+            args.out_dir,
+            export_context["artifacts"]["clustering_audit_workbook_path"],
+        ),
+        "results_interpretation_workbook_path": _path_relative_to(
+            args.out_dir,
+            export_context["artifacts"]["results_interpretation_workbook_path"],
+        ),
+        "group_figure_paths": [
+            _path_relative_to(args.out_dir, path)
+            for path in export_context["artifacts"]["group_figure_paths"]
+        ],
+        "trial_figure_paths": [
+            _path_relative_to(args.out_dir, path)
+            for path in export_context["artifacts"]["trial_figure_paths"]
+        ],
+    }
+    summary_payload["final_parquet_alias_paths"] = {
+        key: _path_relative_to(args.out_dir, value)
+        for key, value in summary_payload["final_parquet_alias_paths"].items()
+    }
+    summary_payload["mode_output_dirs"] = {
+        key: _path_relative_to(args.out_dir, value)
+        for key, value in summary_payload["mode_output_dirs"].items()
     }
     summary_path = args.out_dir / "summary.json"
     k_scan_path = args.out_dir / "k_scan.json"
     _write_json(summary_path, summary_payload)
     _write_json(k_scan_path, k_scan_payload)
     checksum_path = args.out_dir / "checksums.md5"
-    _write_checksums([summary_path, k_scan_path, figure_path], checksum_path)
+    generated_paths = [path for path in args.out_dir.rglob("*") if path.is_file() and path.name != "checksums.md5"]
+    _write_checksums(generated_paths, checksum_path)
     print(f"Wrote summary: {summary_path}")
     print(f"Wrote scan log: {k_scan_path}")
     print(f"Wrote figure: {figure_path}")
+    print(f"Wrote final parquet: {export_context['artifacts']['final_parquet_path']}")
+    print(f"Wrote mode workbook dir: {export_context['artifacts']['mode_output_dirs'][mode]}")
     print(f"Wrote checksums: {checksum_path}")
 
 

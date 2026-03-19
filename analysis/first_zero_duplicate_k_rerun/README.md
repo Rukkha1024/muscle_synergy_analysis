@@ -85,10 +85,41 @@ conda run --no-capture-output -n cuda python \
 
 ## 산출물
 
+이제 이 analysis는 scan 결과만 남기지 않고, **선택된 no-gap `K`를 기준으로 pipeline과 같은 소비 형태의 결과물**도 같이 저장한다.
+
 - `summary.json`: 이번 rerun의 핵심 요약
 - `k_scan.json`: `K`별 duplicate burden과 zero-duplicate 여부
 - `checksums.md5`: 생성 파일 checksum
 - `k_duplicate_burden.png`: analysis rerun과 pipeline metadata를 나란히 보여주는 figure
+- `analysis_methods_manifest.json`: analysis 작업폴더 기준 상대경로 manifest
+- `final.parquet`: no-gap rerun 결과를 single parquet bundle로 다시 저장한 파일
+- `final_concatenated.parquet`: mode alias parquet
+- `concatenated/clustering_audit.xlsx`: pipeline과 같은 형식의 clustering audit workbook
+- `concatenated/results_interpretation.xlsx`: pipeline과 같은 형식의 interpretation workbook
+- `concatenated/figures/*.png`: pooled cluster figure와 mode figure
+
+기본 `default_run` 기준 출력 트리는 아래와 같다.
+
+```text
+analysis/first_zero_duplicate_k_rerun/artifacts/default_run/
+  analysis_methods_manifest.json
+  checksums.md5
+  final.parquet
+  final_concatenated.parquet
+  k_duplicate_burden.png
+  k_scan.json
+  summary.json
+  concatenated/
+    clustering_audit.xlsx
+    results_interpretation.xlsx
+    figures/
+      01_trial_composition.png
+      03_cluster_strategy_composition.png
+      04_pooled_cluster_representatives.png
+      05_within_cluster_strategy_overlay.png
+      pooled_step_nonstep_clusters.png
+      nmf_trials/*.png
+```
 
 ## 현재 확인된 결과
 
@@ -101,6 +132,8 @@ conda run --no-capture-output -n cuda python \
 - pipeline metadata: `k_gap_raw = 15`, `k_selected = 15`, `k_min_unique = 13`
 
 즉, 현재 저장소 상태에서는 **gap statistic을 빼면 `K=13`이 맞고**, pipeline이 `15`를 보고한 이유는 duplicate-free floor가 아니라 gap recommendation을 먼저 반영했기 때문이다.
+
+이 analysis는 그 결론을 말로만 남기지 않고, **`K=13`으로 다시 계산된 parquet/workbook/figure 묶음**을 `analysis/` 작업폴더 안에 저장한다.
 
 ## 해석 방법
 
@@ -116,3 +149,5 @@ conda run --no-capture-output -n cuda python \
 - 이 폴더는 production pipeline을 대체하지 않는다.
 - `main.py`나 main pipeline config를 변경하지 않는다.
 - 입력은 final parquet bundle 하나뿐이며, raw EMG나 intermediate CSV를 다시 만들지 않는다.
+- `summary.json`, `k_scan.json`, `final.parquet`, `final_concatenated.parquet`, `analysis_methods_manifest.json`, 그리고 PNG figure는 현재 byte-level 재현성을 확인했다.
+- `.xlsx` workbook은 내용과 sheet 구조는 같지만, `openpyxl`의 생성 시각 metadata 때문에 run 간 MD5가 달라질 수 있다.

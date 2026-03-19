@@ -1,0 +1,19 @@
+﻿{
+  "selected_mode": "concatenated",
+  "analysis_modes": [
+    "concatenated"
+  ],
+  "combined_final_parquet_path": "final.parquet",
+  "final_parquet_path": "final.parquet",
+  "final_parquet_alias_paths": {
+    "concatenated": "final_concatenated.parquet"
+  },
+  "modes": {
+    "concatenated": {
+      "output_dir": "concatenated",
+      "final_alias_path": "final_concatenated.parquet",
+      "clustering_audit_workbook_path": "concatenated/clustering_audit.xlsx",
+      "results_interpretation_workbook_path": "concatenated/results_interpretation.xlsx"
+    }
+  }
+}
