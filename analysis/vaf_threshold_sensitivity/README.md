@@ -216,6 +216,7 @@ python3 analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py \
 | `artifacts/validity_screening_80_95/by_threshold/vaf_90/summary.json` | screening 안의 90% 상세 요약 | screening 90%를 깊이 볼 때 |
 | `artifacts/validity_exact_090/summary.json` | exact 90% 정밀 검증 | 최종 해석을 쓸 때 |
 | `artifacts/validity_smoke_80_95/summary.json` | 구현 smoke run 요약 | 코드가 end-to-end로 도는지 확인할 때 |
+| `artifacts/*/*.parquet` | 대용량 행 데이터 (Parquet 형식) | 프로그래밍으로 상세 데이터를 분석할 때 |
 | `artifacts/*/checksums.md5` | 해당 run 산출물의 MD5 체크섬 | 재현성 확인이 필요할 때 |
 
 추가 검증 `summary.json`에는 반드시 아래 블록이 들어갑니다.
@@ -229,3 +230,25 @@ python3 analysis/vaf_threshold_sensitivity/analyze_vaf_threshold_validity.py \
 
 - `subject_muscle_channel_summary`
 - `source_trial_split_summary`
+
+### Parquet 분리 저장
+
+50행을 초과하는 `list[dict]` 데이터(예: `null_model.unit_rows`, `null_model.subject_repeat_rows`)는 JSON에 직접 포함하지 않고 **같은 디렉터리에 Parquet 파일**로 분리 저장됩니다. JSON 안에는 다음과 같은 참조 스텁만 남습니다.
+
+```json
+{
+  "unit_rows": {
+    "__parquet__": "null_model__unit_rows.parquet",
+    "__rows__": 170000
+  }
+}
+```
+
+Parquet 파일을 읽으려면:
+
+```python
+import polars as pl
+df = pl.read_parquet("artifacts/validity_exact_090/null_model__unit_rows.parquet")
+```
+
+이 구조 덕분에 전체 validity artifacts 용량이 **233MB에서 15MB로 약 94% 감소**했습니다.
