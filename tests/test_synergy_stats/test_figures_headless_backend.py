@@ -33,6 +33,18 @@ rep_h = pd.DataFrame({{
     "frame_idx": [0, 1, 2],
     "h_value": [0.1, 0.2, 0.3],
 }})
+trial_w = pd.DataFrame({{
+    "component_index": [0, 0],
+    "assigned_cluster_id": [4, 4],
+    "muscle": ["TA", "MG"],
+    "W_value": [0.3, 0.7],
+}})
+trial_h = pd.DataFrame({{
+    "component_index": [0, 0, 0],
+    "assigned_cluster_id": [4, 4, 4],
+    "frame_idx": [0, 1, 2],
+    "h_value": [0.1, 0.2, 0.3],
+}})
 
 cfg = {{"figures": {{"format": "png", "dpi": 72}}}}
 group_output_path = Path({str(group_output_path)!r})
@@ -50,8 +62,8 @@ save_trial_nmf_figure(
     velocity=30,
     trial_num=2,
     step_class="step",
-    trial_w=rep_w,
-    trial_h=rep_h,
+    trial_w=trial_w,
+    trial_h=trial_h,
     muscle_names=["TA", "MG"],
     cfg=cfg,
     output_path=trial_output_path,

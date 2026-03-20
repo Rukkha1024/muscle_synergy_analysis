@@ -936,6 +936,7 @@ def build_group_exports(
     labels_df = pd.DataFrame(
         [
             {
+                **trial_meta_lookup.get(sample["trial_key"], {}),
                 "group_id": group_id,
                 "subject": sample["subject"],
                 "velocity": sample["velocity"],
@@ -943,7 +944,6 @@ def build_group_exports(
                 "trial_id": sample["trial_id"],
                 "component_index": sample["component_index"],
                 "cluster_id": int(label),
-                **trial_meta_lookup.get(sample["trial_key"], {}),
             }
             for sample, label in zip(sample_map, labels)
         ]
@@ -978,6 +978,7 @@ def build_group_exports(
             for muscle_index, value in enumerate(W[:, component_index]):
                 minimal_w_rows.append(
                     {
+                        **trial_meta,
                         "group_id": group_id,
                         "subject": item.subject,
                         "velocity": item.velocity,
@@ -986,13 +987,13 @@ def build_group_exports(
                         "component_index": component_index,
                         "muscle": muscle_names[muscle_index],
                         "W_value": float(value),
-                        **trial_meta,
                     }
                 )
             interpolated_h = _interpolate_series(H[:, component_index], target_windows)
             for frame_idx, value in enumerate(interpolated_h.tolist()):
                 minimal_h_rows.append(
                     {
+                        **trial_meta,
                         "group_id": group_id,
                         "subject": item.subject,
                         "velocity": item.velocity,
@@ -1001,7 +1002,6 @@ def build_group_exports(
                         "component_index": component_index,
                         "frame_idx": frame_idx,
                         "h_value": float(value),
-                        **trial_meta,
                     }
                 )
 

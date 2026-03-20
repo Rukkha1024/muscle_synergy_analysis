@@ -318,7 +318,7 @@ def _rebuild_feature_rows(
         meta = {
             column_name: trial_pdf.iloc[0][column_name]
             for column_name in trial_pdf.columns
-            if column_name not in {"muscle", "W_value"}
+            if column_name not in {"component_index", "muscle", "W_value"}
         }
         feature_rows.append(
             SubjectFeatureResult(

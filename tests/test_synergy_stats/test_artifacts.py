@@ -101,3 +101,64 @@ def test_group_exports_expand_concatenated_source_trial_windows() -> None:
     }.issubset(set(source_trial_windows.columns))
     assert source_trial_windows["analysis_unit_id"].nunique() == 1
     assert source_trial_windows["source_trial_num"].tolist() == [1, 3]
+
+
+def test_group_exports_preserve_explicit_component_fields_over_trial_meta() -> None:
+    """Per-component export rows should not be overwritten by copied trial metadata."""
+    feature_rows = [
+        SubjectFeatureResult(
+            subject="S01",
+            velocity=1,
+            trial_num=1,
+            bundle=SimpleNamespace(
+                W_muscle=np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float32),
+                H_time=np.array([[1.0, 0.1], [0.5, 0.2], [0.25, 0.3]], dtype=np.float32),
+                meta={
+                    "component_index": 99,
+                    "cluster_id": 77,
+                    "analysis_step_class": "step",
+                    "analysis_is_step": True,
+                    "analysis_is_nonstep": False,
+                },
+            ),
+        )
+    ]
+    cluster_result = {
+        "status": "success",
+        "group_id": "global_step",
+        "n_clusters": 2,
+        "labels": np.array([3, 4], dtype=np.int32),
+        "sample_map": [
+            {
+                "group_id": "global_step",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "component_index": 0,
+                "trial_key": ("S01", 1, 1),
+                "trial_id": "S01_v1_T1",
+            },
+            {
+                "group_id": "global_step",
+                "subject": "S01",
+                "velocity": 1,
+                "trial_num": 1,
+                "component_index": 1,
+                "trial_key": ("S01", 1, 1),
+                "trial_id": "S01_v1_T1",
+            },
+        ],
+    }
+
+    exports = build_group_exports(
+        group_id="global_step",
+        feature_rows=feature_rows,
+        cluster_result=cluster_result,
+        muscle_names=["TA", "MG"],
+        target_windows=5,
+    )
+
+    assert sorted(exports["labels"]["component_index"].unique().tolist()) == [0, 1]
+    assert sorted(exports["labels"]["cluster_id"].unique().tolist()) == [3, 4]
+    assert sorted(exports["minimal_W"]["component_index"].unique().tolist()) == [0, 1]
+    assert sorted(exports["minimal_H_long"]["component_index"].unique().tolist()) == [0, 1]

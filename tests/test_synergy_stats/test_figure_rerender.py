@@ -578,6 +578,76 @@ def test_rerender_rebuilds_expected_figure_tree(tmp_path: Path) -> None:
     assert all(Path(path).exists() for paths in rendered.values() for path in paths)
 
 
+def test_rerender_trial_figures_join_real_cluster_assignments(tmp_path: Path, monkeypatch) -> None:
+    """Trial rerender inputs should preserve component identity and add assigned clusters."""
+    run_dir = tmp_path / "trialwise"
+    source_path = tmp_path / "final_trialwise.parquet"
+    bundle = {
+        SUMMARY_FRAME_KEY: pd.DataFrame([{"group_id": "global_step"}]),
+        "rep_W": pd.DataFrame(
+            [
+                {"group_id": "global_step", "cluster_id": 3, "muscle": "M1", "W_value": 1.0},
+                {"group_id": "global_step", "cluster_id": 3, "muscle": "M2", "W_value": 0.0},
+            ]
+        ),
+        "rep_H_long": pd.DataFrame(
+            [
+                {"group_id": "global_step", "cluster_id": 3, "frame_idx": 0, "h_value": 0.1},
+                {"group_id": "global_step", "cluster_id": 3, "frame_idx": 1, "h_value": 0.5},
+            ]
+        ),
+        "minimal_W": pd.DataFrame(
+            [
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 0, "muscle": "M1", "W_value": 1.0},
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 0, "muscle": "M2", "W_value": 0.0},
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 1, "muscle": "M1", "W_value": 0.2},
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 1, "muscle": "M2", "W_value": 0.8},
+            ]
+        ),
+        "minimal_H_long": pd.DataFrame(
+            [
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 0, "frame_idx": 0, "h_value": 0.1},
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 0, "frame_idx": 1, "h_value": 0.5},
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 1, "frame_idx": 0, "h_value": 0.3},
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 1, "frame_idx": 1, "h_value": 0.7},
+            ]
+        ),
+        "labels": pd.DataFrame(
+            [
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 0, "cluster_id": 9, "analysis_step_class": "step"},
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "component_index": 1, "cluster_id": 3, "analysis_step_class": "step"},
+            ]
+        ),
+        "trial_windows": pd.DataFrame(
+            [
+                {"group_id": "global_step", "subject": "S01", "velocity": 1, "trial_num": 1, "trial_id": "S01_v1_T1", "analysis_step_class": "step"},
+            ]
+        ),
+    }
+    write_single_parquet_bundle(bundle, source_path)
+    cfg = _sample_cfg()
+    cfg["cross_group_w_similarity"] = {"enabled": False, "threshold": 0.8, "output_figures": False}
+    captured: dict[str, pd.DataFrame] = {}
+
+    def _capture_trial_figure(**kwargs):
+        captured["trial_w"] = kwargs["trial_w"].copy()
+        captured["trial_h"] = kwargs["trial_h"].copy()
+        kwargs["output_path"].parent.mkdir(parents=True, exist_ok=True)
+        kwargs["output_path"].write_text("ok", encoding="utf-8-sig")
+
+    monkeypatch.setattr(figure_rerender_module, "save_trial_nmf_figure", _capture_trial_figure)
+
+    rendered = render_figures_from_run_dir(run_dir, cfg, source_parquet_path=source_path)
+
+    assert len(rendered["trial_figure_paths"]) == 1
+    assert {"component_index", "assigned_cluster_id"}.issubset(captured["trial_w"].columns)
+    assert {"component_index", "assigned_cluster_id"}.issubset(captured["trial_h"].columns)
+    assert captured["trial_w"].groupby("component_index")["assigned_cluster_id"].nunique().to_dict() == {0: 1, 1: 1}
+    assert captured["trial_h"].groupby("component_index")["assigned_cluster_id"].nunique().to_dict() == {0: 1, 1: 1}
+    assert captured["trial_w"].groupby("component_index")["assigned_cluster_id"].first().to_dict() == {0: 9, 1: 3}
+    assert captured["trial_h"].groupby("component_index")["assigned_cluster_id"].first().to_dict() == {0: 9, 1: 3}
+
+
 def test_rerender_is_byte_stable_for_same_saved_parquet_inputs(tmp_path: Path) -> None:
     """Rerendering twice from the same single parquet should reproduce identical figure bytes."""
     run_dir = tmp_path / "trialwise"

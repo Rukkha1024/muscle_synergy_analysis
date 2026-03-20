@@ -135,6 +135,34 @@ def _group_trial_rows(trial_windows: pl.DataFrame) -> list[dict[str, Any]]:
     return list(rows)
 
 
+def _join_trial_cluster_assignments(
+    component_frame: pl.DataFrame,
+    labels_frame: pl.DataFrame,
+    *,
+    group_id: str,
+    trial_id: str,
+) -> pd.DataFrame:
+    join_keys = ["group_id", "trial_id", "component_index"]
+    trial_labels = labels_frame.filter((pl.col("group_id") == group_id) & (pl.col("trial_id") == trial_id)).select(
+        join_keys + ["cluster_id"]
+    )
+    duplicate_keys = trial_labels.group_by(join_keys).len().filter(pl.col("len") != 1)
+    if duplicate_keys.height > 0:
+        raise ValueError(
+            f"Expected one cluster assignment per component while rerendering trial `{trial_id}` in `{group_id}`."
+        )
+    joined = component_frame.join(
+        trial_labels.rename({"cluster_id": "assigned_cluster_id"}),
+        on=join_keys,
+        how="left",
+    )
+    if joined.height != component_frame.height:
+        raise ValueError(f"Unexpected trial figure join expansion for `{trial_id}` in `{group_id}`.")
+    if joined.get_column("assigned_cluster_id").null_count() > 0:
+        raise ValueError(f"Missing cluster assignment while rerendering trial `{trial_id}` in `{group_id}`.")
+    return joined.to_pandas()
+
+
 def _replace_figure_tree(tmp_dir: Path, figure_dir: Path) -> None:
     backup_dir = figure_dir.parent / "figures.__bak__"
     if backup_dir.exists():
@@ -405,17 +433,17 @@ def render_figures_from_run_dir(
             output_path = trial_figure_dir / _trial_figure_name(trial_row, figure_ext)
             group_id = str(trial_row["group_id"])
             trial_id = str(trial_row["trial_id"])
-            trial_w = (
-                artifacts["minimal_w"]
-                .filter((pl.col("group_id") == group_id) & (pl.col("trial_id") == trial_id))
-                .rename({"component_index": "cluster_id"})
-                .to_pandas()
+            trial_w = _join_trial_cluster_assignments(
+                artifacts["minimal_w"].filter((pl.col("group_id") == group_id) & (pl.col("trial_id") == trial_id)),
+                artifacts["labels"],
+                group_id=group_id,
+                trial_id=trial_id,
             )
-            trial_h = (
-                artifacts["minimal_h_long"]
-                .filter((pl.col("group_id") == group_id) & (pl.col("trial_id") == trial_id))
-                .rename({"component_index": "cluster_id"})
-                .to_pandas()
+            trial_h = _join_trial_cluster_assignments(
+                artifacts["minimal_h_long"].filter((pl.col("group_id") == group_id) & (pl.col("trial_id") == trial_id)),
+                artifacts["labels"],
+                group_id=group_id,
+                trial_id=trial_id,
             )
             save_trial_nmf_figure(
                 subject=str(trial_row["subject"]),

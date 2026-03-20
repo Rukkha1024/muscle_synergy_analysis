@@ -137,6 +137,8 @@ def _render_component_grid(
     output_path: Path,
     *,
     row_label: str,
+    row_id_column: str = "cluster_id",
+    cluster_annotation_column: Optional[str] = None,
     coverage: Optional[pd.DataFrame] = None,
     total_trials: Optional[int] = None,
     strategy_summary: Optional[pd.DataFrame] = None,
@@ -145,8 +147,8 @@ def _render_component_grid(
 ) -> None:
     plt = _pyplot()
     _configure_fonts()
-    cluster_ids = sorted(rep_w["cluster_id"].dropna().unique().tolist()) if not rep_w.empty else []
-    n_clusters = max(len(cluster_ids), 1)
+    row_ids = sorted(rep_w[row_id_column].dropna().unique().tolist()) if not rep_w.empty else []
+    n_clusters = max(len(row_ids), 1)
 
     if total_step_trials_global is not None:
         total_step_trials = total_step_trials_global
@@ -160,22 +162,34 @@ def _render_component_grid(
 
     fig, axes = plt.subplots(n_clusters, 2, figsize=(14, 3.5 * n_clusters), squeeze=False)
     fig.suptitle(title, fontsize=14, fontweight="bold", y=0.995)
-    for row_index, cluster_id in enumerate(cluster_ids or [0]):
+    for row_index, row_id in enumerate(row_ids or [0]):
         ax_w, ax_h = axes[row_index]
 
         subtitle = ""
         if coverage is not None and total_trials is not None:
-            cov_row = coverage.loc[coverage["cluster_id"] == cluster_id]
+            cov_row = coverage.loc[coverage["cluster_id"] == row_id]
             if not cov_row.empty:
                 nt = int(cov_row["n_trials"].iloc[0])
                 tp = float(cov_row["trial_pct"].iloc[0])
                 subtitle = f"\n{nt}/{total_trials} trials ({tp}%)"
                 if strategy_summary is not None and not strategy_summary.empty:
-                    strategy_part = _build_strategy_subtitle_part(strategy_summary, cluster_id, total_step_trials, total_nonstep_trials)
+                    strategy_part = _build_strategy_subtitle_part(strategy_summary, row_id, total_step_trials, total_nonstep_trials)
                     subtitle += f"  |  {strategy_part}"
 
-        cluster_w = rep_w.loc[rep_w["cluster_id"] == cluster_id].copy()
-        cluster_h = rep_h.loc[rep_h["cluster_id"] == cluster_id].copy()
+        cluster_w = rep_w.loc[rep_w[row_id_column] == row_id].copy()
+        cluster_h = rep_h.loc[rep_h[row_id_column] == row_id].copy()
+        row_title = f"{row_label} {_display_value(row_id)}"
+        if cluster_annotation_column:
+            annotation_values = pd.concat(
+                [
+                    cluster_w.get(cluster_annotation_column, pd.Series(dtype=object)),
+                    cluster_h.get(cluster_annotation_column, pd.Series(dtype=object)),
+                ],
+                ignore_index=True,
+            ).dropna()
+            if not annotation_values.empty:
+                cluster_annotation = _display_value(annotation_values.iloc[0])
+                row_title = f"{row_title} (Cluster {cluster_annotation})"
         if cluster_w.empty or cluster_h.empty:
             ax_w.text(0.5, 0.5, "No representative cluster", ha="center", va="center")
             ax_h.text(0.5, 0.5, "No representative cluster", ha="center", va="center")
@@ -184,13 +198,13 @@ def _render_component_grid(
             cluster_w = cluster_w.sort_values("muscle")
             ax_w.bar(cluster_w["muscle"].astype(str), cluster_w["W_value"], color="#5C7CFA")
             ax_w.set_ylim(0.0, max(1.0, float(cluster_w["W_value"].max()) * 1.15))
-            ax_w.set_title(f"{row_label} {cluster_id}: W{subtitle}", fontsize=11)
+            ax_w.set_title(f"{row_title}: W{subtitle}", fontsize=11)
             ax_w.tick_params(axis="x", rotation=45)
 
             h_values, x_values = _normalized_component_axis(cluster_h)
             ax_h.plot(x_values, h_values.to_numpy(dtype=float), color="#2F9E44", linewidth=2.0)
             ax_h.set_xlim(0.0, 100.0)
-            ax_h.set_title(f"{row_label} {cluster_id}: H (100-window){subtitle}", fontsize=11)
+            ax_h.set_title(f"{row_title}: H (100-window){subtitle}", fontsize=11)
             ax_h.set_xlabel("Normalized window (%)")
         ax_w.set_ylabel("Weight")
         ax_h.set_ylabel("Activation")
@@ -428,6 +442,8 @@ def save_trial_nmf_figure(
         cfg=cfg,
         output_path=output_path,
         row_label="Component",
+        row_id_column="component_index",
+        cluster_annotation_column="assigned_cluster_id",
     )
 
 

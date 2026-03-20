@@ -26,14 +26,14 @@ English: This is not a cosmetic figure tweak. In this repository, `component_ind
 - [x] (2026-03-20 02:35Z) English: Rewrote the earlier draft into a bilingual living ExecPlan format.
 - [x] (2026-03-20 10:35Z) 한국어: 계획 리뷰 결과를 반영해 trial figure 데이터 흐름, stronger validation, rerun command, checksum handling을 다시 설계했다.
 - [x] (2026-03-20 10:35Z) English: Incorporated review findings and redesigned the trial-figure data flow, stronger validation, rerun command, and checksum handling.
-- [ ] 한국어: 사용자 승인 후 `analysis/first_zero_duplicate_k_rerun/analyze_first_zero_duplicate_k_rerun.py`에서 reconstruction metadata copy bug를 수정한다.
-- [ ] English: After user approval, fix the reconstruction metadata-copy bug in `analysis/first_zero_duplicate_k_rerun/analyze_first_zero_duplicate_k_rerun.py`.
-- [ ] 한국어: 사용자 승인 후 `src/synergy_stats/clustering.py`에서 explicit component fields가 metadata보다 우선하도록 export row builder를 harden한다.
-- [ ] English: After user approval, harden the export row builders in `src/synergy_stats/clustering.py` so explicit component fields win over metadata.
-- [ ] 한국어: 사용자 승인 후 `src/synergy_stats/figure_rerender.py`와 `src/synergy_stats/figures.py`에서 trial figure가 component identity와 assigned cluster를 함께 표시하도록 수정한다.
-- [ ] English: After user approval, update `src/synergy_stats/figure_rerender.py` and `src/synergy_stats/figures.py` so trial figures display both component identity and assigned cluster.
-- [ ] 한국어: 사용자 승인 후 rerun을 다시 실행하고 parquet, workbook, Figure 04, Figure 05, trial figures, generated checksum manifest를 검증한다.
-- [ ] English: After user approval, rerun the analysis and validate the parquet, workbook, Figure 04, Figure 05, trial figures, and generated checksum manifest.
+- [x] (2026-03-20 10:14Z) 한국어: `analysis/first_zero_duplicate_k_rerun/analyze_first_zero_duplicate_k_rerun.py`에서 reconstruction metadata copy bug를 수정해 `component_index`가 trial-level metadata에 다시 들어가지 않도록 했다.
+- [x] (2026-03-20 10:14Z) English: Fixed the reconstruction metadata-copy bug in `analysis/first_zero_duplicate_k_rerun/analyze_first_zero_duplicate_k_rerun.py` so `component_index` no longer re-enters trial-level metadata.
+- [x] (2026-03-20 10:14Z) 한국어: `src/synergy_stats/clustering.py`에서 metadata spread를 explicit row fields 앞으로 옮겨 export row builder를 harden했다.
+- [x] (2026-03-20 10:14Z) English: Hardened `src/synergy_stats/clustering.py` by moving metadata spread ahead of explicit row fields.
+- [x] (2026-03-20 10:14Z) 한국어: `src/synergy_stats/figure_rerender.py`와 `src/synergy_stats/figures.py`를 수정해 trial figure가 `component_index`를 row identity로 유지하고 assigned cluster를 annotation으로 표시하게 했다.
+- [x] (2026-03-20 10:14Z) English: Updated `src/synergy_stats/figure_rerender.py` and `src/synergy_stats/figures.py` so trial figures keep `component_index` as the row identity and display the assigned cluster as an annotation.
+- [x] (2026-03-20 10:14Z) 한국어: rerun을 다시 실행하고 parquet, workbook, Figure 04, Figure 05, trial figure, generated checksum manifest까지 검증했다.
+- [x] (2026-03-20 10:14Z) English: Re-ran the analysis and validated the parquet, workbook, Figure 04, Figure 05, trial figures, and generated checksum manifest.
 
 ## Surprises & Discoveries / 예상 밖 발견 사항
 
@@ -51,6 +51,9 @@ English: This is not a cosmetic figure tweak. In this repository, `component_ind
 
 - Observation: checksum 파일은 이미 analysis script가 생성한다.
   Evidence: `analysis/first_zero_duplicate_k_rerun/analyze_first_zero_duplicate_k_rerun.py`는 rerun 완료 시 `_write_checksums(...)`를 호출해 `checksums.md5`를 기록한다. 따라서 계획서가 shell `md5sum > checksums.md5`를 다시 실행하라고 지시하면 generated manifest 형식과 encoding을 불필요하게 바꿀 수 있다.
+
+- Observation: generated checksum manifest는 `md5sum -c`에 대해 유효하지만 첫 줄의 BOM 때문에 warning 한 줄이 출력된다.
+  Evidence: rerun 후 `md5sum -c analysis/first_zero_duplicate_k_rerun/artifacts/default_run/checksums.md5`는 모든 artifact에 대해 `OK`를 반환했고, 동시에 `WARNING: 1 line is improperly formatted`를 출력했다. `checksums.md5`의 raw bytes를 확인하면 UTF-8 BOM으로 시작한다.
 
 ## Decision Log / 결정 로그
 
@@ -78,11 +81,15 @@ English: This is not a cosmetic figure tweak. In this repository, `component_ind
   Rationale: 이미 구현된 checksum writer가 있으므로, 계획서는 새로운 artifact 집합이 그 writer에 의해 올바르게 반영되었는지를 확인하면 충분하다.
   Date/Author: 2026-03-20 / GPT-5.4
 
+- Decision: checksum writer의 BOM warning은 이번 revision 범위에 포함하지 않고 residual note로 남긴다.
+  Rationale: 이번 작업의 acceptance criteria는 `component_index` integrity와 join-cardinality 복구다. generated manifest는 모든 artifact를 성공적으로 검증했고, warning은 별도 formatting 개선 작업으로 분리하는 편이 범위를 더 명확하게 유지한다.
+  Date/Author: 2026-03-20 / GPT-5.4
+
 ## Outcomes & Retrospective / 결과 및 회고
 
-한국어: 아직 구현 전 단계다. 이번 개정의 결과는 “무엇을 고칠지”뿐 아니라 “어떻게 검증해야 half-fix를 피할 수 있는지”가 문서에 들어가게 된 것이다. 특히 trial figure가 실제 cluster assignment를 어디서 받아야 하는지, checksum 파일을 어떻게 다뤄야 하는지, H contamination을 어떤 관찰값으로 확인해야 하는지가 분명해졌다.
+한국어: 구현과 rerun validation이 끝났다. direct fix는 rerun reconstruction helper에서 `component_index`를 trial-level metadata에서 제외한 것이고, hardening은 shared export helper에서 explicit component fields가 metadata를 항상 덮어쓰도록 순서를 바꾼 것이다. trial figure path는 실제 `labels`를 join해 `assigned_cluster_id`를 붙이고, renderer는 `component_index`를 row identity로 유지하면서 `Component X (Cluster Y)` 형식의 제목을 그리게 되었다. regression test 11개와 추가 clustering/artifact test를 통과했고, regenerated `final_concatenated.parquet`에서 `labels`, `minimal_W`, `minimal_H_long`의 `component_index` unique set이 모두 `0..6`으로 복구되었다. pooled join cardinality도 `minimal_W 3536 == joined_W 3536`, `minimal_H_long 22100 == joined_H 22100`로 확인되어 Figure 05 contamination 조건이 해소되었다. workbook은 `cluster_labels`, `minimal_W`, `minimal_H`, `trial_windows`를 포함한 expected sheets를 유지했고, Figure 04/05 및 sample trial figure를 시각적으로 확인했을 때 component identity와 assigned cluster가 함께 표시되었다.
 
-English: Implementation has not started yet. The outcome of this rewrite is that the plan now explains not only what to edit, but also how to validate the fix without accepting a half-fix. In particular, it now makes explicit where trial figures must get their cluster assignments, how checksum output should be handled, and which observable facts prove that H contamination is gone.
+English: Implementation and rerun validation are complete. The direct fix excluded `component_index` from trial-level metadata in the rerun reconstruction helper, and the hardening change reordered the shared export helper so explicit component fields always override metadata. The trial-figure path now joins the real `labels` rows to add `assigned_cluster_id`, and the renderer keeps `component_index` as the row identity while titling rows in a `Component X (Cluster Y)` style. The updated code passed 11 focused regression tests plus the broader clustering/artifact test set, and the regenerated `final_concatenated.parquet` restored the unique `component_index` set `0..6` in `labels`, `minimal_W`, and `minimal_H_long`. Pooled join cardinality also validated as `minimal_W 3536 == joined_W 3536` and `minimal_H_long 22100 == joined_H 22100`, which is the observable sign that Figure 05 contamination is gone. The workbook retained the expected sheets including `cluster_labels`, `minimal_W`, `minimal_H`, and `trial_windows`, and a visual spot-check of Figure 04, Figure 05, and a sample trial figure confirmed that component identity and assigned cluster now appear together.
 
 ## Context and Orientation / 현재 맥락과 구조 설명
 
