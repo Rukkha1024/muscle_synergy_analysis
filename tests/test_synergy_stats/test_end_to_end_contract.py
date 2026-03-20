@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.utils.cell import range_boundaries
 import pytest
 import yaml
 
@@ -168,6 +169,12 @@ def test_both_mode_writes_single_parquet_aliases_and_mode_only_outputs(
     assert set(concatenated_bundle["minimal_W"]["aggregation_mode"].unique().tolist()) == {"concatenated"}
     assert set(trialwise_bundle["labels"]["group_id"].unique().tolist()) == {"pooled_step_nonstep"}
     assert set(concatenated_bundle["labels"]["group_id"].unique().tolist()) == {"pooled_step_nonstep"}
+    assert "h_se" in trialwise_bundle["pooled_strategy_h_means"].columns
+    assert "h_n" in trialwise_bundle["pooled_strategy_h_means"].columns
+    assert "h_std" not in trialwise_bundle["pooled_strategy_h_means"].columns
+    assert "h_se" in concatenated_bundle["pooled_strategy_h_means"].columns
+    assert "h_n" in concatenated_bundle["pooled_strategy_h_means"].columns
+    assert "h_std" not in concatenated_bundle["pooled_strategy_h_means"].columns
 
     for mode in ("trialwise", "concatenated"):
         mode_dir = run_dir / mode
@@ -189,8 +196,21 @@ def test_both_mode_writes_single_parquet_aliases_and_mode_only_outputs(
             "representative_H",
             "minimal_W",
             "minimal_H",
+            "pooled_strategy",
+            "pooled_strategy_W",
+            "pooled_strategy_H",
             "table_guide",
         }.issubset(set(trialwise_book.sheetnames))
+        pooled_h_sheet = trialwise_book["pooled_strategy_H"]
+        pooled_h_table = pooled_h_sheet.tables["tbl_pooled_strategy_h_means"]
+        min_col, min_row, max_col, _ = range_boundaries(pooled_h_table.ref)
+        headers = [
+            pooled_h_sheet.cell(row=min_row, column=column_index).value
+            for column_index in range(min_col, max_col + 1)
+        ]
+        assert "h_se" in headers
+        assert "h_n" in headers
+        assert "h_std" not in headers
     finally:
         trialwise_book.close()
 

@@ -33,7 +33,7 @@ from .excel_results import (
     validate_results_interpretation_workbook,
     write_results_interpretation_workbook,
 )
-from .figures import figure_suffix
+from .figures import _summarize_h_curve_bands, figure_suffix
 from .methods import primary_analysis_mode
 from .single_parquet import (
     AGGREGATE_NAME_MAP,
@@ -309,7 +309,7 @@ def _build_pooled_cluster_strategy_H_means_long(
     labels_frame: pd.DataFrame,
     minimal_h_long: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Per-cluster, per-strategy mean H values (long format) for the pooled group."""
+    """Per-cluster, per-strategy H mean and SE values for the pooled group."""
     required = {"group_id", "cluster_id", "analysis_step_class"}
     if labels_frame.empty or not required.issubset(set(labels_frame.columns)):
         return pd.DataFrame()
@@ -331,14 +331,10 @@ def _build_pooled_cluster_strategy_H_means_long(
     if merged.empty:
         return pd.DataFrame()
 
-    agg = (
-        merged.groupby(["group_id", "cluster_id", "strategy_label", "frame_idx"], dropna=False)["h_value"]
-        .agg(["mean", "std"])
-        .reset_index()
+    return _summarize_h_curve_bands(
+        merged,
+        ["group_id", "cluster_id", "strategy_label"],
     )
-    agg.columns = [*agg.columns[:-2], "h_mean", "h_std"]
-    agg["h_std"] = agg["h_std"].fillna(0.0)
-    return agg
 
 
 def _build_cross_group_artifacts(
