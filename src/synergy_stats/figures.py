@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import matplotlib
+import numpy as np
 import pandas as pd
 
 
@@ -97,6 +98,52 @@ def _normalized_component_axis(values: pd.Series) -> tuple[pd.Series, list[float
     return ordered["h_value"], x_values.tolist()
 
 
+def _summarize_h_curve_bands(
+    curve_frame: pd.DataFrame,
+    group_keys: list[str],
+) -> pd.DataFrame:
+    """Summarize H curves into per-frame mean and SE bands."""
+    required = set(group_keys) | {"frame_idx", "h_value"}
+    if curve_frame.empty or not required.issubset(set(curve_frame.columns)):
+        return pd.DataFrame()
+
+    stats = (
+        curve_frame.groupby(group_keys + ["frame_idx"], dropna=False)["h_value"]
+        .agg(["mean", "count", lambda values: values.std(ddof=1)])
+        .reset_index()
+    )
+    stats.columns = [*group_keys, "frame_idx", "h_mean", "h_n", "h_std"]
+    stats["h_std"] = stats["h_std"].fillna(0.0)
+    stats["h_se"] = stats["h_std"] / np.sqrt(stats["h_n"].clip(lower=1))
+    return stats.drop(columns=["h_std"])
+
+
+def _build_group_cluster_h_band_stats(
+    minimal_h_long: pd.DataFrame,
+    labels_frame: pd.DataFrame,
+) -> pd.DataFrame:
+    """Return per-group, per-cluster H mean/SE bands from member curves."""
+    join_keys = ["group_id", "trial_id", "component_index"]
+    required = set(join_keys + ["cluster_id"])
+    if minimal_h_long.empty or labels_frame.empty or not required.issubset(set(labels_frame.columns)):
+        return pd.DataFrame()
+
+    merged = minimal_h_long.merge(
+        labels_frame[join_keys + ["cluster_id"]],
+        on=join_keys,
+        how="inner",
+    )
+    return _summarize_h_curve_bands(merged, ["group_id", "cluster_id"])
+
+
+def _band_half_width(band_frame: pd.DataFrame) -> pd.Series:
+    if "h_se" in band_frame.columns:
+        return band_frame["h_se"].fillna(0.0)
+    if "h_std" in band_frame.columns:
+        return band_frame["h_std"].fillna(0.0)
+    return pd.Series(0.0, index=band_frame.index, dtype=float)
+
+
 def _build_cluster_coverage(
     cluster_labels: pd.DataFrame,
     trial_metadata: pd.DataFrame,
@@ -144,6 +191,7 @@ def _render_component_grid(
     strategy_summary: Optional[pd.DataFrame] = None,
     total_step_trials_global: Optional[int] = None,
     total_nonstep_trials_global: Optional[int] = None,
+    h_band_stats: Optional[pd.DataFrame] = None,
 ) -> None:
     plt = _pyplot()
     _configure_fonts()
@@ -201,8 +249,31 @@ def _render_component_grid(
             ax_w.set_title(f"{row_title}: W{subtitle}", fontsize=11)
             ax_w.tick_params(axis="x", rotation=45)
 
-            h_values, x_values = _normalized_component_axis(cluster_h)
-            ax_h.plot(x_values, h_values.to_numpy(dtype=float), color="#2F9E44", linewidth=2.0)
+            ordered_h = cluster_h.sort_values("frame_idx")
+            h_values, x_values = _normalized_component_axis(ordered_h)
+            line_values = h_values.to_numpy(dtype=float)
+            if h_band_stats is not None and not h_band_stats.empty:
+                band_rows = (
+                    h_band_stats.loc[h_band_stats["cluster_id"] == row_id]
+                    .sort_values("frame_idx")
+                    .copy()
+                )
+                if not band_rows.empty:
+                    band_rows["h_band"] = _band_half_width(band_rows)
+                    merged_band = ordered_h[["frame_idx"]].merge(
+                        band_rows[["frame_idx", "h_band"]],
+                        on="frame_idx",
+                        how="left",
+                    )
+                    half_width = merged_band["h_band"].fillna(0.0).to_numpy(dtype=float)
+                    ax_h.fill_between(
+                        x_values,
+                        line_values - half_width,
+                        line_values + half_width,
+                        color="#2F9E44",
+                        alpha=0.2,
+                    )
+            ax_h.plot(x_values, line_values, color="#2F9E44", linewidth=2.0)
             ax_h.set_xlim(0.0, 100.0)
             ax_h.set_title(f"{row_title}: H (100-window){subtitle}", fontsize=11)
             ax_h.set_xlabel("Normalized window (%)")
@@ -226,6 +297,7 @@ def save_group_cluster_figure(
     strategy_summary: Optional[pd.DataFrame] = None,
     total_step_trials_global: Optional[int] = None,
     total_nonstep_trials_global: Optional[int] = None,
+    h_band_stats: Optional[pd.DataFrame] = None,
 ) -> None:
     has_coverage = cluster_labels is not None and trial_metadata is not None
     if has_coverage:
@@ -250,6 +322,7 @@ def save_group_cluster_figure(
         strategy_summary=strategy_summary,
         total_step_trials_global=total_step_trials_global,
         total_nonstep_trials_global=total_nonstep_trials_global,
+        h_band_stats=h_band_stats,
     )
 
 
@@ -321,8 +394,6 @@ def save_within_cluster_strategy_overlay(
     total_nonstep_trials_global: Optional[int] = None,
 ) -> None:
     """Render per-cluster step vs nonstep W bar + H overlay (Figure 05)."""
-    import numpy as np
-
     plt = _pyplot()
     _configure_fonts()
 
@@ -397,9 +468,9 @@ def save_within_cluster_strategy_overlay(
             frames = sh["frame_idx"].to_numpy(dtype=float)
             x_pct = 100.0 * frames / frames.max() if len(frames) > 1 and frames.max() > 0 else frames
             mean_vals = sh["h_mean"].to_numpy(dtype=float)
-            if "h_std" in sh.columns:
-                std_vals = sh["h_std"].to_numpy(dtype=float)
-                ax_h.fill_between(x_pct, mean_vals - std_vals, mean_vals + std_vals,
+            if "h_se" in sh.columns or "h_std" in sh.columns:
+                band_vals = _band_half_width(sh).to_numpy(dtype=float)
+                ax_h.fill_between(x_pct, mean_vals - band_vals, mean_vals + band_vals,
                                   color=STRATEGY_COLORS[strategy], alpha=0.2)
             ax_h.plot(x_pct, mean_vals, color=STRATEGY_COLORS[strategy], linewidth=3.0, label=strategy)
             mean_collections.append(mean_vals)
@@ -519,8 +590,6 @@ def save_cross_group_matched_w(
     output_path: Path,
 ) -> None:
     """Render matched W bar charts for same_synergy pairs and group_specific clusters."""
-    import numpy as np
-
     plt = _pyplot()
     _configure_fonts()
 
@@ -657,32 +726,20 @@ def save_cross_group_matched_h(
     if not panels:
         return
 
-    # Join labels with minimal_h to get per-trial H curves with cluster assignments
-    trial_h = minimal_h.merge(
-        labels[["group_id", "trial_id", "component_index", "cluster_id"]],
-        on=["group_id", "trial_id", "component_index"],
-        how="inner",
-    )
+    trial_stats = _build_group_cluster_h_band_stats(minimal_h, labels)
 
-    def _compute_trial_stats(
+    def _cluster_band_arrays(
         df: pd.DataFrame, group_id: str, cluster_id: int,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Return (x_pct, mean, std) for all trials in a cluster."""
-        subset = df[(df["group_id"] == group_id) & (df["cluster_id"] == cluster_id)]
+        """Return (x_pct, mean, se) for all member curves in a cluster."""
+        subset = df[(df["group_id"] == group_id) & (df["cluster_id"] == cluster_id)].sort_values("frame_idx")
         if subset.empty:
             return np.array([]), np.array([]), np.array([])
-        pivot = subset.pivot_table(
-            index=["trial_id", "component_index"],
-            columns="frame_idx",
-            values="h_value",
-            aggfunc="first",
-        )
-        vals = pivot.to_numpy(dtype=float)
-        frames = np.array(sorted(pivot.columns), dtype=float)
+        frames = subset["frame_idx"].to_numpy(dtype=float)
         x_pct = 100.0 * frames / frames.max() if len(frames) > 1 and frames.max() > 0 else frames
-        mean = np.nanmean(vals, axis=0)
-        std = np.nanstd(vals, axis=0)
-        return x_pct, mean, std
+        mean = subset["h_mean"].to_numpy(dtype=float)
+        band = _band_half_width(subset).to_numpy(dtype=float)
+        return x_pct, mean, band
 
     def _rep_h_curve(rep_df: pd.DataFrame, cluster_id: int) -> tuple[np.ndarray, np.ndarray]:
         subset = rep_df[rep_df["cluster_id"] == cluster_id].sort_values("frame_idx")
@@ -700,17 +757,17 @@ def save_cross_group_matched_h(
         mean_y_collections: list[np.ndarray] = []
         if panel["type"] == "matched":
             # Step
-            x_s, mean_s, std_s = _compute_trial_stats(trial_h, "global_step", panel["step_cluster_id"])
+            x_s, mean_s, se_s = _cluster_band_arrays(trial_stats, "global_step", panel["step_cluster_id"])
             if len(x_s) > 0:
-                ax.fill_between(x_s, mean_s - std_s, mean_s + std_s, color=step_color, alpha=0.2)
+                ax.fill_between(x_s, mean_s - se_s, mean_s + se_s, color=step_color, alpha=0.2)
             x_rep_s, y_rep_s = _rep_h_curve(rep_h_step, panel["step_cluster_id"])
             if len(x_rep_s) > 0:
                 ax.plot(x_rep_s, y_rep_s, color=step_color, linewidth=2.5, label="step")
                 mean_y_collections.append(y_rep_s)
             # Nonstep
-            x_n, mean_n, std_n = _compute_trial_stats(trial_h, "global_nonstep", panel["nonstep_cluster_id"])
+            x_n, mean_n, se_n = _cluster_band_arrays(trial_stats, "global_nonstep", panel["nonstep_cluster_id"])
             if len(x_n) > 0:
-                ax.fill_between(x_n, mean_n - std_n, mean_n + std_n, color=nonstep_color, alpha=0.2)
+                ax.fill_between(x_n, mean_n - se_n, mean_n + se_n, color=nonstep_color, alpha=0.2)
             x_rep_n, y_rep_n = _rep_h_curve(rep_h_nonstep, panel["nonstep_cluster_id"])
             if len(x_rep_n) > 0:
                 ax.plot(x_rep_n, y_rep_n, color=nonstep_color, linewidth=2.5, label="nonstep")
@@ -721,10 +778,10 @@ def save_cross_group_matched_h(
             cid = panel["cluster_id"]
             color = step_color if gid == "global_step" else nonstep_color
             rep_df = rep_h_step if gid == "global_step" else rep_h_nonstep
-            x_t, mean_t, std_t = _compute_trial_stats(trial_h, gid, cid)
+            x_t, mean_t, se_t = _cluster_band_arrays(trial_stats, gid, cid)
             if len(x_t) > 0:
-                ax.fill_between(x_t, mean_t - std_t, mean_t + std_t, color=color, alpha=0.2,
-                                label=r"mean $\pm$ SD")
+                ax.fill_between(x_t, mean_t - se_t, mean_t + se_t, color=color, alpha=0.2,
+                                label=r"mean $\pm$ SE")
             x_rep, y_rep = _rep_h_curve(rep_df, cid)
             if len(x_rep) > 0:
                 ax.plot(x_rep, y_rep, color=color, linewidth=2.5, label="mean")

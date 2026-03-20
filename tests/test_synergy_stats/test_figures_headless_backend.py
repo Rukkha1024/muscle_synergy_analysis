@@ -33,6 +33,13 @@ rep_h = pd.DataFrame({{
     "frame_idx": [0, 1, 2],
     "h_value": [0.1, 0.2, 0.3],
 }})
+group_h_band_stats = pd.DataFrame({{
+    "cluster_id": [0, 0, 0],
+    "frame_idx": [0, 1, 2],
+    "h_mean": [0.1, 0.2, 0.3],
+    "h_se": [0.01, 0.02, 0.01],
+    "h_n": [3, 3, 3],
+}})
 trial_w = pd.DataFrame({{
     "component_index": [0, 0],
     "assigned_cluster_id": [4, 4],
@@ -56,6 +63,7 @@ save_group_cluster_figure(
     muscle_names=["TA", "MG"],
     cfg=cfg,
     output_path=group_output_path,
+    h_band_stats=group_h_band_stats,
 )
 save_trial_nmf_figure(
     subject="김철수",

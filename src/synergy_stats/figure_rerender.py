@@ -17,6 +17,8 @@ import polars as pl
 
 from .cross_group_similarity import build_cluster_w_matrix
 from .figures import (
+    _build_group_cluster_h_band_stats,
+    _summarize_h_curve_bands,
     _build_cluster_coverage,
     figure_suffix,
     save_cluster_strategy_composition,
@@ -328,6 +330,9 @@ def render_figures_from_run_dir(
     try:
         # Figure 01: Trial composition (concatenated mode only)
         source_trial_windows_frame = bundle.get(SOURCE_TRIAL_WINDOWS_FRAME_KEY, None)
+        raw_labels = bundle.get("labels", pd.DataFrame())
+        raw_minimal_h = bundle.get("minimal_H_long", pd.DataFrame())
+        group_h_band_stats = _build_group_cluster_h_band_stats(raw_minimal_h, raw_labels)
         if source_trial_windows_frame is not None and not source_trial_windows_frame.empty:
             pooled_tw = artifacts["trial_windows"].filter(
                 pl.col("group_id") == "pooled_step_nonstep"
@@ -361,6 +366,11 @@ def render_figures_from_run_dir(
                 strategy_summary=group_strategy,
                 total_step_trials_global=_step_total_unique if group_id == "pooled_step_nonstep" else None,
                 total_nonstep_trials_global=_nonstep_total_unique if group_id == "pooled_step_nonstep" else None,
+                h_band_stats=(
+                    group_h_band_stats.loc[group_h_band_stats["group_id"] == group_id].copy()
+                    if not group_h_band_stats.empty
+                    else pd.DataFrame()
+                ),
             )
             rendered_paths["group_figure_paths"].append(str(output_path))
 
@@ -383,24 +393,23 @@ def render_figures_from_run_dir(
         # Figure 05: Within-cluster strategy overlay
         strategy_w_means = bundle.get(POOLED_CLUSTER_STRATEGY_W_MEANS_KEY, pd.DataFrame())
         strategy_h_means = bundle.get(POOLED_CLUSTER_STRATEGY_H_MEANS_KEY, pd.DataFrame())
-        # Recompute h_std from minimal data if missing
-        if not strategy_h_means.empty and "h_std" not in strategy_h_means.columns:
-            _labels = bundle.get("labels", pd.DataFrame())
-            _min_h = bundle.get("minimal_H_long", pd.DataFrame())
-            if not _labels.empty and not _min_h.empty:
-                _pl = _labels.loc[_labels["group_id"].astype(str) == "pooled_step_nonstep"].copy()
-                if not _pl.empty:
-                    _pl["strategy_label"] = _pl["analysis_step_class"].astype(str).str.strip().str.lower()
-                    _pl = _pl.loc[_pl["strategy_label"].isin(["step", "nonstep"])]
-                    _mk = ["group_id", "trial_id", "component_index"]
-                    _mg = _min_h.merge(_pl[_mk + ["cluster_id", "strategy_label"]], on=_mk, how="inner")
-                    if not _mg.empty:
-                        strategy_h_means = (
-                            _mg.groupby(["group_id", "cluster_id", "strategy_label", "frame_idx"], dropna=False)["h_value"]
-                            .agg(["mean", "std"]).reset_index()
-                        )
-                        strategy_h_means.columns = [*strategy_h_means.columns[:-2], "h_mean", "h_std"]
-                        strategy_h_means["h_std"] = strategy_h_means["h_std"].fillna(0.0)
+        if not raw_labels.empty and not raw_minimal_h.empty:
+            pooled_labels = raw_labels.loc[raw_labels["group_id"].astype(str) == "pooled_step_nonstep"].copy()
+            if not pooled_labels.empty:
+                pooled_labels["strategy_label"] = pooled_labels["analysis_step_class"].astype(str).str.strip().str.lower()
+                pooled_labels = pooled_labels.loc[pooled_labels["strategy_label"].isin(["step", "nonstep"])]
+                merge_keys = ["group_id", "trial_id", "component_index"]
+                pooled_h = raw_minimal_h.merge(
+                    pooled_labels[merge_keys + ["cluster_id", "strategy_label"]],
+                    on=merge_keys,
+                    how="inner",
+                )
+                recomputed_strategy_h = _summarize_h_curve_bands(
+                    pooled_h,
+                    ["group_id", "cluster_id", "strategy_label"],
+                )
+                if not recomputed_strategy_h.empty:
+                    strategy_h_means = recomputed_strategy_h
         if (
             strategy_summary is not None
             and "pooled_step_nonstep" in group_ids
