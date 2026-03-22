@@ -120,9 +120,48 @@ Perturbation onset 시점의 초기 자세 동질성을 확인하기 위해, per
 
 관절 각도는 경추([[@Predicting reactive stepping in response to perturbations by using a classification approach|Emmens et al., 2020]]), 발목, 무릎, 고관절, 그리고 체간([[@Interactions between initial posture and task-level goal explain experimental variability in postural responses to perturbations of standing balance|Van Wouwe et al., 2021]])에서 산출하였다.
 
+### 근육 시너지 변수
+
+근육 시너지 분석에서는 비음수 행렬 분해(NMF)를 통해 근육 가중치 벡터(W), 시간적 활성화 계수(H), 설명 분산 비율(VAF), 분해 차원(rank), 그리고 군집 배정 번호(cluster_id)가 산출된다. W는 각 시너지에 대한 16개 근육의 상대적 기여도를 나타내며, H는 해당 시너지의 시간에 따른 활성화 크기를 나타낸다. VAF는 원본 EMG 행렬에 대한 재구성 정확도를 반영하며, rank는 각 trial에서 채택된 시너지 수를, cluster_id는 pooled 군집화 이후 배정된 대표 시너지 번호를 의미한다.
+
+## 근육 시너지 분석
+
+### 시너지 추출
+
+근육 시너지(muscle synergy)란, 중추신경계(CNS)가 다수의 근육을 소수의 기능적 모듈로 조직하여 협응시키는 단위를 말한다([[@Muscle synergies characterizing human postural responses|Torres-Oviedo & Ting, 2007]]). 본 연구에서는 비음수 행렬 분해(non-negative matrix factorization, NMF)를 적용하여 전처리된 EMG 행렬로부터 시너지를 추출하였다([[@Learning the parts of objects by non-negative matrix factorization|Lee & Seung, 1999]]).
+
+NMF 분해 모델은 다음과 같이 정의한다.
+
+$$X \approx H \times W^{T}$$
+
+여기서 $X$는 [time × 16 muscles] 크기의 EMG 행렬이며, $W$는 [muscles × rank] 크기의 근육 가중치 행렬, $H$는 [time × rank] 크기의 시간적 활성화 계수 행렬이다. $W$의 각 열(column)은 하나의 시너지를 구성하는 근육 간 상대적 기여도를 나타내고, $H$의 대응하는 열은 해당 시너지의 시간에 따른 활성화 크기를 나타낸다.
+
+분석 구간은 step trial의 경우 `platform_onset`에서 `step_onset`까지로 설정하였다. Nonstep trial은 실제 step event가 존재하지 않으므로, 동일 피험자-velocity 내 step trial에서 산출한 평균 step latency(`step_onset − platform_onset`)를 적용한 surrogate 종료점을 사용하였다. 이는 step과 nonstep을 동일한 시간 구조에서 비교하기 위한 것이다(데이터 수집 및 처리 절 참조).
+
+시너지 수(rank)는 1에서 8까지 순차적으로 탐색하여, 설명 분산 비율(VAF)이 0.90 이상을 처음 만족하는 rank를 채택하였다. VAF는 다음과 같이 산출하였다.
+
+$$VAF = 1 - \frac{\sum(X - HW^{T})^{2}}{\sum X^{2}}$$
+
+추출된 $W$는 각 열의 L2 norm 기준으로 정규화하고, $H$에는 대응하는 norm을 곱하여 시너지 간 크기 비교가 가능하도록 하였다.
+
+Concatenated 방식의 분석에서는 동일 피험자, 동일 velocity, 동일 전략(step 또는 nonstep)에 해당하는 trial들을 시간축으로 연결한 super-trial에 NMF를 적용하였다([[@Common muscle synergies for control of center of mass and force in nonstepping and stepping postural behaviors|Chvatal et al., 2011]]). 추출된 H는 원래 trial 경계에 따라 분리한 뒤 평균하여 대표 활성화 프로파일로 사용하였다.
+
+### 시너지 군집화
+
+추출된 시너지를 공통 대표 패턴으로 요약하기 위해, step과 nonstep 모든 trial에서 추출된 W 벡터를 하나의 공간에 pooling한 뒤 K-means 클러스터링을 적용하였다.
+
+최적 클러스터 수(K)는 2단계로 결정하였다. 첫째, gap statistic의 1-SE rule을 적용하였다([[@Estimating the number of clusters in a data set via the gap statistic|Tibshirani et al., 2001]]). 각 후보 K에서 관측된 군집 내 분산(within-cluster dispersion)을 500개 균일분포 참조 표본과 비교하여 gap 값을 산출하였으며, 각 K에서 100회 재시작(restart)을 수행하였다. 1-SE rule은 $Gap(K) \geq Gap(K{+}1) - SE(K{+}1)$을 처음 만족하는 최소 K를 구조 기준 후보로 선정하는 규칙이다. 둘째, zero-duplicate feasibility 검증을 수행하였다. Gap statistic이 추천한 K 이상에서, 동일 trial 내 복수 component가 같은 cluster에 중복 배정되지 않는(zero-duplicate) observed solution이 처음 나타나는 K를 최종 클러스터 수로 채택하였다. 이 과정에서 각 K당 1,000회 재시작을 수행하여 zero-duplicate solution의 존재를 탐색하였다.
+
+각 component의 전략 라벨(step 또는 nonstep)은 군집화 과정에서 보존되므로, 동일 cluster 내에서 전략 간 비교가 가능하다.
+
+### 대표 시너지 및 전략 비교
+
+대표 근육 가중치(W)는 각 cluster의 centroid, 즉 해당 cluster에 배정된 모든 W 벡터의 평균으로 산출하였다. 대표 시간적 활성화 프로파일(H)은 cluster 멤버들의 H를 100개 시간 구간(window)으로 보간(interpolation)한 뒤 평균하였으며, 표준오차(SE) 밴드로 변동성을 표시하였다.
+
+전략 비교는 각 cluster 내 step과 nonstep의 구성 비율을 기준으로, 공유 시너지(shared synergy)와 전략-특이적 시너지(strategy-specific synergy)를 분류하였다. 또한 동일 cluster 내에서 step과 nonstep의 W 패턴 및 H 시간 프로파일을 중첩 비교하여 전략 간 차이를 분석하였다.
 
 
-## 통계방법 
+## 통계방법
 
 균형회복 전략(step vs. nonstep) 간 차이는 변수별로 독립적인 linear mixed-effects model(LMM)을 적용하여 분석하였다. 각 종속변수에 대해 피험자 수준으로 평균하지 않은 개별 시행(raw trial) 데이터를 그대로 모델에 투입하였다. 모델은 균형회복 전략(step vs. nonstep)을 고정 효과(fixed effect)로, 피험자를 임의 절편(random intercept)으로 설정하여 REML(restricted maximum likelihood)로 추정하였다. LMM은 onset timing에 존재하는 결측치 및 피험자별 불균등한 시행 수를 자연스럽게 처리하며, 이는 완전한 균형 설계를 가정하는 paired t-test나 repeated-measures ANOVA보다 정보 손실이 적다는 장점이 있다. 다중비교 보정은 종속변수별로 Benjamini-Hochberg FDR을 적용하였다. 보정은 각 변수집단(근전도, 운동학, 운동역학) 내에서 개별적으로(family-wise) 수행되었다.
 
@@ -257,6 +296,8 @@ step onset 시점
 
 
 # 결론 
+
+- gpt 읽어볼것: [ChatGPT - K-means 클러스터링 방법](https://chatgpt.com/share/69b6d2bb-280c-8003-9ad3-3f8c4f48eab1)
 
 ## 초기자세로 인해서 step이 발생하였는가? 
 
