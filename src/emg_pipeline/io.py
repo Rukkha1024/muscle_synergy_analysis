@@ -237,6 +237,54 @@ def _source_label(label: str) -> str:
     return mapping.get(label, str(label))
 
 
+def _pair_key_series(table: pd.DataFrame) -> pd.Series:
+    subject = table["subject"].astype(str).str.strip()
+    velocity = table["velocity"].astype(str).str.strip()
+    return subject + "|" + velocity
+
+
+def _apply_paired_selection_gate(prepared: pd.DataFrame) -> pd.DataFrame:
+    pair_columns = ["subject", "velocity", "analysis_is_step", "analysis_is_nonstep", "analysis_selected_group_prepaired"]
+    pair_summary = (
+        prepared.loc[prepared["analysis_selected_group_prepaired"], pair_columns]
+        .groupby(["subject", "velocity"], sort=False)
+        .agg(
+            analysis_pair_has_step=("analysis_is_step", "any"),
+            analysis_pair_has_nonstep=("analysis_is_nonstep", "any"),
+        )
+        .reset_index()
+    )
+    pair_summary["analysis_is_paired_key"] = (
+        pair_summary["analysis_pair_has_step"] & pair_summary["analysis_pair_has_nonstep"]
+    )
+    pair_summary["analysis_pair_status"] = "paired"
+    pair_summary.loc[
+        pair_summary["analysis_pair_has_step"] & ~pair_summary["analysis_pair_has_nonstep"],
+        "analysis_pair_status",
+    ] = "step_only"
+    pair_summary.loc[
+        ~pair_summary["analysis_pair_has_step"] & pair_summary["analysis_pair_has_nonstep"],
+        "analysis_pair_status",
+    ] = "nonstep_only"
+    pair_summary.loc[
+        ~pair_summary["analysis_pair_has_step"] & ~pair_summary["analysis_pair_has_nonstep"],
+        "analysis_pair_status",
+    ] = "unselected_key"
+    prepared = prepared.merge(
+        pair_summary[["subject", "velocity", "analysis_is_paired_key", "analysis_pair_status"]],
+        on=["subject", "velocity"],
+        how="left",
+    )
+    prepared["analysis_is_paired_key"] = prepared["analysis_is_paired_key"].astype("boolean").fillna(False).astype(bool)
+    prepared["analysis_pair_status"] = prepared["analysis_pair_status"].fillna("unselected_key")
+    prepared["analysis_selected_group"] = (
+        prepared["analysis_selected_group_prepaired"] & prepared["analysis_is_paired_key"]
+    )
+    if not prepared["analysis_selected_group"].any():
+        raise ValueError("No paired trial groups remain after event filtering.")
+    return prepared
+
+
 def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> pd.DataFrame:
     cfg = cfg or {}
     window_cfg = _windowing_cfg(cfg)
@@ -318,6 +366,10 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
         prepared.loc[nonstep_mask, "analysis_stance_side"] = prepared.loc[nonstep_mask, "analysis_major_step_side"].map(
             _major_stance_from_step_state
         )
+        prepared["analysis_selected_group_prepaired"] = prepared["analysis_selected_group"]
+        prepared["analysis_pair_key"] = _pair_key_series(prepared)
+        prepared["analysis_is_paired_key"] = True
+        prepared["analysis_pair_status"] = "not_required_all_trials"
         return prepared
 
     prepared["analysis_dominant_side"] = prepared[dominant_column].map(_normalize_dominant_side)
@@ -445,6 +497,9 @@ def _prepare_event_metadata(table: pd.DataFrame, cfg: dict[str, Any] | None) -> 
     )
     prepared["analysis_subject_mean_step_onset"] = group_step_mean.astype(float)
     prepared["analysis_subject_mean_step_latency"] = group_latency_mean.astype(float)
+    prepared["analysis_selected_group_prepaired"] = prepared["analysis_selected_group"]
+    prepared["analysis_pair_key"] = _pair_key_series(prepared)
+    prepared = _apply_paired_selection_gate(prepared)
 
     return prepared
 

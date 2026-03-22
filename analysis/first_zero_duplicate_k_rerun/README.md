@@ -83,6 +83,51 @@ conda run --no-capture-output -n cuda python \
   --overwrite
 ```
 
+### paired refilter run
+
+`subject+velocity` 기준 paired filter가 이미 반영된 final parquet를 다시 읽어서, paired subset만으로 `first_zero_duplicate` reclustering과 paired exact McNemar 통계를 만들고 싶다면 아래 명령을 사용한다.
+
+```bash
+conda run --no-capture-output -n cuda python \
+  analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py \
+  --source-parquet outputs/final_concatenated.parquet \
+  --config configs/global_config.yaml \
+  --out-dir analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_run \
+  --overwrite
+```
+
+이 workflow는 raw event/meta를 다시 읽지 않는다. 입력은 paired filter가 끝난 single parquet bundle 하나뿐이다.
+현재 `main.py --out ...`는 workbook/figure는 지정한 run directory 아래에 쓰지만, canonical single parquet alias는 여전히 루트 `outputs/final_concatenated.parquet`에 기록하므로 위 경로를 사용한다.
+
+### paired refilter workflow
+
+`subject + velocity` 기준으로 **step / nonstep이 둘 다 있는 key만 남긴 뒤**, 그 subset에서 다시 `first_zero_duplicate` reclustering과 paired statistics를 보고 싶다면 아래 순서로 실행하면 된다.
+
+1. main pipeline을 isolated output으로 한 번 다시 돌려 paired-only final parquet를 만든다.
+2. 그 parquet를 입력으로 새 paired analysis script를 실행한다.
+
+```bash
+conda run --no-capture-output -n cuda python \
+  main.py \
+  --config configs/global_config.yaml \
+  --out outputs/paired_refilter_pipeline \
+  --overwrite
+
+conda run --no-capture-output -n cuda python \
+  analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py \
+  --source-parquet outputs/final_concatenated.parquet \
+  --out-dir analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_reclustering \
+  --overwrite
+```
+
+이 workflow는 raw event/meta를 analysis 폴더에서 다시 읽지 않는다. source of truth는 main pipeline이 만든 paired-only `final_concatenated.parquet`이고, analysis는 그 parquet만 읽어 다음 산출물을 만든다.
+
+- `paired_subset_manifest.csv`: paired key로 실제 rerun에 포함된 analysis unit 목록
+- `excluded_nonpaired_manifest.csv`: pair를 이루지 못해 빠진 key 목록
+- `paired_cluster_stats.csv`: cluster별 paired exact McNemar 요약
+- `paired_cluster_detail.csv`: cluster x paired key detail evidence
+- `paired_cluster_statistics.xlsx`: reviewer가 바로 읽을 수 있는 paired workbook
+
 ## 산출물
 
 이제 이 analysis는 scan 결과만 남기지 않고, **선택된 no-gap `K`를 기준으로 pipeline과 같은 소비 형태의 결과물**도 같이 저장한다.
@@ -121,6 +166,14 @@ analysis/first_zero_duplicate_k_rerun/artifacts/default_run/
       nmf_trials/*.png
 ```
 
+paired refilter run은 위 산출물에 더해 아래 파일을 같이 남긴다.
+
+- `paired_subset_manifest.csv`: paired key와 surviving step/nonstep analysis unit 대응표
+- `excluded_nonpaired_manifest.csv`: source bundle 안에서 paired 조건을 만족하지 못한 key 목록
+- `paired_cluster_stats.csv`: cluster별 paired presence 요약과 exact McNemar 결과
+- `paired_cluster_detail.csv`: `cluster x paired key` 상세 evidence
+- `paired_cluster_statistics.xlsx`: reviewer-facing paired summary workbook
+
 ## 현재 확인된 결과
 
 2026-03-19 기준 `outputs/final_concatenated.parquet`에 대해 실제 rerun을 돌린 결과는 다음과 같다.
@@ -141,6 +194,8 @@ analysis/first_zero_duplicate_k_rerun/artifacts/default_run/
 - `pipeline_k_selected`: pipeline이 최종 채택한 값
 - `pipeline_k_min_unique`: pipeline metadata상 duplicate가 처음 0개가 되는 값
 - `k_selected_first_zero_duplicate`: 이번 analysis가 gap 없이 다시 찾은 값
+- `paired_key_n`: paired refilter workflow에서 실제로 남은 `subject+velocity` key 수
+- `excluded_pair_key_n`: source bundle에 있었지만 paired subset에서 제외된 key 수
 
 현재 사용자 질문의 핵심은 `pipeline_k_gap_raw` 또는 `pipeline_k_selected`가 `15`여도, **no-gap rule에서는 `13`이 먼저 zero-duplicate가 될 수 있다**는 점이다.
 

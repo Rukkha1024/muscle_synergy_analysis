@@ -24,11 +24,12 @@ English: The core of this work is responsibility separation. Filtering is a prod
 - [x] (2026-03-22T00:20Z) 한국어: 새 paired statistics workbook은 `analysis/first_zero_duplicate_k_rerun/` 내부에서만 생성하기로 고정했다. English: Locked the new paired statistics workbook to be generated only inside `analysis/first_zero_duplicate_k_rerun/`.
 - [x] (2026-03-22T00:25Z) 한국어: standalone ExecPlan 초안을 작성했다. English: Authored the first standalone ExecPlan draft.
 - [x] (2026-03-22T01:30Z) 한국어: 사용자 요구에 맞춰 아키텍처 경계를 다시 잠갔다. Filtering은 main pipeline 수정이고, 통계분석 및 Excel 생성은 analysis 폴더 내부에서만 수행한다. English: Re-locked the architecture boundary to match the user requirement. Filtering belongs to the main pipeline, while statistics and Excel generation happen only inside the analysis folder.
-- [ ] 한국어: `src/emg_pipeline/io.py`에서 기존 selection semantics 뒤에 paired gate를 추가한다. English: Add the paired gate after the existing selection semantics in `src/emg_pipeline/io.py`.
-- [ ] 한국어: isolated pipeline rerun으로 paired-only final parquet를 생성하고 paired key count를 검증한다. English: Produce a paired-only final parquet through an isolated pipeline rerun and verify the paired key count.
-- [ ] 한국어: `analysis/first_zero_duplicate_k_rerun/` 내부에 paired reclustering + paired statistics entrypoint를 추가한다. English: Add a paired reclustering plus paired statistics entrypoint inside `analysis/first_zero_duplicate_k_rerun/`.
-- [ ] 한국어: paired manifests, paired stats CSV, paired workbook, summary.json 확장을 구현한다. English: Implement the paired manifests, paired stats CSVs, paired workbook, and the expanded `summary.json`.
-- [ ] 한국어: pipeline test, analysis test, reproducibility checksum, workbook validation을 완료한다. English: Finish the pipeline test, analysis test, reproducibility checksum, and workbook validation.
+- [x] (2026-03-22T05:20Z) 한국어: `src/emg_pipeline/io.py`의 paired gate 구현과 관련 pipeline contract test 갱신이 working tree에 이미 반영돼 있음을 확인했고, `tests/test_emg_pipeline/test_event_preparation_contract.py` 및 `tests/test_emg_pipeline/test_trial_processing_contract.py` 통과로 동작을 재검증했다. English: Confirmed that the paired gate implementation in `src/emg_pipeline/io.py` and the related pipeline contract test updates were already present in the working tree, and revalidated the behavior by passing `tests/test_emg_pipeline/test_event_preparation_contract.py` and `tests/test_emg_pipeline/test_trial_processing_contract.py`.
+- [x] (2026-03-22T06:35Z) 한국어: `main.py --out outputs/paired_refilter_pipeline --overwrite` rerun을 완료했고, canonical parquet alias가 루트 `outputs/final_concatenated.parquet`로 기록되는 현재 동작을 확인한 뒤 selected 집합이 `21` paired key와 `42` analysis unit만 남기는 것을 검증했다. English: Completed the `main.py --out outputs/paired_refilter_pipeline --overwrite` rerun, confirmed the current behavior where the canonical parquet alias is still written to root `outputs/final_concatenated.parquet`, and verified that the selected set now contains only `21` paired keys and `42` analysis units.
+- [x] (2026-03-22T05:45Z) 한국어: `analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py`를 추가하고 기존 no-gap export helper를 재사용하는 paired entrypoint를 구현했다. English: Added `analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py` and implemented the paired entrypoint by reusing the existing no-gap export helpers.
+- [x] (2026-03-22T06:00Z) 한국어: paired manifests, paired stats CSV, paired workbook validation, summary 확장, 그리고 synthetic analysis contract test를 구현했고 `tests/test_analysis/test_paired_refilter_reclustering.py`를 통과시켰다. English: Implemented the paired manifests, paired stats CSVs, paired workbook validation, the expanded summary, and the synthetic analysis contract test, and passed `tests/test_analysis/test_paired_refilter_reclustering.py`.
+- [x] (2026-03-22T06:15Z) 한국어: legacy no-gap rerun synthetic bundle도 다시 통과하도록 `analysis/first_zero_duplicate_k_rerun/analyze_first_zero_duplicate_k_rerun.py`에 export metadata hydration fallback을 추가했고, 관련 analysis tests를 통과시켰다. English: Added export-metadata hydration fallbacks to `analysis/first_zero_duplicate_k_rerun/analyze_first_zero_duplicate_k_rerun.py` so the legacy no-gap rerun synthetic bundle passes again, and passed the related analysis tests.
+- [x] (2026-03-22T07:05Z) 한국어: 실제 paired analysis rerun과 재현성 비교를 완료했다. `analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py`는 `21` paired key, `0` excluded key, `42` post-paired analysis unit, `K=13`을 기록했고, 반복 실행 간 non-`.xlsx` artifact는 `checksums.md5` 자체를 제외하고 모두 동일했다. README와 ExecPlan living section도 실제 결과로 마감 갱신했다. English: Completed the real paired analysis rerun and reproducibility comparison. `analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py` recorded `21` paired keys, `0` excluded keys, `42` post-paired analysis units, and `K=13`, and repeated runs matched on every non-`.xlsx` artifact except `checksums.md5` itself. The README and ExecPlan living sections were also updated to reflect the actual outcomes.
 
 ## Surprises & Discoveries / 예상 밖 발견 사항
 
@@ -57,12 +58,36 @@ English: The core of this work is responsibility separation. Filtering is a prod
   English: `analysis/first_zero_duplicate_k_rerun/analyze_first_zero_duplicate_k_rerun.py` exposes `--source-parquet`, `--out-dir`, and `--overwrite`, and writes `summary.json`, `checksums.md5`, `final.parquet`, workbooks, and figures.
 
 - Observation:
+  한국어: `main.py --out ...`는 workbook/figure 경로는 isolate하지만 single-parquet alias는 여전히 루트 `outputs/final*.parquet`에 기록한다.
+  English: `main.py --out ...` isolates workbook and figure paths, but the single-parquet aliases are still written to root `outputs/final*.parquet`.
+
+  Evidence:
+  한국어: `outputs/paired_refilter_pipeline/analysis_methods_manifest.json`는 run directory를 가리키지만, 실제 paired-only parquet 검증에 사용된 파일은 `outputs/final_concatenated.parquet`였다.
+  English: `outputs/paired_refilter_pipeline/analysis_methods_manifest.json` points to the run directory, but the actual file used for paired-only parquet verification was `outputs/final_concatenated.parquet`.
+
+- Observation:
+  한국어: 실제 paired pipeline rerun은 full-sample `45` analysis unit을 `42` analysis unit으로 줄였고, 이는 `21`개의 `(subject, velocity)` paired key만 남긴 결과와 정확히 일치했다.
+  English: The real paired pipeline rerun reduced the full-sample `45` analysis units to `42`, exactly matching the retention of only `21` `(subject, velocity)` paired keys.
+
+  Evidence:
+  한국어: `outputs/final_concatenated.parquet`의 `trial_windows`에서 `analysis_selected_group=True`인 행만 다시 집계하면 `paired_key_n = 21`, `excluded_key_n = 0`, `analysis_unit_n = 42`가 나온다.
+  English: Reaggregating only the `analysis_selected_group=True` rows in `trial_windows` from `outputs/final_concatenated.parquet` yields `paired_key_n = 21`, `excluded_key_n = 0`, and `analysis_unit_n = 42`.
+
+- Observation:
   한국어: workbook validation contract는 이미 저장소에 구현되어 있다.
   English: The workbook validation contract is already implemented in the repository.
 
   Evidence:
   한국어: `src/synergy_stats/excel_results.py`는 save 후 reopen validation, `table_guide`, `[목적]`, `[핵심 컬럼]`, `[예시]` 검증 패턴을 제공한다.
   English: `src/synergy_stats/excel_results.py` already provides the save-then-reopen validation pattern, `table_guide`, and checks for `[목적]`, `[핵심 컬럼]`, and `[예시]`.
+
+- Observation:
+  한국어: synthetic single-parquet fixture는 실제 pipeline bundle보다 메타데이터가 더 적어서, legacy rerun과 paired rerun 모두 export 직전에 trial metadata hydration이 필요했다.
+  English: The synthetic single-parquet fixture carries less metadata than the real pipeline bundle, so both the legacy rerun and the paired rerun required trial-metadata hydration just before export.
+
+  Evidence:
+  한국어: `tests/test_analysis/test_first_zero_duplicate_k_rerun.py`와 `tests/test_analysis/test_paired_refilter_reclustering.py`를 실행했을 때 처음에는 `analysis_step_class`와 `analysis_source_trial_count` 누락으로 figure rerender가 실패했고, `trial_windows` 기반 metadata fallback을 추가한 뒤 통과했다.
+  English: When running `tests/test_analysis/test_first_zero_duplicate_k_rerun.py` and `tests/test_analysis/test_paired_refilter_reclustering.py`, figure rerender initially failed because `analysis_step_class` and `analysis_source_trial_count` were missing, and the tests passed after adding `trial_windows`-based metadata fallbacks.
 
 ## Decision Log / 결정 로그
 
@@ -121,11 +146,41 @@ English: The core of this work is responsibility separation. Filtering is a prod
   Date/Author:
   2026-03-22 / GPT-5.4
 
+- Decision:
+  한국어: paired analysis script 안의 exact McNemar p-value는 SciPy helper에 의존하지 않고 script 내부의 exact binomial 계산으로 구현한다.
+  English: Implement the exact McNemar p-value inside the paired analysis script with an internal exact-binomial calculation instead of depending on a SciPy helper.
+
+  Rationale:
+  한국어: 현재 환경의 SciPy 버전 차이로 `binom_test` import가 불안정했고, discordant pair 수가 작아 직접 계산이 더 단순하고 재현 가능했다.
+  English: The current environment’s SciPy helper availability was unstable, and because the discordant pair counts are small, a direct exact-binomial implementation is simpler and more reproducible.
+
+  Date/Author:
+  2026-03-22 / GPT-5.4
+
+- Decision:
+  한국어: paired manifest 재구성은 `analysis_selected_group_prepaired`가 있으면 그것을 우선 사용하고, 없으면 `analysis_selected_group`로 fallback한다.
+  English: When rebuilding the paired manifest, prefer `analysis_selected_group_prepaired` when it exists and fall back to `analysis_selected_group` otherwise.
+
+  Rationale:
+  한국어: pipeline paired gate 이후의 최종 selected 집합은 nonpaired key를 제거하므로, manifest에서 “왜 탈락했는지”를 설명하려면 paired gate 직전 selection truth가 필요하다. synthetic 또는 legacy bundle에는 이 컬럼이 없을 수 있으므로 fallback도 필요하다.
+  English: The final selected set after the pipeline paired gate removes nonpaired keys, so the manifest needs the pre-paired selection truth to explain why a key was excluded. Synthetic or legacy bundles may not contain that column, so a fallback is also required.
+
+  Date/Author:
+  2026-03-22 / GPT-5.4
+
 ## Outcomes & Retrospective / 결과 및 회고
 
-한국어: 구현은 아직 시작하지 않았다. 하지만 이 계획은 이전 초안과 달리 pipeline filtering과 analysis statistics의 책임 경계를 명시적으로 분리한다. 승인 후 implementer는 먼저 isolated pipeline rerun으로 paired-only final parquet를 만들고, 그 다음 analysis 폴더의 새 entrypoint로 reclustering, paired manifests, exact McNemar 통계, reviewer-facing workbook을 end-to-end로 생성해야 한다.
+한국어: 구현 결과, main pipeline은 이제 기존 selection semantics를 유지한 채 마지막에 `(subject, velocity)` paired gate를 적용해 nonpaired key를 제거한다. 현재 입력 기준 full-sample `45` concatenated analysis unit은 paired-only rerun에서 `42`로 줄었고, 선택된 key는 `21`개로 수렴했다. analysis 폴더 안의 새 paired rerun entrypoint는 이 paired-only source parquet를 읽어 no-gap `first_zero_duplicate` reclustering을 다시 수행하고, 실제 데이터에서 `K=13`, `paired_key_n=21`, `excluded_pair_key_n=0`, `analysis_unit_n_postpaired=42`를 기록했다.
 
-English: Implementation has not started yet. Unlike the earlier draft, this plan now explicitly separates pipeline filtering from analysis statistics. After approval, the implementer must first produce a paired-only final parquet through an isolated pipeline rerun and then use a new analysis-folder entrypoint to generate the reclustering, paired manifests, exact McNemar statistics, and reviewer-facing workbook end to end.
+English: The implementation outcome is that the main pipeline now preserves the existing selection semantics and applies a final `(subject, velocity)` paired gate that removes nonpaired keys. For the current inputs, the full-sample `45` concatenated analysis units contract to `42` in the paired-only rerun, leaving `21` selected keys. The new paired rerun entrypoint inside the analysis folder reads that paired-only source parquet, reruns the no-gap `first_zero_duplicate` reclustering, and on the real data records `K=13`, `paired_key_n=21`, `excluded_pair_key_n=0`, and `analysis_unit_n_postpaired=42`.
+
+한국어: 검증 관점에서 중요한 결과는 두 가지다. 첫째, pipeline rerun 직후 `trial_windows` selected 집합에는 `step_only`나 `nonstep_only` key가 남지 않았다. 둘째, paired analysis workflow를 두 번 반복했을 때 non-`.xlsx` artifact는 `checksums.md5` 파일 자체를 제외하고 모두 동일했다. `checksums.md5`는 run-path 문자열을 포함하므로 반복 실행마다 내용이 달라지는 것이 정상이며, workbook은 별도 MD5 equality 대신 reopen structural validation으로 검증했다.
+
+English: Two validation outcomes matter most. First, after the pipeline rerun, the selected `trial_windows` set contains no remaining `step_only` or `nonstep_only` keys. Second, when the paired analysis workflow was repeated twice, every non-`.xlsx` artifact matched exactly except the `checksums.md5` file itself. That file is expected to differ because it embeds run-path strings, and the workbook was validated with reopen-based structural checks instead of strict MD5 equality.
+
+한국어: 구현 중 추가로 확인된 caveat은 `main.py --out`가 모든 artifact를 완전히 run-local로 고립시키지 않는다는 점이다. workbook과 figure는 지정한 run directory 아래에 생성되지만, canonical single-parquet alias는 여전히 루트 `outputs/final*.parquet`로 기록된다. 이번 paired validation은 이 현재 동작을 전제로 수행했고, 장기적으로는 output alias 분리가 별도 개선 후보가 된다.
+
+English: One additional caveat surfaced during implementation: `main.py --out` does not fully isolate every artifact to the run-local directory. The workbooks and figures are created under the requested run directory, but the canonical single-parquet aliases are still written to root `outputs/final*.parquet`. This paired validation was performed against that current behavior, and output-alias isolation remains a candidate for future cleanup.
 
 ## Context and Orientation / 현재 맥락과 구조 설명
 
@@ -228,7 +283,7 @@ English: Run all commands from the repo root `/home/alice/workspace/26-03-synerg
       import pandas as pd
       from src.synergy_stats.single_parquet import load_single_parquet_bundle
 
-      bundle = load_single_parquet_bundle("outputs/paired_refilter_pipeline/final_concatenated.parquet")
+      bundle = load_single_parquet_bundle("outputs/final_concatenated.parquet")
       trial_windows = bundle["trial_windows"].copy()
       selected = trial_windows.loc[trial_windows["analysis_selected_group"] == True].copy()
       summary = (
@@ -268,7 +323,7 @@ English: Run all commands from the repo root `/home/alice/workspace/26-03-synerg
 
       conda run --no-capture-output -n cuda python \
         analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py \
-        --source-parquet outputs/paired_refilter_pipeline/final_concatenated.parquet \
+        --source-parquet outputs/final_concatenated.parquet \
         --config configs/global_config.yaml \
         --out-dir analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_run \
         --overwrite
@@ -296,17 +351,15 @@ English: Run all commands from the repo root `/home/alice/workspace/26-03-synerg
 9. 한국어: reproducibility checksum을 만든다.
    English: Build the reproducibility checksums.
 
-      Pipeline rerun A:
-        conda run --no-capture-output -n cuda python main.py --config configs/global_config.yaml --out outputs/paired_refilter_pipeline_a --overwrite
-
-      Pipeline rerun B:
-        conda run --no-capture-output -n cuda python main.py --config configs/global_config.yaml --out outputs/paired_refilter_pipeline_b --overwrite
+      Current caveat:
+        `main.py --out ...` still rewrites the canonical single-parquet alias at `outputs/final_concatenated.parquet`,
+        so reproducibility is verified by repeating the paired analysis rerun against that canonical paired-only parquet.
 
       Analysis rerun A:
-        conda run --no-capture-output -n cuda python analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py --source-parquet outputs/paired_refilter_pipeline_a/final_concatenated.parquet --config configs/global_config.yaml --out-dir analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_run_a --overwrite
+        conda run --no-capture-output -n cuda python analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py --source-parquet outputs/final_concatenated.parquet --config configs/global_config.yaml --out-dir analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_reclustering --overwrite
 
       Analysis rerun B:
-        conda run --no-capture-output -n cuda python analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py --source-parquet outputs/paired_refilter_pipeline_b/final_concatenated.parquet --config configs/global_config.yaml --out-dir analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_run_b --overwrite
+        conda run --no-capture-output -n cuda python analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py --source-parquet outputs/final_concatenated.parquet --config configs/global_config.yaml --out-dir analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_reclustering_repeat --overwrite
 
       Compare deterministic artifacts only:
         final.parquet

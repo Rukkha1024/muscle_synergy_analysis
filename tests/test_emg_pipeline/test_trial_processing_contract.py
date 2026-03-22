@@ -60,7 +60,7 @@ def test_donorless_nonstep_group_slices_using_platform_offset(
     fixture_bundle: dict[str, object],
     tmp_path,
 ) -> None:
-    """Donorless nonstep trials should still slice when platform_offset exists."""
+    """Donorless nonstep trials should keep fallback metadata but fail the paired final gate."""
     cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
     workbook_path = tmp_path / "donorless_nonstep_slice.xlsx"
     platform_rows = [
@@ -99,25 +99,53 @@ def test_donorless_nonstep_group_slices_using_platform_offset(
         pd.DataFrame(platform_rows).to_excel(writer, sheet_name="platform", index=False)
         meta.to_excel(writer, sheet_name="meta", index=False)
 
-    event_df = load_event_metadata(str(workbook_path), cfg)
-    assert event_df.loc[event_df["analysis_selected_group"]].shape[0] == 1
+    with pytest.raises(ValueError, match="No paired trial groups remain after event filtering."):
+        load_event_metadata(str(workbook_path), cfg)
 
-    mocap_frames = list(range(21))
-    emg_df = pd.DataFrame(
-        {
-            "subject": ["S99"] * len(mocap_frames),
-            "velocity": [1] * len(mocap_frames),
-            "trial_num": [2] * len(mocap_frames),
-            "MocapFrame": mocap_frames,
-            "original_DeviceFrame": [frame * 10 for frame in mocap_frames],
-        }
-    )
-    merged = merge_event_metadata(emg_df, event_df)
+
+def test_paired_selected_trial_records_keep_platform_offset_fallback_metadata(
+    fixture_bundle: dict[str, object],
+) -> None:
+    """Paired-eligible trial records should still slice correctly when the end came from platform_offset."""
+    cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
+    rows: list[dict[str, object]] = []
+    for trial_num, offset_end, step_class, is_step, is_nonstep, window_source in (
+        (1, 11.0, "step", True, False, "actual_step_onset"),
+        (2, 18.0, "nonstep", False, True, "platform_offset"),
+    ):
+        for frame in range(0, 22):
+            rows.append(
+                {
+                    "subject": "S55",
+                    "velocity": 1,
+                    "trial_num": trial_num,
+                    "original_DeviceFrame": frame,
+                    "platform_onset": 0.0,
+                    "analysis_window_start": 0.0,
+                    "analysis_window_end": offset_end,
+                    "platform_offset": offset_end,
+                    "step_onset": 11.0 if is_step else pd.NA,
+                    "analysis_selected_group": True,
+                    "analysis_selected_group_prepaired": True,
+                    "analysis_is_step": is_step,
+                    "analysis_is_nonstep": is_nonstep,
+                    "analysis_step_class": step_class,
+                    "analysis_pair_key": "S55|1",
+                    "analysis_is_paired_key": True,
+                    "analysis_pair_status": "paired_eligible",
+                    "analysis_window_source": window_source,
+                    "analysis_window_is_surrogate": window_source != "actual_step_onset",
+                }
+            )
+    merged = pd.DataFrame(rows)
+
     records = build_trial_records(merged, cfg)
-    assert len(records) == 1
-    record = records[0]
-    assert int(record.frame["DeviceFrame"].max()) == 150
-    assert record.metadata["analysis_window_source"] == "platform_offset"
+
+    assert len(records) == 2
+    nonstep_record = next(record for record in records if record.key == ("S55", 1, 2))
+    assert int(nonstep_record.frame["DeviceFrame"].max()) == 18
+    assert nonstep_record.metadata["analysis_window_source"] == "platform_offset"
+    assert bool(nonstep_record.metadata["analysis_window_is_surrogate"]) is True
 
 
 def test_legacy_platform_offset_window_remains_configurable(

@@ -47,7 +47,7 @@ def test_event_preparation_keeps_donorless_nonstep_rows_by_using_platform_offset
     fixture_bundle: dict[str, Path],
     tmp_path: Path,
 ) -> None:
-    """Donorless nonstep rows should remain selected and use platform_offset as the window end."""
+    """Donorless nonstep rows should keep their fallback window but fail the paired final gate."""
     cfg = load_pipeline_config(str(fixture_bundle["global_config"]))
     invalid_path = _write_event_workbook(
         tmp_path,
@@ -110,9 +110,14 @@ def test_event_preparation_keeps_donorless_nonstep_rows_by_using_platform_offset
 
     prepared = load_event_metadata(str(invalid_path), cfg)
     invalid_rows = prepared.loc[(prepared["subject"] == "S99") & (prepared["velocity"] == 1)]
-    assert invalid_rows["analysis_selected_group"].any()
+    assert invalid_rows["analysis_selected_group_prepaired"].any()
+    assert not invalid_rows["analysis_selected_group"].any()
     assert invalid_rows["analysis_is_nonstep"].any()
     invalid_nonstep = invalid_rows.loc[invalid_rows["analysis_is_nonstep"]].iloc[0]
+    assert bool(invalid_nonstep["analysis_selected_group_prepaired"]) is True
+    assert bool(invalid_nonstep["analysis_selected_group"]) is False
+    assert bool(invalid_nonstep["analysis_is_paired_key"]) is False
+    assert invalid_nonstep["analysis_pair_status"] == "nonstep_only"
     assert invalid_nonstep["analysis_window_source"] == "platform_offset"
     assert bool(invalid_nonstep["analysis_window_is_surrogate"]) is False
     assert float(invalid_nonstep["analysis_window_end"]) == pytest.approx(float(invalid_nonstep["platform_offset"]))
@@ -761,7 +766,11 @@ def test_event_preparation_major_step_side_does_not_leak_across_velocities(
     v2_nonstep = prepared.loc[(prepared["subject"] == "S01") & (prepared["velocity"] == 2) & (prepared["trial_num"] == 1)].iloc[0]
 
     assert bool(v1_nonstep["analysis_selected_group"]) is True
-    assert bool(v2_nonstep["analysis_selected_group"]) is True
+    assert bool(v1_nonstep["analysis_is_paired_key"]) is True
+    assert bool(v2_nonstep["analysis_selected_group_prepaired"]) is True
+    assert bool(v2_nonstep["analysis_selected_group"]) is False
+    assert bool(v2_nonstep["analysis_is_paired_key"]) is False
+    assert v2_nonstep["analysis_pair_status"] == "nonstep_only"
     assert v1_nonstep["analysis_major_step_side"] == "step_r"
     assert v1_nonstep["analysis_stance_side"] == "left"
     assert v2_nonstep["analysis_major_step_side"] == ""

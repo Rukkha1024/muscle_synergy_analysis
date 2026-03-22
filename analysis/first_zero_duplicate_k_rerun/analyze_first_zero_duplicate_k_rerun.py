@@ -335,6 +335,60 @@ def _rebuild_feature_rows(
     return feature_rows, muscle_names
 
 
+def _hydrate_feature_rows_for_exports(
+    feature_rows: list[SubjectFeatureResult],
+    trial_windows_frame: Any | None = None,
+) -> list[SubjectFeatureResult]:
+    trial_window_lookup: dict[str, dict[str, Any]] = {}
+    if trial_windows_frame is not None:
+        trial_windows_pl = pl.from_pandas(trial_windows_frame)
+        if not trial_windows_pl.is_empty() and "analysis_unit_id" in trial_windows_pl.columns:
+            for row in trial_windows_pl.to_dicts():
+                analysis_unit_id = str(row.get("analysis_unit_id", "")).strip()
+                if analysis_unit_id:
+                    trial_window_lookup.setdefault(analysis_unit_id, row)
+
+    hydrated: list[SubjectFeatureResult] = []
+    for item in feature_rows:
+        meta = dict(item.bundle.meta)
+        analysis_unit_id = str(meta.get("analysis_unit_id", "") or meta.get("trial_id", "")).strip()
+        if analysis_unit_id and analysis_unit_id in trial_window_lookup:
+            for key, value in trial_window_lookup[analysis_unit_id].items():
+                meta.setdefault(str(key), value)
+        trial_num_text = str(meta.get("trial_num", item.trial_num)).strip().lower()
+        if "analysis_step_class" not in meta or not str(meta.get("analysis_step_class", "")).strip():
+            if "nonstep" in trial_num_text:
+                meta["analysis_step_class"] = "nonstep"
+            elif "step" in trial_num_text:
+                meta["analysis_step_class"] = "step"
+            else:
+                meta["analysis_step_class"] = "unknown"
+        if "analysis_is_step" not in meta:
+            meta["analysis_is_step"] = str(meta["analysis_step_class"]).strip().lower() == "step"
+        if "analysis_is_nonstep" not in meta:
+            meta["analysis_is_nonstep"] = str(meta["analysis_step_class"]).strip().lower() == "nonstep"
+        meta.setdefault("analysis_selected_group", True)
+        meta.setdefault("analysis_source_trial_count", 1)
+        meta.setdefault("source_trial_nums_csv", str(item.trial_num))
+        meta.setdefault("aggregation_mode", "concatenated")
+        meta.setdefault("status", "ok")
+        if "analysis_unit_id" not in meta or not str(meta["analysis_unit_id"]).strip():
+            meta["analysis_unit_id"] = analysis_unit_id or f"{item.subject}_v{item.velocity}_T{item.trial_num}"
+        hydrated.append(
+            SubjectFeatureResult(
+                subject=item.subject,
+                velocity=item.velocity,
+                trial_num=item.trial_num,
+                bundle=SimpleNamespace(
+                    W_muscle=item.bundle.W_muscle,
+                    H_time=item.bundle.H_time,
+                    meta=meta,
+                ),
+            )
+        )
+    return hydrated
+
+
 def _build_scan_cfg(metadata_row: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     algorithm_used = _scalar_to_str(metadata_row.get("algorithm_used"), "sklearn_kmeans").strip().lower()
     cfg = {
@@ -692,6 +746,7 @@ def main() -> None:
 
     _print_section("[M2] Rebuild Pooled Feature Rows")
     feature_rows, muscle_names = _rebuild_feature_rows(bundle["minimal_W"], bundle["minimal_H_long"], args.group_id)
+    feature_rows = _hydrate_feature_rows_for_exports(feature_rows, bundle.get("trial_windows"))
     print(f"Trials reconstructed: {len(feature_rows)}")
     print(f"Muscles per vector: {len(muscle_names)}")
     print(f"Subject Hmax: {_subject_hmax(feature_rows)}")
