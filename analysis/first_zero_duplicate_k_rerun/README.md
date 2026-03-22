@@ -1,8 +1,14 @@
 # first_zero_duplicate_k_rerun
 
-이 폴더는 **main pipeline을 바꾸지 않고**, pipeline이 이미 만든 final parquet만 읽어서 `gap statistic` 없이 대표 `K`를 다시 고르고 싶을 때 쓰는 analysis 전용 작업 공간이다.
+이 폴더는 main pipeline이 이미 만든 final parquet만 읽어서 `gap statistic` 없이 대표 `K`를 다시 고르거나, paired-only bundle 기준으로 cluster presence 통계를 다시 계산하고 싶을 때 쓰는 analysis 전용 작업 공간이다.
 
-현재 질문은 "중복 trial이 처음 0개가 되는 값은 `K=13`인데, 왜 pipeline 결과는 `15`로 보이나?"였다. 이 분석은 그 질문을 production CLI 변경 없이 재현 가능한 방식으로 답하기 위해 만들어졌다.
+현재 질문은 "중복 trial이 처음 0개가 되는 값은 `K=13`인데, 왜 pipeline 결과는 더 큰 값을 보이나?"였고, 이후 main pipeline의 filtering source of truth도 `(subject, velocity)` paired gate를 포함하도록 바뀌었다. 이 analysis는 그 paired-only final parquet를 production CLI 밖에서 다시 읽어, no-gap rerun과 paired exact McNemar 통계를 reviewer-friendly artifact로 정리하기 위해 만들어졌다.
+
+## 공식 결과 문서
+
+- paired 결과 해석 report: `analysis/first_zero_duplicate_k_rerun/report.md`
+- paired 통계 workbook: `analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_reclustering/paired_cluster_statistics.xlsx`
+- paired summary: `analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_reclustering/summary.json`
 
 ## 사용자 목표
 
@@ -22,13 +28,13 @@
 - 기본 source parquet: `outputs/final_concatenated.parquet`
 - 기본 group: `pooled_step_nonstep`
 
-2026-03-19 기준 현재 저장소의 기본 `concatenated` bundle metadata는 다음과 같다.
+2026-03-22 기준 현재 저장소의 기본 paired-only `concatenated` bundle metadata는 다음과 같다.
 
-- `k_gap_raw = 15`
-- `k_selected = 15`
+- `k_gap_raw = 16`
+- `k_selected = 16`
 - `k_min_unique = 13`
 
-즉, pipeline metadata만 봐도 "gap recommendation은 `15`이고, duplicate가 처음 0개가 되는 값은 `13`"이라는 차이가 이미 들어 있다. 이 analysis는 그 차이를 **직접 재탐색해서 재현**하는 역할을 한다.
+즉, pipeline metadata만 봐도 "gap recommendation은 `16`이고, duplicate가 처음 0개가 되는 값은 `13`"이라는 차이가 이미 들어 있다. 이 analysis는 그 차이를 **직접 재탐색해서 재현**하는 역할을 한다.
 
 ## 선택 규칙
 
@@ -92,7 +98,7 @@ conda run --no-capture-output -n cuda python \
   analysis/first_zero_duplicate_k_rerun/analyze_paired_refilter_reclustering.py \
   --source-parquet outputs/final_concatenated.parquet \
   --config configs/global_config.yaml \
-  --out-dir analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_run \
+  --out-dir analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_reclustering \
   --overwrite
 ```
 
@@ -127,6 +133,7 @@ conda run --no-capture-output -n cuda python \
 - `paired_cluster_stats.csv`: cluster별 paired exact McNemar 요약
 - `paired_cluster_detail.csv`: cluster x paired key detail evidence
 - `paired_cluster_statistics.xlsx`: reviewer가 바로 읽을 수 있는 paired workbook
+- `report.md`: 현재 paired 결과를 해석한 analysis 문서
 
 ## 산출물
 
@@ -173,20 +180,23 @@ paired refilter run은 위 산출물에 더해 아래 파일을 같이 남긴다
 - `paired_cluster_stats.csv`: cluster별 paired presence 요약과 exact McNemar 결과
 - `paired_cluster_detail.csv`: `cluster x paired key` 상세 evidence
 - `paired_cluster_statistics.xlsx`: reviewer-facing paired summary workbook
+- `report.md`: paired 결과 해석과 workbook 읽는 법을 정리한 문서
 
 ## 현재 확인된 결과
 
-2026-03-19 기준 `outputs/final_concatenated.parquet`에 대해 실제 rerun을 돌린 결과는 다음과 같다.
+2026-03-22 기준 paired refilter rerun의 현재 확인 결과는 다음과 같다.
 
-- pooled vector 수: `221`
-- analysis unit 수: `45`
-- `k_min = 7`
+- source parquet: `outputs/final_concatenated.parquet`
+- paired key 수: `21`
+- source bundle 안 excluded pair key 수: `0`
+- analysis unit 수: `42`
+- pooled vector 수: `212`
+- `k_min = 8`
 - no-gap rerun의 최종값: `k_selected_first_zero_duplicate = 13`
-- pipeline metadata: `k_gap_raw = 15`, `k_selected = 15`, `k_min_unique = 13`
+- pipeline metadata: `k_gap_raw = 16`, `k_selected = 16`, `k_min_unique = 13`
+- paired workbook: `analysis/first_zero_duplicate_k_rerun/artifacts/paired_refilter_reclustering/paired_cluster_statistics.xlsx`
 
-즉, 현재 저장소 상태에서는 **gap statistic을 빼면 `K=13`이 맞고**, pipeline이 `15`를 보고한 이유는 duplicate-free floor가 아니라 gap recommendation을 먼저 반영했기 때문이다.
-
-이 analysis는 그 결론을 말로만 남기지 않고, **`K=13`으로 다시 계산된 parquet/workbook/figure 묶음**을 `analysis/` 작업폴더 안에 저장한다.
+즉, 현재 paired-only bundle에서도 **gap statistic을 빼면 `K=13`이 first zero-duplicate floor로 남고**, pipeline은 gap recommendation 때문에 `16`을 선택한다. cluster presence exact McNemar 결과는 `paired_cluster_statistics.xlsx`와 `report.md`에서 함께 읽을 수 있다.
 
 ## 해석 방법
 
@@ -197,7 +207,7 @@ paired refilter run은 위 산출물에 더해 아래 파일을 같이 남긴다
 - `paired_key_n`: paired refilter workflow에서 실제로 남은 `subject+velocity` key 수
 - `excluded_pair_key_n`: source bundle에 있었지만 paired subset에서 제외된 key 수
 
-현재 사용자 질문의 핵심은 `pipeline_k_gap_raw` 또는 `pipeline_k_selected`가 `15`여도, **no-gap rule에서는 `13`이 먼저 zero-duplicate가 될 수 있다**는 점이다.
+현재 paired workflow의 핵심은 `pipeline_k_gap_raw` 또는 `pipeline_k_selected`가 `16`이어도, **no-gap rule에서는 `13`이 먼저 zero-duplicate가 될 수 있다**는 점과, 그 paired cluster presence 차이가 보정 후에도 유지되는지는 workbook/report에서 따로 확인해야 한다는 점이다.
 
 ## 주의
 
