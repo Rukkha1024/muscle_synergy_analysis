@@ -18,3 +18,5 @@ tests/fixtures/perturb_inform_fixture.xlsm
 tests/reference_outputs/reference_baseline/
 
 archive/
+# Large files - specific oversized artifacts
+analysis/vaf_threshold_sensitivity/artifacts/**/summary.json
